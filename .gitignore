@@ -65,3 +65,5 @@ doc/html
 doc/html/
 # MacOS metadata
 .DS_Store
+experiment
+test.c
