@@ -68,3 +68,4 @@ doc/html/
 experiment
 test.c
 test.v
+*.exe
