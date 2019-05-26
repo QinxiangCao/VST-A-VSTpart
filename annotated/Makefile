@@ -19,10 +19,10 @@ depend .depend:
 	@$(COQDEP) *.v > .depend
 
 %.v: %.c clightgen
-	$(CLIGHTGEN) $<
+	$(CLIGHTGEN) -normalize $<
 
 %_annotation.v: %.c clightgen %_def.vo
-	$(CLIGHTGEN) -A -o $@ -V $*_def -V $* $<
+	$(CLIGHTGEN) -normalize -A -o $@ -V $*_def -V $* $<
 
 %.vo: %.v
 	@echo COQC $<

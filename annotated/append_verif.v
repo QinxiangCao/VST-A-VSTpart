@@ -101,11 +101,11 @@ Definition DC (sh: share) (s1 s2: list val) (x: val) (y: val): statement :=
 (************************************************************)
 (************************************************************)
 
-Lemma body_append: semax_body Vprog Gprog append.f_append append_spec.
+Lemma body_append: semax_body Vprog Gprog f_append append_spec.
 Proof.
 start_function.
 match goal with
-| |- ?P => let d1 := eval hnf in (fn_body f_append) in
+| |- ?P => let d1 := eval hnf in f_append_hint in
            change (let d := @abbreviate _ d1 in P)
 end.
 forwardD sh.

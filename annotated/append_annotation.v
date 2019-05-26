@@ -6,22 +6,18 @@ Local Open Scope Z_scope.
 
 Require Import annotated_Clight.
 
-Definition f_append := {|
-  fn_return := (tptr (Tstruct _list noattr));
-  fn_callconv := cc_default;
-  fn_params := ((_x, (tptr (Tstruct _list noattr))) ::
-                (_y, (tptr (Tstruct _list noattr))) :: nil);
-  fn_vars := nil;
-  fn_temps := ((_t, (tptr (Tstruct _list noattr))) ::
-               (_u, (tptr (Tstruct _list noattr))) :: nil);
-  fn_body :=
- GIVEN sh: share, GIVEN s1: list val, GIVEN s2: list val, GIVEN x: val, GIVEN y: val, 
-(Sifthenelse (Ebinop Oeq (Etempvar _x (tptr (Tstruct _list noattr)))
-               (Ecast (Econst_int (Int.repr 0) tint) (tptr tvoid)) tint)
-  (Sreturn (Some (Etempvar _y (tptr (Tstruct _list noattr)))))
-  (Ssequence
-    (Sset _t (Etempvar _x (tptr (Tstruct _list noattr))))
-    
+Definition f_append_hint :=  GIVEN sh: share, GIVEN s1: list val, GIVEN s2: list val, GIVEN x: val, GIVEN y: val, 
+                                                  (Sifthenelse (Ebinop Oeq
+                                                                 (Etempvar _x (tptr (Tstruct _list noattr)))
+                                                                 (Ecast
+                                                                   (Econst_int (Int.repr 0) tint)
+                                                                   (tptr tvoid))
+                                                                 tint)
+                                                    (Sreturn (Some (Etempvar _y (tptr (Tstruct _list noattr)))))
+                                                    (Ssequence
+                                                      (Sset _t
+                                                        (Etempvar _x (tptr (Tstruct _list noattr))))
+                                                      
     (Ssequence
       (Sassert (EX a: val, EX s1b: list val,
         (PROP (s1 = a :: s1b)
@@ -35,14 +31,17 @@ Definition f_append := {|
          SEP (data_at sh t_struct_list (a ,u) x; listrep sh s1b u; listrep sh s2 y)))%assert)
     (GIVEN u: val,
     
-    (Ssequence
-      (Sset _u
-        (Efield
-          (Ederef (Etempvar _t (tptr (Tstruct _list noattr)))
-            (Tstruct _list noattr)) _tail (tptr (Tstruct _list noattr))))
-      (Ssequence
-        (Swhile
-          
+                                                      (Ssequence
+                                                        (Sset _u
+                                                          (Efield
+                                                            (Ederef
+                                                              (Etempvar _t (tptr (Tstruct _list noattr)))
+                                                              (Tstruct _list noattr))
+                                                            _tail
+                                                            (tptr (Tstruct _list noattr))))
+                                                        (Ssequence
+                                                          (Swhile
+                                                            
       (EX a: val, EX s1b: list val, EX t: val, EX u: val,
             PROP ()
             LOCAL (temp _x x; temp _t t; temp _u u; temp _y y)
@@ -51,9 +50,13 @@ Definition f_append := {|
                    listrep sh s1b u;
                    listrep sh s2 y))%assert
       
-          (Ebinop One (Etempvar _u (tptr (Tstruct _list noattr)))
-            (Ecast (Econst_int (Int.repr 0) tint) (tptr tvoid)) tint)
-          
+                                                            (Ebinop One
+                                                              (Etempvar _u (tptr (Tstruct _list noattr)))
+                                                              (Ecast
+                                                                (Econst_int (Int.repr 0) tint)
+                                                                (tptr tvoid))
+                                                              tint)
+                                                            
         (GIVEN a: val, GIVEN s1b: list val, GIVEN t: val, GIVEN u: val,
         (Ssequence
             (Sassert (EX b: val, EX s1c: list val, EX z: val,
@@ -65,22 +68,26 @@ Definition f_append := {|
                     listrep sh s1c z; listrep sh s2 y)))%assert)
           (GIVEN b: val, GIVEN s1c: list val, GIVEN z: val,
         
-          (Ssequence
-            (Sset _t (Etempvar _u (tptr (Tstruct _list noattr))))
-            (Sset _u
-              (Efield
-                (Ederef (Etempvar _t (tptr (Tstruct _list noattr)))
-                  (Tstruct _list noattr)) _tail
-                (tptr (Tstruct _list noattr))))
-            )))))
-        (Ssequence
-          (Sassign
-            (Efield
-              (Ederef (Etempvar _t (tptr (Tstruct _list noattr)))
-                (Tstruct _list noattr)) _tail (tptr (Tstruct _list noattr)))
-            (Etempvar _y (tptr (Tstruct _list noattr))))
-          (Sreturn (Some (Etempvar _x (tptr (Tstruct _list noattr)))))
-          )))))))))
-|}.
-
-
+                                                            (Ssequence
+                                                              (Sset _t
+                                                                (Etempvar _u (tptr (Tstruct _list noattr))))
+                                                              (Sset _u
+                                                                (Efield
+                                                                  (Ederef
+                                                                    (Etempvar _t (tptr (Tstruct _list noattr)))
+                                                                    (Tstruct _list noattr))
+                                                                  _tail
+                                                                  (tptr (Tstruct _list noattr))))
+                                                              )))))
+                                                          (Ssequence
+                                                            (Sassign
+                                                              (Efield
+                                                                (Ederef
+                                                                  (Etempvar _t (tptr (Tstruct _list noattr)))
+                                                                  (Tstruct _list noattr))
+                                                                _tail
+                                                                (tptr (Tstruct _list noattr)))
+                                                              (Etempvar _y (tptr (Tstruct _list noattr))))
+                                                            (Sreturn (Some (Etempvar _x (tptr (Tstruct _list noattr)))))
+                                                            ))))))))).
+                                                  
