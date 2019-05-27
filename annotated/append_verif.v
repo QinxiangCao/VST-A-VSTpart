@@ -139,7 +139,7 @@ forwardD.
   forwardD.
   {
     Exists a s1b x u.
-    subst s1. entailer!. cancel_wand.
+    subst s1. entailer!. simpl. cancel_wand.
   }
   {
     entailer!.

@@ -4,7 +4,20 @@ From Coq Require Import String List ZArith.
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.
 Local Open Scope Z_scope.
 
-Require Import annotated_Clight.
+                                                  Module Info.
+                                                    Definition version := "3.5"%string.
+                                                    Definition build_number := ""%string.
+                                                    Definition build_tag := ""%string.
+                                                    Definition arch := "x86"%string.
+                                                    Definition model := "32sse2"%string.
+                                                    Definition abi := "standard"%string.
+                                                    Definition bitsize := 32.
+                                                    Definition big_endian := false.
+                                                    Definition source_file := "append.c"%string.
+                                                    Definition normalized := true.
+                                                  End Info.
+                                                  
+                                                  Require Import annotated_Clight.
 
 Definition f_append_hint :=  GIVEN sh: share, GIVEN s1: list val, GIVEN s2: list val, GIVEN x: val, GIVEN y: val, 
                                                   (Sifthenelse (Ebinop Oeq

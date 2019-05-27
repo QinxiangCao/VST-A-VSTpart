@@ -1,4 +1,10 @@
--include Makefile.config
+ifeq (,$(wildcard ./Makefile.config))
+ $(error FAILURE: You need a file Makefile.config to indicate VST location)
+endif
+include Makefile.config
+VSTDIRS=msl sepcomp veric floyd
+COMPCERT=$(VSTDIR)compcert/
+COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d)) -R $(COMPCERT) compcert $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc -w -deprecated-focus,-deprecated-unfocus
@@ -30,5 +36,11 @@ depend .depend:
 
 _CoqProject:
 	@echo $(COQFLAGS) > _CoqProject
+
+clean:
+	@rm -f *.vo
+	@rm -f *.glob
+	@rm -f *.aux
+
 
 include .depend
