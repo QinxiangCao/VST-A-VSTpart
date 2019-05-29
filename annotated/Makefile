@@ -21,18 +21,18 @@ all:
 
 # make sure clightgen is built in parent directory
 .PHONY: clightgen depend
-clightgen:
+clightgen ../clightgen.exe:
 	$(MAKE) -C .. clightgen
 
 CLIGHTGEN=../clightgen
 
 depend .depend: cprogs
-	@$(COQDEP) *.v > .depend
+	@$(COQDEP) *.v $(CPROGSDIR)/*.v > .depend
 
-$(CPROGSDIR)/%.v: %.c
+$(CPROGSDIR)/%.v: %.c ../clightgen.exe
 	$(CLIGHTGEN) -normalize -o $@ $<
 
-$(CPROGSDIR)/%_annotation.v: %.c
+$(CPROGSDIR)/%_annotation.v: %.c ../clightgen.exe
 	$(CLIGHTGEN) -normalize -A -V $*_def -V $* -o $@ $<
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c).v $(CPROGSDIR)/$(c)_annotation.v)
@@ -42,7 +42,7 @@ cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c).v $(CPROGSDIR)/$(c)_annotation
 	@$(COQC) $(COQFLAGS) $<
 
 _CoqProject:
-	@echo $(COQFLAGS) > _CoqProject
+	@echo '$(COQFLAGS)' > _CoqProject
 
 .PHONY: clean
 clean:

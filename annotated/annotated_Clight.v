@@ -60,7 +60,11 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
   | LScons: option Z -> statement -> labeled_statements -> labeled_statements.
                       (**r [None] is [default], [Some x] is [case x] *)
 
-Notation "'GIVEN'  x ':' T ',' c " := (Sgiven _ (fun x : T => c)) (at level 65, x at level 99) : logic.
+Notation "'GIVEN' x .. y , c " :=
+  (Sgiven _ (fun x => .. (Sgiven _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+(* Notation "'GIVEN' (x1 : T1) , (x2 : T2) , .. , (xn : Tn) , c " :=
+  (Sgiven T1 (fun x1 => (Sgiven T2 (fun x2 => .. (Sgiven Tn (fun xn => c)) .. )))) (at level 65, x1 at level 99, x2 at level 99) : logic. *)
+(* Notation "'GIVEN'  x ':' T ',' c " := (Sgiven _ (fun x : T => c)) (at level 65, x at level 99) : logic. *)
 
 Definition Swhile (Inv: environ -> mpred) (e: expr) (s: statement):=
   Sloop Inv Inv (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
@@ -112,3 +116,4 @@ Definition type_of_fundef (f: fundef) : type :=
 - a proof that this environment is consistent with the definitions. *)
 
 Definition program := Ctypes.program function.
+

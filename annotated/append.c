@@ -3,7 +3,7 @@
 struct list {int head; struct list *tail;};
 
 struct list *append (struct list *x, struct list *y) {
-  /* GIVEN sh: share, GIVEN s1: list val, GIVEN s2: list val, GIVEN x: val, GIVEN y: val, */
+  /* GIVEN (sh: share) (s1: list val) (s2: list val) (x: val) (y: val), */
   struct list *t, *u;
   if (x==NULL)
     return y;
@@ -15,7 +15,7 @@ struct list *append (struct list *x, struct list *y) {
         (PROP (s1 = a :: s1b)
          LOCAL (temp _t x; temp _x x; temp _y y)
          SEP (listrep sh s1 x; listrep sh s2 y))))
-    (GIVEN a: val, GIVEN s1b: list val,
+    (GIVEN (a: val) (s1b: list val),
     (Ssequence
       (Sassert (EX u: val,
         (PROP ()
@@ -36,7 +36,7 @@ struct list *append (struct list *x, struct list *y) {
       */
       while (u!=NULL) {
         /*
-        (GIVEN a: val, GIVEN s1b: list val, GIVEN t: val, GIVEN u: val,
+        (GIVEN (a: val) (s1b: list val) (t: val) (u: val),
         (Ssequence
             (Sassert (EX b: val, EX s1c: list val, EX z: val,
               (PROP (s1b = b :: s1c)
@@ -45,7 +45,7 @@ struct list *append (struct list *x, struct list *y) {
                     data_at sh t_struct_list (a, u) t;
                     data_at sh t_struct_list (b, z) u;
                     listrep sh s1c z; listrep sh s2 y)))%assert)
-          (GIVEN b: val, GIVEN s1c: list val, GIVEN z: val,
+          (GIVEN (b: val) (s1c: list val) (z: val),
         */
         t = u;
         u = t->tail;
