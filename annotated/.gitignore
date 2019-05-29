@@ -1,3 +1,4 @@
 .depend
 _CoqProject
 Makefile.config
+cprogs/*
