@@ -33,18 +33,18 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
   | cs :: cs_list =>
     match cs with
     | inl (Inv, c) => Error (MSG "Dangling loop invariant" :: nil)
-    | inl (Assert, c) => fold_cs cs_list (Ssequence (Sassert c) acc)
-    | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
-    | inr (Sloop _ _ s1 s2) =>
-      match cs_list with
-      (* If there are two invariants, put two; if there is only one invariant, use it twice. *)
-      | inl (Inv, inv2) :: inl (Inv, inv1) :: cs_list =>
-        fold_cs cs_list (Sloop inv1 inv2 s1 s2)
-      | inl (Inv, inv) :: cs_list =>
-        fold_cs cs_list (Sloop inv inv s1 s2)
-      | _ => Error (MSG "Missing loop invariant" :: nil)
+    | inl (Assert, c) =>
+      match acc with
+      | Sskip => fold_cs cs_list (Sassert c)
+      | _ => fold_cs cs_list (Ssequence (Sassert c) acc)
       end
-    | inr s => fold_cs cs_list (Ssequence s acc)
+    | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
+    | inr s =>
+      match s, acc with
+      | Sskip, _ => fold_cs cs_list acc
+      | _, Sskip => fold_cs cs_list s
+      | _, _ => fold_cs cs_list (Ssequence s acc)
+      end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
     end
   end.
@@ -55,12 +55,12 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
   | Clight.Slcomment c s =>
       annotate_stmt_list (inl c :: cs_list) s
   | Clight.Srcomment s c =>
-      do cs_list <- annotate_stmt_list cs_list s;
-      OK (inl c :: cs_list)
+      do cs_list1 <- annotate_stmt_list cs_list s;
+      OK (inl c :: cs_list1)
   | Clight.Ssequence s1 s2 =>
-      do cs_list <- annotate_stmt_list cs_list s1;
-      do cs_list <- annotate_stmt_list cs_list s2;
-      OK cs_list
+      do cs_list1 <- annotate_stmt_list cs_list s1;
+      do cs_list2 <- annotate_stmt_list cs_list1 s2;
+      OK cs_list2
   | Clight.Sloop s1 s2 =>
     do s1' <- annotate_stmt s1;
     do s2' <- annotate_stmt s2;

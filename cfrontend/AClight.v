@@ -31,12 +31,10 @@ Require Import Smallstep.
 Require Import Ctypes.
 Require Import Cop.
 Require Import Clight.
-
-(* Import OCaml's string type from Comment. *)
-Definition string := Comment.string.
+Require Import Comment.
 
 (* Abstract assertion encoded as string *)
-Definition assert : Type := string.
+Definition assert : Type := Comment.string.
 
 (** ** Statements *)
 
@@ -44,7 +42,7 @@ Definition assert : Type := string.
 
 Inductive statement : Type :=
   | Sassert : assert -> statement
-  | Sgiven: string -> statement -> statement         (* abstract given clause *)
+  | Sgiven: Comment.string -> statement -> statement         (* abstract given clause *)
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
