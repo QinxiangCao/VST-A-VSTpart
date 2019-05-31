@@ -15,7 +15,7 @@ COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 CPROGSDIR=cprogs
 CPROGS=append
 
-all:
+all: clightgen
 	@test -f .depend || $(MAKE) depend
 	$(MAKE) _CoqProject $(CPROGS:=_verif.vo)
 
