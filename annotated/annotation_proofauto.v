@@ -31,6 +31,17 @@ Proof.
   exact H.
 Qed.
 
+Lemma decorate_C_skip1:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall (d1: statement) Delta P c Post,
+      (* should check d1 not Sassert or Sassume *)
+      semax Delta P c Post ->
+      (let d := @abbreviate _ Sskip in semax Delta P c Post).
+Proof.
+  intros.
+  exact H.
+Qed.
+
 Lemma decorate_C_if_then1:
   forall {Espec: OracleKind} {cs: compspecs},
     forall b d1 d2 Delta P c Post,
@@ -104,6 +115,20 @@ Proof.
   + exact H0.
 Qed.
 
+Lemma decorate_C_assert2:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall P' d1 d2 Delta P c Post,
+      ENTAIL Delta, P |-- P' ->
+      (let d := @abbreviate _ d1 in semax Delta P' c Post) ->
+      (let d := @abbreviate _ (Ssequence d1 (Ssequence (Sassert P') d2)) in semax Delta P c Post).
+Proof.
+  intros.
+  eapply semax_pre.
+  + exact H.
+  + exact H0.
+Qed.
+
+
 Lemma decorate_C_given:
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} d1 Delta P c Post,
@@ -133,6 +158,13 @@ Tactic Notation "forwardD" :=
       [ ..
       | revert d; refine (decorate_C_if_then1 _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_if_else1 _ _ _ _ _ _ _ _)]
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Sassert ?P)) in
+       semax _ _ (Clight.Sifthenelse _ _ _) _ =>
+      intro d; forward_if;
+      [ ..
+      | revert d; refine (decorate_C_if_then1 _ _ _ _ _ _ _ _)
+      | revert d; refine (decorate_C_if_else1 _ _ _ _ _ _ _ _)]
+  
   | |- let d := @abbreviate _ (Ssequence (Swhile ?Inv _ _) _) in
        semax _ _ (Clight.Ssequence (Clight.Swhile _ _) _) _ =>
       intro d; forward_while Inv;
