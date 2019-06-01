@@ -42,7 +42,10 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     | inr s =>
       match s, acc with
       | Sskip, _ => fold_cs cs_list acc
-      | _, Sskip => fold_cs cs_list s
+      | Sbreak, Sskip
+      | Scontinue, Sskip
+      | Sreturn _, Sskip
+          => fold_cs cs_list s
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
