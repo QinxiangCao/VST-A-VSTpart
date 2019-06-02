@@ -390,7 +390,7 @@ and lblstmts p = function
       fprintf p "@[<hv 2>(LScons %a@ %a@ %a)@]"
               (print_option coqZ) lbl stmt s lblstmts ls
 
-let print_function p (id, f) =
+(* let print_function p (id, f) =
   fprintf p "Definition f_%s := {|@ " (extern_atom id);
   fprintf p "  fn_return := %a;@ " typ f.fn_return;
   fprintf p "  fn_callconv := %a;@ " callconv f.fn_callconv;
@@ -399,9 +399,9 @@ let print_function p (id, f) =
   fprintf p "  fn_temps := %a;@ " (print_list (print_pair ident typ)) f.fn_temps;
   fprintf p "  fn_body :=@ ";
   stmt p f.fn_body;
-  fprintf p "@ |}.@ @ "
+  fprintf p "@ |}.@ @ " *)
 
-let init_data p = function
+(* let init_data p = function
   | Init_int8 n -> fprintf p "Init_int8 %a" coqint n
   | Init_int16 n -> fprintf p "Init_int16 %a" coqint n
   | Init_int32 n -> fprintf p "Init_int32 %a" coqint n
@@ -423,40 +423,40 @@ let print_globdef p (id, gd) =
   match gd with
   | Gfun(Ctypes.Internal f) -> print_function p (id, f)
   | Gfun(Ctypes.External _) -> ()
-  | Gvar v -> print_variable p (id, v)
+  | Gvar v -> print_variable p (id, v) *)
 
-let print_ident_globdef p = function
+(* let print_ident_globdef p = function
   | (id, Gfun(Ctypes.Internal f)) ->
       fprintf p "(%a, Gfun(Internal f_%s))" ident id (extern_atom id)
   | (id, Gfun(Ctypes.External(ef, targs, tres, cc))) ->
       fprintf p "@[<hov 2>(%a,@ @[<hov 2>Gfun(External %a@ %a@ %a@ %a))@]@]"
         ident id external_function ef typlist targs typ tres callconv cc
   | (id, Gvar v) ->
-      fprintf p "(%a, Gvar v_%s)" ident id (extern_atom id)
+      fprintf p "(%a, Gvar v_%s)" ident id (extern_atom id) *)
 
 (* Composite definitions *)
 
-let print_composite_definition p (Composite(id, su, m, a)) =
+(* let print_composite_definition p (Composite(id, su, m, a)) =
   fprintf p "@[<hv 2>Composite %a %s@ %a@ %a@]"
     ident id
     (match su with Struct -> "Struct" | Union -> "Union")
     (print_list (print_pair ident typ)) m
-    attribute a
+    attribute a *)
 
 (* Assertion processing *)
 
-let re_annot_param = Str.regexp "%%\\|%[1-9][0-9]*"
+(* let re_annot_param = Str.regexp "%%\\|%[1-9][0-9]*" *)
 
-type fragment = Text of string | Param of int
+(* type fragment = Text of string | Param of int *)
 
 (* For compatibility with OCaml < 4.00 *)
-let list_iteri f l =
+(* let list_iteri f l =
   let rec iteri i = function
   | [] -> ()
   | a::l -> f i a; iteri (i + 1) l
-  in iteri 0 l
+  in iteri 0 l *)
 
-let print_assertion p (txt, targs) =
+(* let print_assertion p (txt, targs) =
   let frags =
     List.map
       (function
@@ -481,22 +481,23 @@ let print_assertion p (txt, targs) =
      | Text s -> fprintf p "%s" s
      | Param n -> fprintf p "_x%d" n)
     frags;
-  fprintf p "@ "
+  fprintf p "@ " *)
 
-let print_assertions p =
+(* let print_assertions p =
   if !assertions <> [] then begin
     fprintf p "Definition assertions (txt: string) args : Prop :=@ ";
     fprintf p "  match txt, args with@ ";
     List.iter (print_assertion p) !assertions;
     fprintf p "  | _, _ => False@ ";
     fprintf p "  end.@ @ "
-  end
+  end *)
 
 (* The prologue *)
 
 let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
+Require Import annotated_Clight.\n\
 Local Open Scope Z_scope.\n"
 
 (* Naming the compiler-generated temporaries occurring in the program *)
@@ -574,6 +575,5 @@ let print_program p prog sourcefile normalized =
   fprintf p "@[<v 0>";
   fprintf p "%s" prologue;
   print_clightgen_info p sourcefile normalized;
-  fprintf p "%s@ " "Require Import annotated_Clight.";
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
   fprintf p "@]@."
