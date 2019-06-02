@@ -37,7 +37,6 @@ forwardD s2.
 forwardD x.
 forwardD y.
 forwardD.
-forwardD.
 * forwardD.
   rewrite listrep_null. normalize.
   Exists y.
@@ -59,6 +58,7 @@ forwardD.
     entailer!.
   }
   forwardD.
+  (* The next line fails because next command is in MORE_COMMANDS *)
   forwardD.
   forwardD.
   {
