@@ -199,8 +199,10 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ Sskip in _ =>
       refine (decorate_C_skip _ _)
   | |- let d := @abbreviate _ (Ssequence _ (Ssequence (Sassert ?P) _)) in _ => 
-  (* We need to adjust abrv here *)
-      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _);
+      [ intro d; abbreviate_semax; revert d
+      | intro d; abbreviate_semax; revert d
+      ]
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in
        semax _ _ (Clight.Sifthenelse _ _ _) _ =>
       intro d; forward_if;

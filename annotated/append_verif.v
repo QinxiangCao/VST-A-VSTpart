@@ -58,7 +58,6 @@ forwardD.
     entailer!.
   }
   forwardD.
-  (* The next line fails because next command is in MORE_COMMANDS *)
   forwardD.
   forwardD.
   {
