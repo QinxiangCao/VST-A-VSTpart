@@ -52,6 +52,18 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     end
   end.
 
+Fixpoint find_inv (cs_list: list (comment + statement)) : res (loop_invariant * list (comment + statement)) :=
+  match cs_list with
+  | inl (Inv, inv2) :: inl (Inv, inv1) :: cs_list =>
+    OK ((LIDouble inv1 inv2), cs_list)
+  | inl (Inv, inv) :: cs_list =>
+    OK ((LISingle inv), cs_list)
+  | cs :: cs_list =>
+    do (inv, cs_list) <- find_inv cs_list;
+    OK (inv, cs :: cs_list)
+  | _ => Error (MSG "Missing loop invariant" :: nil)
+  end.
+
 Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
   let fix annotate_stmt_list (cs_list: list (comment + statement)) (s: Clight.statement) : res (list (comment + statement)) :=
   match s with
@@ -67,14 +79,8 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
   | Clight.Sloop s1 s2 =>
     do s1' <- annotate_stmt s1;
     do s2' <- annotate_stmt s2;
-    match cs_list with
-    (* If there are two invariants, put two; if there is only one invariant, use it twice. *)
-    | inl (Inv, inv2) :: inl (Inv, inv1) :: cs_list =>
-      OK (inr (Sloop (LIDouble inv1 inv2) s1' s2') :: cs_list)
-    | inl (Inv, inv) :: cs_list =>
-      OK (inr (Sloop (LISingle inv) s1' s2') :: cs_list)
-    | _ => Error (MSG "Missing loop invariant" :: nil)
-    end
+    do (inv, cs_list) <- find_inv cs_list;
+    OK (inr (Sloop inv s1' s2') :: cs_list)
   | _ =>
     do s' <-
       match s with
