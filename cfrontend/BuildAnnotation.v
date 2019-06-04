@@ -70,9 +70,9 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
     match cs_list with
     (* If there are two invariants, put two; if there is only one invariant, use it twice. *)
     | inl (Inv, inv2) :: inl (Inv, inv1) :: cs_list =>
-      OK (inr (Sloop inv1 inv2 s1' s2') :: cs_list)
+      OK (inr (Sloop (LIDouble inv1 inv2) s1' s2') :: cs_list)
     | inl (Inv, inv) :: cs_list =>
-      OK (inr (Sloop inv inv s1' s2') :: cs_list)
+      OK (inr (Sloop (LISingle inv) s1' s2') :: cs_list)
     | _ => Error (MSG "Missing loop invariant" :: nil)
     end
   | _ =>

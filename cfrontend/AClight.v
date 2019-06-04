@@ -36,6 +36,10 @@ Require Import Comment.
 (* Abstract assertion encoded as string *)
 Definition assert : Type := Comment.string.
 
+Inductive loop_invariant :=
+  | LISingle : assert -> loop_invariant
+  | LIDouble : assert -> assert -> loop_invariant.
+
 (** ** Statements *)
 
 (** This is statement with annotation *)
@@ -50,7 +54,7 @@ Inductive statement : Type :=
   | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
   | Ssequence : statement -> statement -> statement  (**r sequence *)
   | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
-  | Sloop: assert -> assert -> statement -> statement -> statement (**r infinite loop *)
+  | Sloop: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
   | Sreturn : option expr -> statement      (**r [return] statement *)
@@ -64,7 +68,7 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
                       (**r [None] is [default], [Some x] is [case x] *)
 
 Definition Swhile (Inv : assert) (e: expr) (s: statement):=
-  Sloop Inv Inv (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
+  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
 
 (** ** Functions *)
 

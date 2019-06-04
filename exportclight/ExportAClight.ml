@@ -333,6 +333,13 @@ let rec expr p = function
 let comment p (t, c) =
   fprintf p "%s" c*)
 
+(* Loop invariants *)
+let loop_invariant p = function
+| LISingle inv ->
+  fprintf p "@[<hov 2>(LISingle %s)@]" inv
+| LIDouble (inv1, inv2) ->
+  fprintf p "@[<hov 2>(LISingle %s@ %s)@]" inv1 inv2
+
 (* Statements *)
 let rec stmt p = function
   | Sassert c ->
@@ -362,14 +369,12 @@ let rec stmt p = function
       fprintf p "@[<hv 2>(Ssequence@ %a@ %a)@]" stmt s1 stmt s2
   | Sifthenelse(e, s1, s2) ->
       fprintf p "@[<hv 2>(Sifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
-  | Sloop (inv, inv2, Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip)
-      when inv = inv2 ->
+  | Sloop ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
       fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
-  | Sloop (inv, inv2, Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip)
-      when inv = inv2 ->
+  | Sloop ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
       fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
-  | Sloop (inv1, inv2, s1, s2) ->
-      fprintf p "@[<hv 2>(Sloop@ %s@ %s@ %a@ %a)@]" inv1 inv2 stmt s1 stmt s2
+  | Sloop (inv, s1, s2) ->
+      fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
   | Sbreak ->
       fprintf p "Sbreak"
   | Scontinue ->
@@ -530,7 +535,7 @@ let rec name_stmt = function
       name_opt_temporary optid; List.iter name_expr el
   | Ssequence(s1, s2) -> name_stmt s1; name_stmt s2
   | Sifthenelse(e, s1, s2) -> name_expr e; name_stmt s1; name_stmt s2
-  | Sloop(_, _, s1, s2) -> name_stmt s1; name_stmt s2
+  | Sloop(_, s1, s2) -> name_stmt s1; name_stmt s2
   | Sbreak -> ()
   | Scontinue -> ()
   | Sswitch(e, cases) -> name_expr e; name_lblstmts cases
