@@ -13,7 +13,7 @@ COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
 CPROGSDIR=cprogs
-CPROGS=append
+CPROGS=append sumarray2
 
 all: clightgen
 	@test -f .depend || $(MAKE) depend

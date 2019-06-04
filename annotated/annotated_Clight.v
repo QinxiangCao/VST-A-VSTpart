@@ -33,12 +33,18 @@ Require Import Cop.
 Require Import Clight.
 Require Export VST.floyd.proofauto.
 
+Definition assert := (environ -> mpred).
+
+Inductive loop_invariant :=
+  | LISingle : assert -> loop_invariant
+  | LIDouble : assert -> assert -> loop_invariant.
+
 (** ** Statements *)
 
 (** This is statement with annotation *)
 
 Inductive statement : Type :=
-  | Sassert : (environ -> mpred) -> statement
+  | Sassert : assert -> statement
   | Sgiven: forall A: Type, (A -> statement) -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
@@ -47,7 +53,7 @@ Inductive statement : Type :=
   | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
   | Ssequence : statement -> statement -> statement  (**r sequence *)
   | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
-  | Sloop: (environ -> mpred) -> (environ -> mpred) -> statement -> statement -> statement (**r infinite loop *)
+  | Sloop: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
   | Sreturn : option expr -> statement      (**r [return] statement *)
@@ -66,8 +72,8 @@ Notation "'GIVEN' x .. y , c " :=
   (Sgiven T1 (fun x1 => (Sgiven T2 (fun x2 => .. (Sgiven Tn (fun xn => c)) .. )))) (at level 65, x1 at level 99, x2 at level 99) : logic. *)
 (* Notation "'GIVEN'  x ':' T ',' c " := (Sgiven _ (fun x : T => c)) (at level 65, x at level 99) : logic. *)
 
-Definition Swhile (Inv: environ -> mpred) (e: expr) (s: statement):=
-  Sloop Inv Inv (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
+Definition Swhile (Inv: assert) (e: expr) (s: statement):=
+  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
 
 (** ** Functions *)
 

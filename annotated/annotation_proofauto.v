@@ -83,9 +83,9 @@ Qed.
 
 Lemma decorate_C_loop_body:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall d1 Inv1 Inv2 d2 d3 Delta P c Post,
+    forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sloop Inv1 Inv2 d1 d2) d3) in semax Delta P c Post).
+      (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
 Proof.
   intros.
   exact H.
@@ -93,9 +93,9 @@ Qed.
 
 Lemma decorate_C_loop_incr:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall d1 Inv1 Inv2 d2 d3 Delta P c Post,
+    forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sloop Inv1 Inv2 d1 d2) d3) in semax Delta P c Post).
+      (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
 Proof.
   intros.
   exact H.
@@ -103,9 +103,9 @@ Qed.
 
 Lemma decorate_C_loop_after:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall d1 Inv1 Inv2 d2 d3 Delta P c Post,
+    forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d3 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sloop Inv1 Inv2 d1 d2) d3) in semax Delta P c Post).
+      (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
 Proof.
   intros.
   exact H.
@@ -266,10 +266,18 @@ Tactic Notation "forwardD" :=
       [ ..
       | revert d; refine (decorate_C_while_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_while_after _ _ _ _ _ _ _ _ _)]
-  | |- let d := @abbreviate _ (Ssequence (Sloop ?Inv1 ?Inv2 _ _) _) in
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
        (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
        _ =>
-      intro d; forward_loop Inv1 continue:Inv2;
+      intro d; forward_loop Inv;
+      [ ..
+      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _ _)
+      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _ _)
+      | revert d; refine (decorate_C_loop_after _ _ _ _ _ _ _ _ _ _)]
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
+       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
+       _ =>
+      intro d; forward_loop Inv1 continue: Inv2;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _ _)
