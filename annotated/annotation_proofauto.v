@@ -32,7 +32,7 @@ Qed.
 Lemma decorate_C_assert2:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
-      (let d := @abbreviate _ s1 in semax Delta P c1 (overridePost Q Post)) ->
+      (let d := @abbreviate _ (Ssequence s1 Sskip) in semax Delta P c1 (overridePost Q Post)) ->
       (let d := @abbreviate _ s2 in semax Delta Q c2 Post) ->
       (let d := @abbreviate _ (Ssequence s1 (Ssequence (Sassert Q) s2)) in semax Delta P (Clight.Ssequence c1 c2) Post).
 Proof.
@@ -243,6 +243,7 @@ Proof.
   apply H.
 Qed.
 
+
 Tactic Notation "forwardD" :=
   lazymatch goal with
   | |- let d := @abbreviate _ Sskip in _ =>
@@ -271,17 +272,14 @@ Tactic Notation "forwardD" :=
        _ =>
       intro d; forward_loop Inv;
       [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_after _ _ _ _ _ _ _ _ _ _)]
+      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)]
   | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
        (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
        _ =>
       intro d; forward_loop Inv1 continue: Inv2;
       [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_after _ _ _ _ _ _ _ _ _ _)]
+      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
+      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)]
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
        semax _ _ _ _ =>
       refine (decorate_C_given _ _ _ _ _ _); intros x d; Intros; revert d
