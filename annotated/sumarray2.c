@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 unsigned sumarray(unsigned a[], int n) {
   /* Given (a : val) (sh : share) (contents : list Z) (size: Z), */
   int i; unsigned s;
