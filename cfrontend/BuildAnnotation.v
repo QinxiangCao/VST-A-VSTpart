@@ -1,5 +1,5 @@
 Require Import Ctypes Clight AClight Comment.
-Require Import Errors String.
+Require Import Errors String List.
 
 (* *********************************************************************)
 (*                                                                     *)
@@ -27,6 +27,8 @@ Open Scope error_monad_scope.
 Open Scope string_scope.
 Open Scope list_scope.
 
+Parameter get_binder_list : assert -> list Comment.string.
+
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
   | nil => OK acc
@@ -36,7 +38,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     | inl (Assert, c) =>
       match acc with
       | Sskip => fold_cs cs_list (Sassert c)
-      | _ => fold_cs cs_list (Ssequence (Sassert c) acc)
+      | _ => fold_cs cs_list (Ssequence (Sassert c) (fold_right Sgiven acc (get_binder_list c)))
       end
     | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
     | inr s =>
@@ -66,47 +68,76 @@ Fixpoint find_inv (cs_list: list (comment + statement)) : res (loop_invariant * 
 
 Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
   let fix annotate_stmt_list (cs_list: list (comment + statement)) (s: Clight.statement) : res (list (comment + statement)) :=
-  match s with
-  | Clight.Slcomment c s =>
-      annotate_stmt_list (inl c :: cs_list) s
-  | Clight.Srcomment s c =>
-      do cs_list1 <- annotate_stmt_list cs_list s;
-      OK (inl c :: cs_list1)
-  | Clight.Ssequence s1 s2 =>
-      do cs_list1 <- annotate_stmt_list cs_list s1;
-      do cs_list2 <- annotate_stmt_list cs_list1 s2;
-      OK cs_list2
-  | Clight.Sloop s1 s2 =>
-    do s1' <- annotate_stmt s1;
-    do s2' <- annotate_stmt s2;
-    do (inv, cs_list) <- find_inv cs_list;
-    OK (inr (Sloop inv s1' s2') :: cs_list)
-  | _ =>
-    do s' <-
-      match s with
-      | Clight.Sifthenelse a s1 s2 =>
-          do s1' <- annotate_stmt s1;
-          do s2' <- annotate_stmt s2;
-          OK (Sifthenelse a s1' s2')
-      | Clight.Sswitch a ls =>
-          do ls' <- annotate_lblstmt ls;
-          OK (Sswitch a ls')
-      | Clight.Slabel lbl s =>
-          do s' <- annotate_stmt s;
-          OK (Slabel lbl s')
-      | Clight.Sskip => OK Sskip
-      | Clight.Sassign a1 a2 => OK (Sassign a1 a2)
-      | Clight.Sset id a => OK (Sset id a)
-      | Clight.Scall optid a al => OK (Scall optid a al)
-      | Clight.Sbuiltin optid ef tyargs al => OK (Sbuiltin optid ef tyargs al)
-      | Clight.Sbreak => OK Sbreak
-      | Clight.Scontinue => OK Scontinue
-      | Clight.Sreturn opta => OK (Sreturn opta)
-      | Clight.Sgoto lbl => OK (Sgoto lbl)
-      | _ => Error (MSG "Internal error: invalid argument s in annotate_simple_stmt" :: nil)
-      end;
-    OK (inr s' :: cs_list)
-  end
+    let annotate_loop (inv: loop_invariant) (s1 s2: Clight.statement) : res statement :=
+      match inv with
+      | LISingle inv =>
+        do cs_list1 <- annotate_stmt_list nil s1;
+        do cs_list2 <- annotate_stmt_list cs_list1 s2;
+        do s' <- fold_cs cs_list2 Sskip;
+        let s' :=
+          match s' with
+          | Ssequence (Sifthenelse e Sskip Sbreak) s1'
+            => Ssequence (Sifthenelse e s1' Sbreak) Sskip
+          | _ => s'
+          end
+        in
+        let s'' := fold_right Sgiven s' (get_binder_list inv) in
+        OK (Sloop (LISingle inv) s'' Sskip)
+      | LIDouble inv1 inv2 =>
+        do s1' <- annotate_stmt s1;
+        do s2' <- annotate_stmt s2;
+        let s1' :=
+          match s1' with
+          | Ssequence (Sifthenelse e Sskip Sbreak) s1'
+            => Ssequence (Sifthenelse e s1' Sbreak) Sskip
+          | _ => s1'
+          end
+        in
+        let s1'' := fold_right Sgiven s1' (get_binder_list inv1) in
+        let s2'' := fold_right Sgiven s2' (get_binder_list inv2) in
+        OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
+      end
+    in
+    match s with
+    | Clight.Slcomment c s =>
+        annotate_stmt_list (inl c :: cs_list) s
+    | Clight.Srcomment s c =>
+        do cs_list1 <- annotate_stmt_list cs_list s;
+        OK (inl c :: cs_list1)
+    | Clight.Ssequence s1 s2 =>
+        do cs_list1 <- annotate_stmt_list cs_list s1;
+        do cs_list2 <- annotate_stmt_list cs_list1 s2;
+        OK cs_list2
+    | Clight.Sloop s1 s2 =>
+      do (inv, cs_list) <- find_inv cs_list;
+      do s <- annotate_loop inv s1 s2;
+      OK (inr s :: cs_list)
+    | _ =>
+      do s' <-
+        match s with
+        | Clight.Sifthenelse a s1 s2 =>
+            do s1' <- annotate_stmt s1;
+            do s2' <- annotate_stmt s2;
+            OK (Sifthenelse a s1' s2')
+        | Clight.Sswitch a ls =>
+            do ls' <- annotate_lblstmt ls;
+            OK (Sswitch a ls')
+        | Clight.Slabel lbl s =>
+            do s' <- annotate_stmt s;
+            OK (Slabel lbl s')
+        | Clight.Sskip => OK Sskip
+        | Clight.Sassign a1 a2 => OK (Sassign a1 a2)
+        | Clight.Sset id a => OK (Sset id a)
+        | Clight.Scall optid a al => OK (Scall optid a al)
+        | Clight.Sbuiltin optid ef tyargs al => OK (Sbuiltin optid ef tyargs al)
+        | Clight.Sbreak => OK Sbreak
+        | Clight.Scontinue => OK Scontinue
+        | Clight.Sreturn opta => OK (Sreturn opta)
+        | Clight.Sgoto lbl => OK (Sgoto lbl)
+        | _ => Error (MSG "Internal error: invalid argument s in annotate_simple_stmt" :: nil)
+        end;
+      OK (inr s' :: cs_list)
+    end
   in
   do cs_list <- annotate_stmt_list nil s;
   do s' <- fold_cs cs_list Sskip;
