@@ -21,78 +21,30 @@ forwardD.
 forwardD.
 { EExists. entailer!. }
 forwardD.
-lazymatch goal with
-| |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
-      intro d; forward_loop Inv end.
-forwardD.
-lazymatch goal with
-| |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
-      intro d; forward_loop Inv;
-      [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_after _ _ _ _ _ _ _ _ _ _)]
-end.
-forward_loop (EX i: Z,
-    PROP  (0 <= i <= size)
-    LOCAL (temp _a a;
-          temp _i (Vint (Int.repr i));
-          temp _n (Vint (Int.repr size));
-          temp _s (Vint (Int.repr (sum_Z (sublist 0 i contents)))))
-    SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a)).
 forwardD.
 intro d.
-forward.
+assert_PROP (Zlength contents = size). {
+  entailer!. list_solve2.
+}
 revert d.
 forwardD.
-forward_loop (EX i: Z,
-    PROP  (0 <= i <= size)
-    LOCAL (temp _a a;
-          temp _i (Vint (Int.repr i));
-          temp _n (Vint (Int.repr size));
-          temp _s (Vint (Int.repr (sum_Z (sublist 0 i contents)))))
-    SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a)).
 forwardD.
-forward_for_simple_bound size
-  (EX i: Z,
-   PROP  ((*0 <= i <= size*))
-   LOCAL (temp _a a;
-          (*temp _i (Vint (Int.repr i)); *)
-          temp _n (Vint (Int.repr size));
-          temp _s (Vint (Int.repr (sum_Z (sublist 0 i contents)))))
-   SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a)).
-
-* (* Prove that current precondition implies loop invariant *)
-entailer!.
-* (* Prove postcondition of loop body implies loop invariant *)
-(* "forward" fails and tells us to first make (0 <= i < Zlength contents)
-   provable by auto, so we assert the following: *)
-assert_PROP (Zlength contents = size). {
-  entailer!. do 2 rewrite Zlength_map. reflexivity.
+forwardD.
+{ Exists (i+1). entailer!.
+  f_equal. f_equal.
+  rewrite (sublist_split 0 i (i+1)) by omega.
+  rewrite sum_Z_app. rewrite (sublist_one i) by omega.
+  auto.
+  simpl. autorewrite with sublist. normalize.
 }
-forward. (* x = a[i] *)
-forward. (* s += x; *)
- (* Now we have reached the end of the loop body, and it's
-   time to prove that the _current precondition_  (which is the
-   postcondition of the loop body) entails the loop invariant. *)
-entailer!.
- f_equal. f_equal.
- rewrite (sublist_split 0 i (i+1)) by omega.
- rewrite sum_Z_app. rewrite (sublist_one i) by omega.
- simpl. autorewrite with sublist. normalize.
-* (* After the loop *)
-forward.  (* return s; *)
- (* Here we prove that the postcondition of the function body
-    entails the postcondition demanded by the function specification. *)
-entailer!.
-autorewrite with sublist in *.
-reflexivity.
+forwardD.
+{ entailer!. assert (i = Zlength contents) by list_solve2. subst i.
+  autorewrite with sublist in *. reflexivity.
+}
+forwardD.
 Qed.
 
+(*
 (* Contents of the extern global initialized array "_four" *)
 Definition four_contents := [1; 2; 3; 4].
 
@@ -145,3 +97,4 @@ prove_semax_prog.
 semax_func_cons body_sumarray.
 semax_func_cons body_main.
 Qed.
+*)

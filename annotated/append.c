@@ -1,4 +1,4 @@
-#define NULL 0
+#include <stddef.h>
 
 struct list {int head; struct list *tail;};
 
@@ -14,13 +14,11 @@ struct list *append (struct list *x, struct list *y) {
          LOCAL (temp _t x; temp _x x; temp _y y)
          SEP (listrep sh s1 x; listrep sh s2 y)))
     */
-    /* Given (a: val) (s1b: list val), */
     /* Assert (EX u: val,
         (PROP ()
          LOCAL (temp _t x; temp _x x; temp _y y)
          SEP (data_at sh t_struct_list (a ,u) x; listrep sh s1b u; listrep sh s2 y)))%assert
     */
-    /* Given u: val, */
     u = t->tail;
     /* Inv
     (EX a: val, EX s1b: list val, EX t: val, EX u: val,
@@ -32,7 +30,6 @@ struct list *append (struct list *x, struct list *y) {
                  listrep sh s2 y))%assert
     */
     while (u!=NULL) {
-      /* Given (a: val) (s1b: list val) (t: val) (u: val), */
       /* Assert (EX b: val, EX s1c: list val, EX z: val,
             (PROP (s1b = b :: s1c)
              LOCAL (temp _x x; temp _t t; temp _u u; temp _y y)
@@ -41,9 +38,18 @@ struct list *append (struct list *x, struct list *y) {
                   data_at sh t_struct_list (b, z) u;
                   listrep sh s1c z; listrep sh s2 y)))%assert
       */
-      /* Given (b: val) (s1c: list val) (z: val), */
       t = u;
       u = t->tail;
+    }
+    {
+    /* Assert (EX a: val, EX t: val, EX u: val,
+          PROP ()
+          LOCAL (temp _x x; temp _t t;  temp _y y)
+          SEP (listrep sh (a::s2) t -* listrep sh (s1++s2) x;
+                 data_at sh t_struct_list (a, nullval) t;
+                 listrep sh [] u;
+                 listrep sh s2 y))%assert
+    */
     }
     t->tail = y;
     return x;

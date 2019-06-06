@@ -27,6 +27,7 @@ Require Import append_annotation.
 Lemma body_append: semax_body Vprog Gprog f_append append_spec.
 Proof.
 start_function.
+unfold Clight.Swhile.
 match goal with
 | |- ?P => let d1 := eval hnf in f_append_hint in
            change (let d := @abbreviate _ d1 in P)
@@ -60,20 +61,18 @@ forwardD.
   forwardD.
   forwardD.
   forwardD.
+  forwardD.
   {
     Exists a s1b x u.
     subst s1. entailer!. simpl. cancel_wand.
   }
   {
-    entailer!.
-  }
-  {
-    clear a s1b H0 u.
-    rename a0 into a, s1b0 into s1b, u0 into u.
-    forwardD a.
-    forwardD s1b.
-    forwardD t.
-    forwardD u.
+    clear a s1b H0 u. (* Without clearing deadvars here, we will have "a is already used later" *)
+    forwardD.
+    forwardD.
+    forwardD.
+    forwardD.
+    forwardD.
     forwardD.
     {
       destruct s1b as [| b s1c]; unfold listrep at 3; fold listrep; [ Intros; contradiction |].
@@ -87,7 +86,7 @@ forwardD.
     forwardD.
     forwardD.
     {
-      Exists (b,s1c,u,z). unfold fst, snd.
+      Exists b s1c u z.
       simpl app.
       entailer!.
       rewrite sepcon_comm.
@@ -97,21 +96,26 @@ forwardD.
       forget (b::s1c++s2) as s3.
       unfold listrep; fold listrep; Exists u; auto.
     }
+    forwardD.
+    {
+      Exists a t u. entailer!. rewrite (proj1 H3 (eq_refl _)). simpl. cancel.
+    }
   }
-  clear a s1b H0 u.
-  rename a0 into a, s1b0 into s1b, u0 into u.
-  forwardD.
-  forwardD.
   {
-    rewrite (proj1 H2 (eq_refl _)).
-    Exists x.
-    simpl app.
-    clear.
-    entailer!.
-    unfold listrep at 3; fold listrep. normalize.
-    pull_right (listrep sh (a :: s2) t -* listrep sh (s1 ++ s2) x).
-    apply modus_ponens_wand'.
-    unfold listrep at 2; fold listrep. Exists y; auto.
+    clear a s1b H0 u.
+    forwardD.
+    forwardD.
+    forwardD.
+    forwardD.
+    forwardD.
+    {
+      Exists x.
+      entailer!.
+      unfold listrep at 3; fold listrep. normalize.
+      pull_right (listrep sh (a :: s2) t -* listrep sh (s1 ++ s2) x).
+      apply modus_ponens_wand'.
+      unfold listrep at 2; fold listrep. Exists y; auto.
+    }
   }
 Qed.
 

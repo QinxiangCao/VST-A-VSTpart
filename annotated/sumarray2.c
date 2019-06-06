@@ -13,7 +13,6 @@ unsigned sumarray(unsigned a[], int n) {
     SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a))
   */
   for (i=0; i<n; i++) {
-    /* Given i : Z, */
     s += a[i];
   }
   {
