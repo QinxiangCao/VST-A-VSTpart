@@ -4,7 +4,7 @@ unsigned sumarray(unsigned a[], int n) {
   /* Given (a : val) (sh : share) (contents : list Z) (size: Z), */
   int i; unsigned s;
   s=0;
-  /* Inv (EX i: Z,
+  /* Inv (EX i,
     PROP  (0 <= i <= size)
     LOCAL (temp _a a;
           temp _i (Vint (Int.repr i));
