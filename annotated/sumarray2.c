@@ -16,7 +16,7 @@ unsigned sumarray(unsigned a[], int n) {
     s += a[i];
   }
   {
-  /* Assert (
+  /* * Assert (
     PROP  ()
     LOCAL (temp _s (Vint (Int.repr (sum_Z contents))))
     SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a))
