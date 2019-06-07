@@ -8,6 +8,13 @@ Proof.
   intros. assumption.
 Qed.
 
+Lemma decorate_C_dummyassert: forall Q s P,
+  (let d := @abbreviate _ s in P) ->
+  let d := @abbreviate _ (Ssequence (Sdummyassert Q) s) in P.
+Proof.
+  intros. assumption.
+Qed.
+
 Lemma decorate_C_step: forall P s1 s2,
   (let d := @abbreviate _ s2 in P) ->
   (let d := @abbreviate _ (Ssequence s1 s2) in P).
@@ -248,6 +255,8 @@ Tactic Notation "forwardD" :=
   lazymatch goal with
   | |- let d := @abbreviate _ Sskip in _ =>
       refine (decorate_C_skip _ _)
+  | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
+      refine (decorate_C_dummyassert _ _ _ _)
   | |- let d := @abbreviate _ (Ssequence _ (Ssequence (Sassert ?P) _)) in _ => 
       refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _);
       [ intro d; abbreviate_semax; revert d
@@ -283,6 +292,10 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
        semax _ _ _ _ =>
       refine (decorate_C_given _ _ _ _ _ _); intros x d; Intros; revert d
+      ;try match goal with
+      | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
+      refine (decorate_C_dummyassert _ _ _ _)
+      end
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
       refine (decorate_C_assert P _ _ _ _ _ _ _)
