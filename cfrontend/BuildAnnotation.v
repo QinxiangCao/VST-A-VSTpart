@@ -27,7 +27,16 @@ Open Scope error_monad_scope.
 Open Scope string_scope.
 Open Scope list_scope.
 
-Parameter get_binder_list : assert -> list Comment.string.
+Parameter get_binder_list : assert -> list Comment.string * Comment.string.
+
+Definition add_binder_list (s: statement) (c: assert) : statement :=
+  let (binder_list, dummy_assert) := get_binder_list c in
+  match binder_list with
+  | nil => s
+  | _ =>
+    let s := Ssequence (Sdummyassert dummy_assert) s in
+    fold_right Sgiven s binder_list
+  end.
 
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
@@ -38,7 +47,8 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     | inl (Assert, c) =>
       match acc with
       | Sskip => fold_cs cs_list (Sassert c)
-      | _ => fold_cs cs_list (Ssequence (Sassert c) (fold_right Sgiven acc (get_binder_list c)))
+      | _ =>
+        fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
       end
     | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
     | inr s =>
@@ -81,7 +91,7 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
           | _ => s'
           end
         in
-        let s'' := fold_right Sgiven s' (get_binder_list inv) in
+        let s'' := add_binder_list s' inv in
         OK (Sloop (LISingle inv) s'' Sskip)
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
@@ -93,8 +103,8 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
           | _ => s1'
           end
         in
-        let s1'' := fold_right Sgiven s1' (get_binder_list inv1) in
-        let s2'' := fold_right Sgiven s2' (get_binder_list inv2) in
+        let s1'' := add_binder_list s1' inv1 in
+        let s2'' := add_binder_list s2' inv2 in
         OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
       end
     in

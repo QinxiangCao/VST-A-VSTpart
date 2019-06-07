@@ -1,6 +1,6 @@
 open String
 
-let get_binder_list (s : string) : string list =
+let get_binder_list (s : string) : string list * string =
   (* print_endline s; *)
   let l = length s in
   let i = ref 0 in
@@ -16,11 +16,13 @@ let get_binder_list (s : string) : string list =
       i := !i+1; c
     else failwith "Unexpected end of assertion"
   in
-  let rec loop acc =
+  let rec loop acc cnt =
     let c = next_char () in
     (* print_char c; *)
-    if is_whitespace c || c = '(' then
-      loop acc
+    if is_whitespace c then
+      loop acc cnt
+    else if c = '(' then
+      loop acc (cnt+1)
     else if c = 'E' then
       if has_next_char() && next_char () = 'X' then
         let start = !i in
@@ -36,10 +38,10 @@ let get_binder_list (s : string) : string list =
         (* print_endline res;
         print_int !i;
         print_newline (); *)
-        loop (trim (res) :: acc)
+        loop (trim (res) :: acc) cnt
       else
-        acc
+        (List.rev acc, make cnt '(' ^ sub s (!i-2) (l-(!i-2)))
     else
-      acc
+      (List.rev acc, make cnt '(' ^ sub s (!i-1) (l-(!i-1)))
   in
-  List.rev (loop [])
+  loop [] 0

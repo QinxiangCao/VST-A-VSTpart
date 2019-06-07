@@ -344,6 +344,8 @@ let loop_invariant p = function
 let rec stmt p = function
   | Sassert c ->
     fprintf p "@[<hov 2>(Sassert %s)@]" c
+  | Sdummyassert c ->
+    fprintf p "@[<hov 2>(Sdummyassert %s)@]" c
   | Sgiven (c, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" c stmt s
   | Sskip ->
@@ -525,6 +527,7 @@ let rec name_expr = function
 
 let rec name_stmt = function
   | Sassert _ -> ()
+  | Sdummyassert _ -> ()
   | Sgiven (_, s) -> name_stmt s
   | Sskip -> ()
   | Sassign(e1, e2) -> name_expr e1; name_expr e2
