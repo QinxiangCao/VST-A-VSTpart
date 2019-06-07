@@ -38,6 +38,28 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
     fold_right Sgiven s binder_list
   end.
 
+Fixpoint loop_concat_break (s safter: statement) : statement :=
+  let f :=
+    fix f s :=
+      match s with
+      | Sbreak => safter
+      | Sgiven binder s => Sgiven binder (f s)
+      | Ssequence s1 s2 => Ssequence (f s1) (f s2)
+      | Sifthenelse e s1 s2 => Sifthenelse e (f s1) (f s2)
+      | Sloop inv s1 s2 => Sloop inv (f s1) (f s2)
+      | Slabel lbl s => Slabel lbl (f s)
+      | Sswitch e ls => Sswitch e (f' ls)
+      | _ => s
+      end
+    with f' s :=
+      match s with
+      | LSnil => LSnil
+      | LScons lbl s ls => LScons lbl (f s) (f' ls)
+      end
+    for f
+  in
+  f s.
+
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
   | nil => OK acc
@@ -58,6 +80,10 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | Scontinue, Sskip
       | Sreturn _, Sskip
           => fold_cs cs_list s
+      | Sloop inv s1 s2, Ssequence (Sassert _) _
+          => fold_cs cs_list (Ssequence s acc)
+      | Sloop inv s1 s2, safter
+          => fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
