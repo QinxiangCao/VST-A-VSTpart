@@ -67,7 +67,6 @@ forwardD.
     subst s1. entailer!. simpl. cancel_wand.
   }
   {
-    clear a s1b H0 u. (* Without clearing deadvars here, we will have "a is already used later" *)
     forwardD.
     forwardD.
     forwardD.
@@ -98,11 +97,10 @@ forwardD.
     }
     forwardD.
     {
-      Exists a t u. entailer!. rewrite (proj1 H3 (eq_refl _)). simpl. cancel.
+      Exists a t u. entailer!. rewrite (proj1 H4 (eq_refl _)). simpl. cancel.
     }
   }
   {
-    clear a s1b H0 u.
     forwardD.
     forwardD.
     forwardD.
@@ -112,7 +110,7 @@ forwardD.
       Exists x.
       entailer!.
       unfold listrep at 3; fold listrep. normalize.
-      pull_right (listrep sh (a :: s2) t -* listrep sh (s1 ++ s2) x).
+      pull_right (listrep sh (a :: s2) t -* listrep sh ((a0 :: s1b) ++ s2) x).
       apply modus_ponens_wand'.
       unfold listrep at 2; fold listrep. Exists y; auto.
     }

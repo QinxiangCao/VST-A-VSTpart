@@ -291,7 +291,11 @@ Tactic Notation "forwardD" :=
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)]
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
        semax _ _ _ _ =>
-      refine (decorate_C_given _ _ _ _ _ _); intros x d; Intros; revert d
+      refine (decorate_C_given _ _ _ _ _ _);
+      first
+      [ intro x
+      | let old_x := fresh x in rename x into old_x; intro x];
+      intro d; Intros; revert d
       ;try match goal with
       | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
       refine (decorate_C_dummyassert _ _ _ _)
