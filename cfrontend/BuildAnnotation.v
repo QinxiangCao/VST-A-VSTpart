@@ -1,5 +1,5 @@
 Require Import Ctypes Clight AClight Comment.
-Require Import Errors String List.
+Require Import Coqlib Errors String List.
 
 (* *********************************************************************)
 (*                                                                     *)
@@ -60,6 +60,23 @@ Fixpoint loop_concat_break (s safter: statement) : statement :=
   in
   f s.
 
+Fixpoint count_break (s: statement) : res Z :=
+  match s with
+  | Sgiven _ s => count_break s
+  | Sifthenelse _ s1 s2 =>
+      do cnt1 <- count_break s1;
+      do cnt2 <- count_break s2;
+      OK (cnt1 + cnt2)
+  | Slabel _ s => count_break s
+  | _ => OK 0
+  end.
+
+Definition check_single_break (s: statement) : res unit :=
+  do cnt <- count_break s;
+  if cnt <=? 1
+    then OK tt
+    else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
+
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
   | nil => OK acc
@@ -80,10 +97,12 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | Scontinue, Sskip
       | Sreturn _, Sskip
           => fold_cs cs_list s
-      | Sloop inv s1 s2, Ssequence (Sassert _) _
+      | Sloop inv s1 s2, Ssequence (Sassert _) _ (* If loop is followed by an assertion, use it as post condition. *)
+      | Sloop inv s1 s2, Sskip (* or followed by skip *)
           => fold_cs cs_list (Ssequence s acc)
-      | Sloop inv s1 s2, safter
-          => fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
+      | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
+          do _ <- check_single_break (Ssequence s1 s2);
+          fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
