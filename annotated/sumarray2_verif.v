@@ -18,7 +18,6 @@ forwardD size.
 forwardD.
 forwardD.
 forwardD.
-forwardD.
 { EExists. entailer!. }
 forwardD.
 forwardD.
@@ -38,10 +37,20 @@ forwardD.
   simpl. autorewrite with sublist. normalize.
 }
 forwardD.
+forwardD.
+unfold Post.
+Exists i.
+Exists H6.
+Exists H5.
+apply delta_derives_refl.
+subst Post.
+intro d.
+Intros i. Intros H4. Intros H5.
+revert d.
+forwardD.
 { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
   autorewrite with sublist in *. reflexivity.
 }
-forwardD.
 Qed.
 
 (*
