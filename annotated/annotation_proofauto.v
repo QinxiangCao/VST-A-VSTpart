@@ -300,13 +300,17 @@ Tactic Notation "forwardD" :=
       intro d; clear d;
       try (is_evar Post;
         repeat first
-        [ apply delta_derives_refl; fail 2
+        [ apply delta_derives_refl
         | match reverse goal with
           | H : Intro_tag ?x |- _ =>
             clear H;
             Exists x;
+            instantiate (1 := (fun xx => _)); cbv beta;
             repeat match goal with
-            | H : context [x] |- _ => Exists H; clear H
+            | H : context [x] |- _ =>
+                Exists H;
+                instantiate (1 := (fun HH => _)); cbv beta;
+                clear H
             end
           end
         ]

@@ -37,10 +37,6 @@ forwardD.
   }
   forwardD.
   forwardD.
-  Exists i.
-  Exists H6.
-  Exists H5.
-  apply delta_derives_refl.
 * forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.

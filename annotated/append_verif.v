@@ -100,31 +100,6 @@ forwardD.
     }
     (* else branch *)
     forwardD.
-    intro d.
-    Exists a.
-    Exists u.
-    Exists H3. eapply derives_trans. 2 : apply derives_refl. cbv delta [H3]; clear H3.
-    repeat match goal with
-            | H : context [u] |- _ => idtac H; Exists H; idtac H; clear H; idtac H
-            end.
-    lazymatch goal with
-  (* entailment *)
-  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
-      intro d; clear d;
-      try (is_evar Post;
-        repeat first
-        [ apply delta_derives_refl; fail 2
-        | match reverse goal with
-          | H : Intro_tag ?x |- _ =>
-            clear H;
-            Exists x;
-            repeat match goal with
-            | H : context [x] |- _ => idtac H; Exists H; idtac H
-            end
-          end
-        ]
-      )
-      end.
     forwardD.
   (* lazymatch goal with
   (* entailment *)
@@ -188,7 +163,7 @@ forwardD.
     {
       Exists x.
       entailer!.
-      rewrite (proj1 H16 (eq_refl _)). simpl.
+      rewrite (proj1 H8 (eq_refl _)). simpl.
       unfold listrep at 3; fold listrep. normalize.
       pull_right (listrep sh (a :: s2) t -* listrep sh ((a0 :: s1b0) ++ s2) x).
       apply modus_ponens_wand'.
