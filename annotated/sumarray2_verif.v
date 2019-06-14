@@ -19,34 +19,34 @@ forwardD.
 forwardD.
 forwardD.
 { EExists. entailer!. }
-forwardD.
-forwardD.
-intro d.
-assert_PROP (Zlength contents = size). {
-  entailer!. list_solve2.
-}
-revert d.
-forwardD.
-forwardD.
-forwardD.
-{ Exists (i+1). entailer!.
-  f_equal. f_equal.
-  rewrite (sublist_split 0 i (i+1)) by omega.
-  rewrite sum_Z_app. rewrite (sublist_one i) by omega.
-  auto.
-  simpl. autorewrite with sublist. normalize.
-}
-forwardD.
-forwardD.
-Exists i.
-Exists H6.
-Exists H5.
-apply delta_derives_refl.
-forwardD.
-forwardD.
-{ entailer!. assert (i = Zlength contents) by list_solve2. subst i.
-  autorewrite with sublist in *. reflexivity.
-}
+* forwardD.
+  forwardD.
+  intro d.
+  assert_PROP (Zlength contents = size). {
+    entailer!. list_solve2.
+  }
+  revert d.
+  forwardD.
+  forwardD.
+  forwardD.
+  { Exists (i+1). entailer!.
+    f_equal. f_equal.
+    rewrite (sublist_split 0 i (i+1)) by omega.
+    rewrite sum_Z_app. rewrite (sublist_one i) by omega.
+    auto.
+    simpl. autorewrite with sublist. normalize.
+  }
+  forwardD.
+  forwardD.
+  Exists i.
+  Exists H6.
+  Exists H5.
+  apply delta_derives_refl.
+* forwardD.
+  forwardD.
+  { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
+    autorewrite with sublist in *. reflexivity.
+  }
 Qed.
 
 (*
