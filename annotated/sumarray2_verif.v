@@ -6,7 +6,6 @@ Require Import sumarray2_annotation.
 Lemma body_sumarray: semax_body Vprog Gprog f_sumarray sumarray_spec.
 Proof.
 start_function.
-unfold Sfor in *.
 match goal with
 | |- ?P => let d1 := eval hnf in f_sumarray_hint in
            change (let d := @abbreviate _ d1 in P)

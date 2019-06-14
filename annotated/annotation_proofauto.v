@@ -284,11 +284,28 @@ Proof.
   intros. apply andp_left2. apply derives_refl.
 Qed.
 
+Ltac start_function :=
+  floyd.forward.start_function;
+  unfold Clight.Swhile, Sfor in *.
+
 Tactic Notation "forwardD" :=
   lazymatch goal with
   (* entailment *)
-  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- _ =>
-      intro d; clear d
+  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
+      intro d; clear d;
+      try (is_evar Post;
+        repeat first
+        [ apply delta_derives_refl; fail 2
+        | match goal with
+          | H : Intros_tag ?x |- _ =>
+            Exists x;
+            repeat match goal with
+            | H : context [x] |- _ => Exists H; clear H
+            end;
+            clear H x
+          end
+        ]
+      )
   (* skip *)
   | |- let d := @abbreviate _ Sskip in _ =>
       refine (decorate_C_skip _ _)
