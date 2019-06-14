@@ -43,10 +43,8 @@ Exists i.
 Exists H6.
 Exists H5.
 apply delta_derives_refl.
-subst Post.
-intro d.
-Intros i. Intros H4. Intros H5.
-revert d.
+subst Post d1.
+forwardD.
 forwardD.
 { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
   autorewrite with sublist in *. reflexivity.

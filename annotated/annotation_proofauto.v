@@ -361,7 +361,15 @@ Tactic Notation "forwardD" :=
       first
       [ intro x
       | let old_x := fresh x in rename x into old_x; intro x];
-      intros ? d; Intros; revert d
+      intros ? d;
+      repeat match goal with
+      | |- semax _ (EX (_ : ?P), _) _ _ =>
+        match type of P with
+        | Prop => let H := fresh "H" in Intro H
+        end
+      end;
+      Intros;
+      revert d
       ;try match goal with
       | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
       refine (decorate_C_dummyassert _ _ _ _)

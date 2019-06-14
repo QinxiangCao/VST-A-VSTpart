@@ -108,12 +108,11 @@ forwardD.
     }
   }
   {
-    cbv delta [Post d1].
+    subst Post d1.
     forwardD.
     forwardD.
     forwardD.
     forwardD.
-    intro d; Intro H13; revert d.
     forwardD.
     forwardD.
     {
