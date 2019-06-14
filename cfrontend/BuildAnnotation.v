@@ -42,7 +42,7 @@ Fixpoint loop_concat_break (s safter: statement) : statement :=
   let f :=
     fix f s :=
       match s with
-      | Sbreak => safter
+      | Sbreak => Ssequence Sbreak safter
       | Sgiven binder s => Sgiven binder (f s)
       | Ssequence s1 s2 => Ssequence (f s1) (f s2)
       | Sifthenelse e s1 s2 => Sifthenelse e (f s1) (f s2)
