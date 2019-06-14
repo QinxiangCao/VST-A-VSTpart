@@ -254,12 +254,12 @@ Proof.
   + exact H0.
 Qed. *)
 
-Definition Intros_tag {A} (x : A) := True.
+Definition Intro_tag {A} (x : A) := True.
 
 Lemma decorate_C_given:
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} d1 Delta P c Post,
-      (forall a, Intros_tag a -> let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (forall a, Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
       (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
 Proof.
   intros.
@@ -270,7 +270,7 @@ Qed.
 Lemma decorate_C_given':
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} a d1 Delta P c Post,
-      (Intros_tag a -> let d := @abbreviate _ (d1 a) in semax Delta P c Post) ->
+      (Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta P c Post) ->
       (let d := @abbreviate _ (Sgiven A d1) in semax Delta P c Post).
 Proof.
   intros.
@@ -288,6 +288,11 @@ Ltac start_function :=
   floyd.forward.start_function;
   unfold Clight.Swhile, Sfor in *.
 
+Ltac clear_all_Intro_tag :=
+  repeat match goal with
+  | H : Intro_tag _ |- _ => clear H
+  end.
+
 Tactic Notation "forwardD" :=
   lazymatch goal with
   (* entailment *)
@@ -296,13 +301,13 @@ Tactic Notation "forwardD" :=
       try (is_evar Post;
         repeat first
         [ apply delta_derives_refl; fail 2
-        | match goal with
-          | H : Intros_tag ?x |- _ =>
+        | match reverse goal with
+          | H : Intro_tag ?x |- _ =>
+            clear H;
             Exists x;
             repeat match goal with
             | H : context [x] |- _ => Exists H; clear H
-            end;
-            clear H x
+            end
           end
         ]
       )
@@ -354,6 +359,8 @@ Tactic Notation "forwardD" :=
       let Post_name := fresh "Post" in
       evar (Post_name : assert);
       let Post := eval unfold Post_name in Post_name in
+      clear Post_name;
+      clear_all_Intro_tag;
       intro d;
       forward_loop Inv break: Post;
       [ ..
@@ -370,6 +377,8 @@ Tactic Notation "forwardD" :=
       let Post_name := fresh "Post" in
       evar (Post_name : assert);
       let Post := eval unfold Post_name in Post_name in
+      clear Post_name;
+      clear_all_Intro_tag;
       intro d; forward_loop Inv1 continue: Inv2 break: Post;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
