@@ -103,12 +103,11 @@ forwardD.
     forwardD.
     forwardD.
     {
-      unfold Post. Exists a s1b t u H13. apply delta_derives_refl.
+      Exists a s1b t u H13. apply delta_derives_refl.
       (*  entailer!. rewrite (proj1 H4 (eq_refl _)). simpl. cancel. *)
     }
   }
   {
-    subst Post d1.
     forwardD.
     forwardD.
     forwardD.

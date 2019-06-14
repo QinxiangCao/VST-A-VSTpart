@@ -38,12 +38,10 @@ forwardD.
 }
 forwardD.
 forwardD.
-unfold Post.
 Exists i.
 Exists H6.
 Exists H5.
 apply delta_derives_refl.
-subst Post d1.
 forwardD.
 forwardD.
 { entailer!. assert (i = Zlength contents) by list_solve2. subst i.

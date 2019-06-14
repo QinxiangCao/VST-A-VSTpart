@@ -334,26 +334,34 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
        (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
        _ =>
-      let Post := fresh "Post" in
-      evar (Post : assert);
+      let Post_name := fresh "Post" in
+      evar (Post_name : assert);
+      let Post := eval unfold Post_name in Post_name in
       intro d;
-      set (d1 := ltac: (fill_decorate_C_loop_after2));
       forward_loop Inv break: Post;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_after d1 _ _ _ _ _ _)]
+      | let d1 := fresh "d1" in
+        set (d1 := ltac: (fill_decorate_C_loop_after2));
+        revert d;
+        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
+      ]
   (* loop double inv without postcondition*)
   | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
        (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
        _ =>
-      let Post := fresh "Post" in
-      evar (Post : assert);
-      set (d1 := ltac: (fill_decorate_C_loop_after2));
+      let Post_name := fresh "Post" in
+      evar (Post_name : assert);
+      let Post := eval unfold Post_name in Post_name in
       intro d; forward_loop Inv1 continue: Inv2 break: Post;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_after d1 _ _ _ _ _ _)]
+      | let d1 := fresh "d1" in
+        set (d1 := ltac: (fill_decorate_C_loop_after2));
+        revert d;
+        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
+      ]
   (* given *)
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
        semax _ _ _ _ =>
