@@ -324,9 +324,26 @@ Qed.
 
 Definition Post_infer_tag := I.
 
+Ltac use_annotation hint :=
+  match goal with
+  | |- ?P => let d1 := eval hnf in hint in
+             change (let d := @abbreviate _ d1 in P)
+  end;
+  cbv delta [Swhile].
+
 Ltac start_function :=
   floyd.forward.start_function;
   unfold Clight.Swhile, Sfor in *.
+
+Ltac old_assert_PROP P :=
+  assert_PROP P.
+
+Ltac assert_prop P :=
+  lazymatch goal with
+  | |- let d := @abbreviate statement _ in _ =>
+    intro d; old_assert_PROP P; only 2: revert d
+  | _ => old_assert_PROP P
+  end.
 
 Local Ltac clear_all_Intro_tag :=
   repeat match goal with

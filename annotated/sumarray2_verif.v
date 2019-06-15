@@ -6,10 +6,7 @@ Require Import sumarray2_annotation.
 Lemma body_sumarray: semax_body Vprog Gprog f_sumarray sumarray_spec.
 Proof.
 start_function.
-match goal with
-| |- ?P => let d1 := eval hnf in f_sumarray_hint in
-           change (let d := @abbreviate _ d1 in P)
-end.
+use_annotation f_sumarray_hint.
 forwardD a.
 forwardD sh.
 forwardD contents.
@@ -20,11 +17,9 @@ forwardD.
 { EExists. entailer!. }
 * forwardD.
   forwardD.
-  intro d.
-  assert_PROP (Zlength contents = size). {
+  assert_prop (Zlength contents = size). {
     entailer!. list_solve2.
   }
-  revert d.
   forwardD.
   forwardD.
   forwardD.

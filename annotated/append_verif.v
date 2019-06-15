@@ -27,11 +27,7 @@ Require Import append_annotation.
 Lemma body_append: semax_body Vprog Gprog f_append append_spec.
 Proof.
 start_function.
-match goal with
-| |- ?P => let d1 := eval hnf in f_append_hint in
-           change (let d := @abbreviate _ d1 in P)
-end.
-cbv delta [Swhile].
+use_annotation f_append_hint.
 forwardD sh.
 forwardD s1.
 forwardD s2.
