@@ -37,7 +37,9 @@ forwardD.
   }
   forwardD.
   forwardD.
-* forwardD.
+  apply fold_right_and_rev_nil.
+* simpl rev.
+  forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
     autorewrite with sublist in *. reflexivity.

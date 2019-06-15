@@ -284,11 +284,51 @@ Proof.
   intros. apply andp_left2. apply derives_refl.
 Qed.
 
+Lemma delta_derives_refl_and_Props:
+  forall Delta P Q R,
+    fold_right and True P ->
+    ENTAIL Delta, PROPx nil (LOCALx Q (SEPx R)) |-- PROPx P (LOCALx Q (SEPx R)).
+Proof.
+  intros. apply andp_left2.
+  unfold PROPx. apply andp_left2.
+  apply andp_right.
+  + apply prop_right. assumption.
+  + apply derives_refl.
+Qed.
+
+Lemma fold_right_and_app_iff_and: forall Pl Ql,
+  fold_right and True (Pl ++ Ql) <-> fold_right and True Pl /\ fold_right and True Ql.
+Proof.
+  intros. induction Pl; simpl; tauto.
+Qed.
+
+Lemma fold_right_and_rev_iff: forall Pl,
+  fold_right and True (rev Pl) <-> fold_right and True Pl.
+Proof.
+  intros. induction Pl; simpl.
+  + tauto.
+  + rewrite fold_right_and_app_iff_and. simpl. tauto.
+Qed.
+
+Lemma fold_right_and_rev_extract: forall (P: Prop) Pl,
+  P -> fold_right and True (rev Pl) -> fold_right and True (rev (P :: Pl)).
+Proof.
+  intros *. do 2 rewrite fold_right_and_rev_iff. simpl. auto.
+Qed.
+
+Lemma fold_right_and_rev_nil:
+  fold_right and True (rev nil).
+Proof.
+  simpl. auto.
+Qed.
+
+Definition Post_infer_tag := I.
+
 Ltac start_function :=
   floyd.forward.start_function;
   unfold Clight.Swhile, Sfor in *.
 
-Ltac clear_all_Intro_tag :=
+Local Ltac clear_all_Intro_tag :=
   repeat match goal with
   | H : Intro_tag _ |- _ => clear H
   end.
@@ -299,21 +339,28 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
       intro d; clear d;
       try (is_evar Post;
-        repeat first
-        [ apply delta_derives_refl
-        | match reverse goal with
-          | H : Intro_tag ?x |- _ =>
-            clear H;
-            Exists x;
-            instantiate (1 := (fun xx => _)); cbv beta;
-            repeat match goal with
-            | H : context [x] |- _ =>
-                Exists H;
-                instantiate (1 := (fun HH => _)); cbv beta;
-                clear H
-            end
+        repeat match reverse goal with
+        | H : Intro_tag ?x |- _ =>
+          clear H;
+          Exists x;
+          instantiate (1 := (fun xx => _)); cbv beta
+        end;
+        eapply delta_derives_refl_and_Props;
+        repeat lazymatch goal with
+        | H : _ |- _ =>
+          lazymatch type of H with
+          | Post_infer_tag =>
+              apply fold_right_and_rev_nil
+          | ?P =>
+              match type of P with
+              | Prop =>
+                  eapply fold_right_and_rev_extract;
+                  only 1: apply H;
+                  clear H
+              | _ => clear H
+              end
           end
-        ]
+        end
       )
   (* skip *)
   | |- let d := @abbreviate _ Sskip in _ =>

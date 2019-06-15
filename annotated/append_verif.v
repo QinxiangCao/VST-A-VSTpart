@@ -101,6 +101,7 @@ forwardD.
     (* else branch *)
     forwardD.
     forwardD.
+    apply fold_right_and_rev_nil.
   (* lazymatch goal with
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
@@ -113,7 +114,7 @@ forwardD.
             Exists x; clear H; idtac x
           end
         ]end. *)
-    (* Set Nested Proofs Allowed.
+    (* 
     Lemma revert_evar : forall {A} (x : A) P (Q : assert),
       EX x, P x |-- Q -> P x |-- Q.
     Proof.
@@ -153,7 +154,7 @@ forwardD.
       (*  entailer!. rewrite (proj1 H4 (eq_refl _)). simpl. cancel. *)
     } *)
   }
-  {
+  { simpl rev.
     forwardD.
     forwardD.
     forwardD.
