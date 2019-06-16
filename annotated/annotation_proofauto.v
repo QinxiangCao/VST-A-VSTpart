@@ -302,6 +302,9 @@ Proof.
   intros. induction Pl; simpl; tauto.
 Qed.
 
+(* Create a exclusive local definition. *)
+Local Definition rev {A} := @rev A.
+
 Lemma fold_right_and_rev_iff: forall Pl,
   fold_right and True (rev Pl) <-> fold_right and True Pl.
 Proof.
@@ -322,7 +325,7 @@ Proof.
   simpl. auto.
 Qed.
 
-Definition Post_infer_tag := I.
+Definition Post_infer_tag := True.
 
 Ltac use_annotation hint :=
   match goal with
@@ -351,6 +354,7 @@ Local Ltac clear_all_Intro_tag :=
   end.
 
 Tactic Notation "forwardD" :=
+  simpl rev;
   lazymatch goal with
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
@@ -379,9 +383,6 @@ Tactic Notation "forwardD" :=
           end
         end
       )
-  (* skip *)
-  | |- let d := @abbreviate _ Sskip in _ =>
-      refine (decorate_C_skip _ _)
   (* dummyassert *)
   | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
       refine (decorate_C_dummyassert _ _ _ _)
@@ -429,6 +430,7 @@ Tactic Notation "forwardD" :=
       let Post := eval unfold Post_name in Post_name in
       clear Post_name;
       clear_all_Intro_tag;
+      assert Post_infer_tag by (exact I);
       intro d;
       forward_loop Inv break: Post;
       [ ..
@@ -447,7 +449,9 @@ Tactic Notation "forwardD" :=
       let Post := eval unfold Post_name in Post_name in
       clear Post_name;
       clear_all_Intro_tag;
-      intro d; forward_loop Inv1 continue: Inv2 break: Post;
+      assert Post_infer_tag by (exact I);
+      intro d;
+      forward_loop Inv1 continue: Inv2 break: Post;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)

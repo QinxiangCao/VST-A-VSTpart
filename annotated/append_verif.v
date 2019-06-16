@@ -97,7 +97,6 @@ forwardD.
     (* else branch *)
     forwardD.
     forwardD.
-    apply fold_right_and_rev_nil.
   (* lazymatch goal with
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
@@ -150,8 +149,7 @@ forwardD.
       (*  entailer!. rewrite (proj1 H4 (eq_refl _)). simpl. cancel. *)
     } *)
   }
-  { simpl rev.
-    forwardD.
+  { forwardD.
     forwardD.
     forwardD.
     forwardD.
@@ -160,7 +158,7 @@ forwardD.
     {
       Exists x.
       entailer!.
-      rewrite (proj1 H8 (eq_refl _)). simpl.
+      rewrite (proj1 H9 (eq_refl _)). simpl.
       unfold listrep at 3; fold listrep. normalize.
       pull_right (listrep sh (a :: s2) t -* listrep sh ((a0 :: s1b0) ++ s2) x).
       apply modus_ponens_wand'.
