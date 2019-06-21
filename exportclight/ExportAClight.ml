@@ -565,9 +565,24 @@ let name_program p =
 
 (* Print annotation part only *)
 let print_function_annotation p (id, f) =
+  fprintf p "Definition f_%s_spec_annotation :=@ " (extern_atom id);
+  let ((binder, pre), post) = f.fn_spec in
+  fprintf p "@[<hov 2>  fun %s => (%s,@ %s).@]@ @ " binder pre post;
+
+  fprintf p "Definition f_%s_spec_complex :=@ " (extern_atom id);
+  fprintf p "  ltac:(uncurry_funcspec f_%s_spec_annotation).@ @ " (extern_atom id);
+
+  fprintf p "Definition f_%s_funsig: funsig :=@ " (extern_atom id);
+  fprintf p "  %a.@ @ "
+        (print_pair (print_list (print_pair ident typ)) typ) (f.fn_params, f.fn_return);
+
+  fprintf p "Definition %s_spec :=@ "(extern_atom id) ;
+  fprintf p "  ltac:(make_funcspec %a f_%s_funsig f_%s_spec_complex).@ @ "
+        ident id (extern_atom id) (extern_atom id);
+
   fprintf p "Definition f_%s_hint :=@ " (extern_atom id);
   stmt p f.fn_body;
-  fprintf p ".@ "
+  fprintf p ".@ @ "
 
 let print_globdef_annotation p (id, gd) =
   match gd with

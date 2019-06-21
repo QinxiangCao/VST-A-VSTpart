@@ -35,6 +35,7 @@ Require Import Comment.
 
 (* Abstract assertion encoded as string *)
 Definition assert : Type := Comment.string.
+Definition binder : Type := Comment.string.
 
 Inductive loop_invariant :=
   | LISingle : assert -> loop_invariant
@@ -47,7 +48,7 @@ Inductive loop_invariant :=
 Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
-  | Sgiven: Comment.string -> statement -> statement         (* abstract given clause *)
+  | Sgiven: binder -> statement -> statement         (* abstract given clause *)
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
@@ -84,7 +85,8 @@ Record function : Type := mkfunction {
   fn_params: list (ident * type);
   fn_vars: list (ident * type);
   fn_temps: list (ident * type);
-  fn_body: statement
+  fn_body: statement;
+  fn_spec: binder * assert * assert
 }.
 
 Definition var_names (vars: list(ident * type)) : list ident :=
