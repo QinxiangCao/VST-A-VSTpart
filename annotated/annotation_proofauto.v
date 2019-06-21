@@ -164,96 +164,6 @@ Proof.
   assumption.
 Qed.
 
-(*
-Lemma decorate_C_if_then1:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Sifthenelse b d1 d2) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_if_else1:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Sifthenelse b d1 d2) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_if_then2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 Q d3 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) (Ssequence (Sassert Q) d3)) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_if_else2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 Q d3 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) (Ssequence (Sassert Q) d3)) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-*)
-
-(*
-Lemma decorate_C_while_body2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 Inv d2 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Swhile Inv b d1) d2) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_while_after2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 Inv d2 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Swhile Inv b d1) d2) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-*)
-
-(* Lemma decorate_C_assert:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall P' d1 Delta P c Post,
-      ENTAIL Delta, P |-- P' ->
-      (let d := @abbreviate _ d1 in semax Delta P' c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sassert P') d1) in semax Delta P c Post).
-Proof.
-  intros.
-  eapply semax_pre.
-  + exact H.
-  + exact H0.
-Qed.
-
-Lemma decorate_C_assert2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall P' d1 d2 Delta P c Post,
-      ENTAIL Delta, P |-- P' ->
-      (let d := @abbreviate _ d1 in semax Delta P' c Post) ->
-      (let d := @abbreviate _ (Ssequence d1 (Ssequence (Sassert P') d2)) in semax Delta P c Post).
-Proof.
-  intros.
-  eapply semax_pre.
-  + exact H.
-  + exact H0.
-Qed. *)
-
 Definition Intro_tag {A} (x : A) := True.
 
 Lemma decorate_C_given:
@@ -275,6 +185,12 @@ Proof.
   intros.
   apply H.
 Qed.
+
+Ltac ignore_dummyassert :=
+  match goal with
+  | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
+    refine (decorate_C_dummyassert _ _ _ _)
+  end.
 
 Lemma delta_derives_refl:
   forall Delta P,
@@ -432,8 +348,8 @@ Function spec: " S);
   end;
   start_function_hint;
   unfold Clight.Swhile, Sfor in *;
-  revert d.
-
+  revert d;
+  repeat ignore_dummyassert.
 
 Ltac old_assert_PROP P :=
   assert_PROP P.
@@ -573,10 +489,7 @@ Tactic Notation "forwardD" :=
       end;
       Intros;
       revert d
-      ;try match goal with
-      | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
-      refine (decorate_C_dummyassert _ _ _ _)
-      end
+      ;repeat ignore_dummyassert
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
       refine (decorate_C_assert P _ _ _ _ _ _ _)

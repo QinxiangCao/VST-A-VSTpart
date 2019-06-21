@@ -69,9 +69,6 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
 
 Notation "'GIVEN' x .. y , c " :=
   (Sgiven _ (fun x => .. (Sgiven _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
-(* Notation "'GIVEN' (x1 : T1) , (x2 : T2) , .. , (xn : Tn) , c " :=
-  (Sgiven T1 (fun x1 => (Sgiven T2 (fun x2 => .. (Sgiven Tn (fun xn => c)) .. )))) (at level 65, x1 at level 99, x2 at level 99) : logic. *)
-(* Notation "'GIVEN'  x ':' T ',' c " := (Sgiven _ (fun x : T => c)) (at level 65, x at level 99) : logic. *)
 
 Definition Swhile (Inv: assert) (e: expr) (s: statement):=
   Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
@@ -188,3 +185,6 @@ Ltac make_funcspec name funsig spec :=
     exact (name, NDmk_funspec funsig cc_default T (fun x => P) (fun x => Q))
   | _ => fail 0 spec "is not in valid form of funcspec"
   end.
+
+Notation "'ANNOTATION_WITH' x .. y , c " :=
+  (fun x => .. (fun y => c) .. ) (at level 65, x binder, y binder).
