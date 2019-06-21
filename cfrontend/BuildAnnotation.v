@@ -208,21 +208,23 @@ with annotate_lblstmt (ls: Clight.labeled_statements) : res labeled_statements :
       OK (LScons c s' ls1')
   end.
 
-Definition annotate_body (s: Clight.statement) : res ((binder * assert * assert) * statement) :=
+Definition annotate_body (s: Clight.statement) : res (option (binder * assert * assert) * statement) :=
   match s with
   | Clight.Slcomment (With, binder) (
       Clight.Slcomment (Require, pre) (
         Clight.Slcomment (Ensure, post) s)) =>
     do s' <- annotate_stmt s;
-    OK ((binder, pre, post), s')
+    OK (Some (binder, pre, post), s')
   | Clight.Ssequence (
       Clight.Slcomment (With, binder) (
         Clight.Slcomment (Require, pre) (
           Clight.Slcomment (Ensure, post) s1)))
       s2 =>
     do s' <- annotate_stmt (Clight.Ssequence s1 s2);
-    OK ((binder, pre, post), s')
-  | _ => Error (MSG "Funcspec is missing or broken" :: nil)
+    OK (Some (binder, pre, post), s')
+  | _ =>
+    do s' <- annotate_stmt s;
+    OK (None, s')
   end.
 
 Definition annotate_function (f: Clight.function) : res function :=

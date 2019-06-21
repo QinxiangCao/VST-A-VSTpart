@@ -86,7 +86,7 @@ Record function : Type := mkfunction {
   fn_vars: list (ident * type);
   fn_temps: list (ident * type);
   fn_body: statement;
-  fn_spec: binder * assert * assert
+  fn_spec: option (binder * assert * assert)
 }.
 
 Definition var_names (vars: list(ident * type)) : list ident :=
