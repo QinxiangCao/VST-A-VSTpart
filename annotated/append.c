@@ -3,6 +3,18 @@
 struct list {int head; struct list *tail;};
 
 struct list *append (struct list *x, struct list *y) {
+  /* With (sh: share) (x: val) (y: val) (s1: list val) (s2: list val) */
+  /* Require
+       PROP(writable_share sh)
+       LOCAL (temp _x x; temp _y y)
+       SEP (listrep sh s1 x; listrep sh s2 y)
+  */
+  /* Ensure
+      EX r: val,
+       PROP()
+       LOCAL(temp ret_temp r)
+       SEP (listrep sh (s1++s2) r)
+  */
   /* Given (sh: share) (x: val) (y: val) (s1: list val) (s2: list val), */
   struct list *t, *u;
   if (x==NULL)

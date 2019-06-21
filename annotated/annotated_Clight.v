@@ -147,8 +147,8 @@ Ltac move_let_inside v :=
 
 Ltac uncurry_funcspec spec :=
   let spec_name := fresh "spec" in
+  let spec := eval unfold spec in spec in
   pose (spec_name := spec);
-  unfold spec in spec_name;
   repeat
     lazymatch goal with
     | spec_name := fun x:?T1 => fun y:?T2 => ?spec |- _ =>
