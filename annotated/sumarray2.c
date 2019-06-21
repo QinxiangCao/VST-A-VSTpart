@@ -28,6 +28,7 @@ unsigned sumarray(unsigned a[], int n) {
 unsigned four[4] = {1,2,3,4};
 
 int main(void) {
+  // Given gv: globals,
   unsigned s;
   s = sumarray(four+2,2);
   return (int)s;

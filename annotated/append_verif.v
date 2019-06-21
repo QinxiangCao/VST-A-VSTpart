@@ -26,13 +26,7 @@ Require Import append_annotation.
 
 Lemma body_append: semax_body Vprog Gprog f_append append_spec.
 Proof.
-start_function.
-use_annotation f_append_hint.
-forwardD sh.
-forwardD s1.
-forwardD s2.
-forwardD x.
-forwardD y.
+start_function f_append_hint.
 forwardD.
 * forwardD.
   rewrite listrep_null. normalize.

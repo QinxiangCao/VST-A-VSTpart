@@ -3,7 +3,7 @@
 struct list {int head; struct list *tail;};
 
 struct list *append (struct list *x, struct list *y) {
-  /* Given (sh: share) (s1: list val) (s2: list val) (x: val) (y: val), */
+  /* Given (sh: share) (x: val) (y: val) (s1: list val) (s2: list val), */
   struct list *t, *u;
   if (x==NULL)
     return y;

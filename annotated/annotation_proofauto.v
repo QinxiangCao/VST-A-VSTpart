@@ -268,13 +268,12 @@ Proof.
 Qed.
 
 Lemma decorate_C_given':
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall {A: Type} a d1 Delta P c Post,
-      (Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Sgiven A d1) in semax Delta P c Post).
+    forall {A: Type} a d1 (P : Prop),
+      (let d := @abbreviate _ (d1 a) in P) ->
+      (let d := @abbreviate _ (Sgiven A d1) in P).
 Proof.
   intros.
-  apply H. apply I.
+  apply H.
 Qed.
 
 Lemma delta_derives_refl:
@@ -334,9 +333,107 @@ Ltac use_annotation hint :=
   end;
   cbv delta [Swhile].
 
-Ltac start_function :=
-  floyd.forward.start_function;
-  unfold Clight.Swhile, Sfor in *.
+Ltac specialize_annotation d x :=
+  revert d;
+  match goal with
+  | |- let d := @abbreviate _ (Sgiven _ (fun (y:?T) => ?d1)) in _ =>
+    refine (decorate_C_given' x _ _ _)
+  end; intro d.
+
+Ltac destruct_and_bind_annotation d :=
+  lazymatch goal with
+  | |- @semax _ _ _ (match ?p with (a,b) => _ end * _) _ _ =>
+    destruct p as [a b];
+    lazymatch goal with
+    | |- @semax _ _ _ (match ?p with (a,b) => _ end * _) _ _ =>
+      destruct_and_bind_annotation d;
+      specialize_annotation d b
+    | _ =>
+      specialize_annotation d a;
+      specialize_annotation d b
+    end
+  end.
+
+Ltac start_function hint :=
+  let d := fresh "d" in
+  let hint := eval hnf in hint in
+  pose (d := @abbreviate statement hint);
+  leaf_function;
+  match goal with |- semax_body _ _ ?F ?spec =>
+    let D := constr:(Clight.type_of_function F) in
+    let S := constr:(type_of_funspec (snd spec)) in
+    let D := eval hnf in D in let D := eval simpl in D in 
+    let S := eval hnf in S in let S := eval simpl in S in 
+    tryif (unify D S) then idtac else
+    tryif function_types_compatible D S 
+    then idtac "Warning: the function-body parameter/return types are not identical to the funspec types, although they are compatible:
+Function body:" D "
+Function spec:" S
+    else
+   (fail "Function signature (param types, return type) from function-body does not match function signature from funspec
+Function body: " D "
+Function spec: " S);
+    check_normalized F
+  end;
+  match goal with |- semax_body ?V ?G ?F ?spec =>
+    let s := fresh "spec" in
+    pose (s:=spec); hnf in s;
+    match goal with
+    | s :=  (DECLARE _ WITH _: globals
+               PRE  [] main_pre _ nil _
+               POST [ tint ] _) |- _ => idtac
+    | s := ?spec' |- _ => check_canonical_funspec spec'
+    end;
+    change (semax_body V G F s); subst s
+  end;
+  let DependedTypeList := fresh "DependedTypeList" in
+  match goal with |- semax_body _ _ _ (pair _ (NDmk_funspec _ _ _ ?Pre _)) =>
+    match Pre with
+    | (fun x => match _ with (a,b) => _ end) => intros Espec DependedTypeList x
+    | (fun i => _) => intros Espec DependedTypeList i; specialize_annotation d i
+    end;
+    simpl Clight.fn_body; simpl Clight.fn_params; simpl Clight.fn_return
+  end;
+  simpl functors.MixVariantFunctor._functor in *;
+  simpl rmaps.dependent_type_functor_rec;
+  clear DependedTypeList;
+  lazymatch goal with
+  | |- @semax _ _ _ (match ?p with (a,b) => _ end * _) _ _ =>
+      destruct_and_bind_annotation d
+  | _ => idtac
+  end;
+  simplify_func_tycontext;
+  try expand_main_pre;
+  process_stackframe_of;
+  repeat change_mapsto_gvar_to_data_at;  (* should really restrict this to only in main,
+                                  but it needs to come after process_stackframe_of *)
+  repeat rewrite <- data_at__offset_zero;
+  try apply start_function_aux1;
+  repeat (apply semax_extract_PROP;
+              match goal with
+              | |- _ ?sh -> _ =>
+                 match type of sh with
+                 | share => intros ?SH
+                 | Share.t => intros ?SH
+                 | _ => intro
+                 end
+               | |- _ => intro
+               end);
+  first [ eapply eliminate_extra_return'; [ reflexivity | reflexivity | ]
+        | eapply eliminate_extra_return; [ reflexivity | reflexivity | ]
+        | idtac];
+  abbreviate_semax;
+  lazymatch goal with 
+  | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
+  | _ => idtac
+  end;
+  try match goal with DS := @abbreviate (PTree.t funspec) PTree.Leaf |- _ =>
+     clearbody DS
+  end;
+  start_function_hint;
+  unfold Clight.Swhile, Sfor in *;
+  revert d.
+
 
 Ltac old_assert_PROP P :=
   assert_PROP P.
@@ -496,8 +593,12 @@ Tactic Notation "forwardD" :=
   end.
 
 Tactic Notation "forwardD" constr(a) :=
-  match goal with
-  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
+  lazymatch goal with
+  | |- let d := @abbreviate _ (Sgiven _ (fun (x:?T) => _)) in
        semax _ _ _ _ =>
-      refine (decorate_C_given' a _ _ _ _ _ _); intros ? d; Intros; revert d
+      first
+      [ ignore (a : T)
+      | fail 1 a "must have type" T
+      ];
+      refine (decorate_C_given' a _ _ _)
   end.
