@@ -589,6 +589,20 @@ let print_globdef_annotation p (id, gd) =
   | Gfun(Ctypes.Internal f) -> print_function_annotation p (id, f)
   | _ -> ()
 
+let print_Gprog p prog_defs =
+  fprintf p "Definition Gprog : funspecs :=@ ";
+  fprintf p "  ltac:(with_library prog [@[<hv>";
+  let cnt = ref 0 in
+  List.iter (fun (id, gd) ->
+    match gd with
+    | Gfun (Ctypes.Internal _) ->
+      if !cnt > 0 then fprintf p ";@ ";
+      fprintf p "%s_spec" (extern_atom id);
+      cnt := !cnt+1
+    | _ -> ()
+  ) prog_defs;
+  fprintf p "@]]).@ @ "
+
 (* All together *)
 
 let print_program p prog sourcefile normalized =
@@ -599,4 +613,5 @@ let print_program p prog sourcefile normalized =
   fprintf p "%s" prologue;
   print_clightgen_info p sourcefile normalized;
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
+  print_Gprog p prog.Ctypes.prog_defs;
   fprintf p "@]@."
