@@ -1,7 +1,7 @@
 #include <stddef.h>
 
 unsigned sumarray(unsigned a[], int n) {
-  /* With (a : val) (sh : share) (contents : list Z) (size: Z), */
+  /* With a sh contents size, */
   /* Require
       PROP  (readable_share sh; 0 <= size <= Int.max_signed)
       LOCAL (temp _a a; temp _n (Vint (Int.repr size)))
@@ -31,7 +31,7 @@ unsigned sumarray(unsigned a[], int n) {
 unsigned four[4] = {1,2,3,4};
 
 int main(void) {
-  /* With (gv: globals), */
+  /* With gv, */
   /* Require
       main_pre prog nil gv
   */

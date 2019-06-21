@@ -3,7 +3,7 @@
 struct list {int head; struct list *tail;};
 
 struct list *append (struct list *x, struct list *y) {
-  /* With (sh: share) (x: val) (y: val) (s1: list val) (s2: list val), */
+  /* With sh x y s1 s2, */
   /* Require
        PROP(writable_share sh)
        LOCAL (temp _x x; temp _y y)
