@@ -333,21 +333,25 @@ let rec expr p = function
 let comment p (t, c) =
   fprintf p "%s" c*)
 
+(* Assertion *)
+let assertion p a =
+  fprintf p "(%s)" a
+
 (* Loop invariants *)
 let loop_invariant p = function
 | LISingle inv ->
-  fprintf p "@[<hov 2>(LISingle %s)@]" inv
+  fprintf p "@[<hov 2>(LISingle %a)@]" assertion inv
 | LIDouble (inv1, inv2) ->
-  fprintf p "@[<hov 2>(LISingle %s@ %s)@]" inv1 inv2
+  fprintf p "@[<hov 2>(LISingle %a@ %a)@]" assertion inv1 assertion inv2
 
 (* Statements *)
 let rec stmt p = function
-  | Sassert c ->
-    fprintf p "@[<hov 2>(Sassert %s)@]" c
-  | Sdummyassert c ->
-    fprintf p "@[<hov 2>(Sdummyassert %s)@]" c
-  | Sgiven (c, s) ->
-    fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" c stmt s
+  | Sassert a ->
+    fprintf p "@[<hov 2>(Sassert %a)@]" assertion a
+  | Sdummyassert a ->
+    fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
+  | Sgiven (b, s) ->
+    fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
   | Sskip ->
       fprintf p "Sskip"
   | Sassign(e1, e2) ->
@@ -372,9 +376,9 @@ let rec stmt p = function
   | Sifthenelse(e, s1, s2) ->
       fprintf p "@[<hv 2>(Sifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
   | Sloop ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
-      fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
+      fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
   | Sloop ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
-      fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
+      fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
   | Sloop (inv, s1, s2) ->
       fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
   | Sbreak ->
@@ -567,7 +571,7 @@ let print_function_spec p (id, f) =
   match f.fn_spec with
   | Some ((binder, pre), post) ->
     fprintf p "Definition f_%s_spec_annotation :=@ " (extern_atom id);
-    fprintf p "@[<hov 2>  fun %s => (%s,@ %s).@]@ @ " binder pre post;
+    fprintf p "@[<hov 2>  ANNOTATION_WITH %s (%a,@ %a).@]@ @ " binder assertion pre assertion post;
 
     fprintf p "Definition f_%s_spec_complex :=@ " (extern_atom id);
     fprintf p "  ltac:(uncurry_funcspec f_%s_spec_annotation).@ @ " (extern_atom id);
