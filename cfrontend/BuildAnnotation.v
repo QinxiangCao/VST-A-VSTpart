@@ -27,7 +27,7 @@ Open Scope error_monad_scope.
 Open Scope string_scope.
 Open Scope list_scope.
 
-Parameter get_binder_list : assert -> list Comment.string * Comment.string.
+Parameter get_binder_list : assert -> list binder * assert.
 
 Definition add_binder_list (s: statement) (c: assert) : statement :=
   let (binder_list, dummy_assert) := get_binder_list c in
@@ -90,6 +90,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
         fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
       end
     | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
+    | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
       match s, acc with
       | Sskip, _ => fold_cs cs_list acc
@@ -207,14 +208,44 @@ with annotate_lblstmt (ls: Clight.labeled_statements) : res labeled_statements :
       OK (LScons c s' ls1')
   end.
 
+Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
+      : option (binder * assert * assert) * statement :=
+  match funcspec with (binder, pre, post) =>
+    (Some funcspec,
+      Sgiven binder (
+        Ssequence (Sdummyassert pre) (
+          Ssequence (Sdummyassert post)
+            s)))
+  end.
+
+Definition annotate_body (s: Clight.statement) : res (option (binder * assert * assert) * statement) :=
+  match s with
+  | Clight.Slcomment (With, binder) (
+      Clight.Slcomment (Require, pre) (
+        Clight.Slcomment (Ensure, post) s)) =>
+    do s' <- annotate_stmt s;
+    OK (add_funcspec (binder, pre, post) s')
+  | Clight.Ssequence (
+      Clight.Slcomment (With, binder) (
+        Clight.Slcomment (Require, pre) (
+          Clight.Slcomment (Ensure, post) s1)))
+      s2 =>
+    do s' <- annotate_stmt (Clight.Ssequence s1 s2);
+    OK (add_funcspec (binder, pre, post) s')
+  | _ =>
+    do s' <- annotate_stmt s;
+    OK (None, s')
+  end.
+
 Definition annotate_function (f: Clight.function) : res function :=
-  do body' <- annotate_stmt f.(Clight.fn_body);
+  do (spec, body') <- annotate_body f.(Clight.fn_body);
   OK {| fn_return := f.(Clight.fn_return);
         fn_callconv := f.(Clight.fn_callconv);
         fn_params := f.(Clight.fn_params);
         fn_vars := f.(Clight.fn_vars);
         fn_temps := f.(Clight.fn_temps);
-        fn_body := body' |}.
+        fn_body := body';
+        fn_spec := spec |}.
 
 (** Whole-program transformation *)
 
