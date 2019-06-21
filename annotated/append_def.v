@@ -61,28 +61,3 @@ intros.
  destruct x; try contradiction. hnf in H; subst i. contradiction H0; reflexivity.
  apply I.
 Qed.
-
-Definition append_spec_annotation :=
-  (fun sh x y s1 s2 =>
-    (PROP(writable_share sh)
-     LOCAL (temp _x x; temp _y y)
-     SEP (listrep sh s1 x; listrep sh s2 y),
-     EX r: val,
-       PROP()
-       LOCAL(temp ret_temp r)
-       SEP (listrep sh (s1++s2) r)
-    )
-  ).
-
-(* Import Coq.Program.Tactics. *)
-
-Definition append_spec_complex :=
-  ltac:(uncurry_funcspec append_spec_annotation).
-
-Definition append_funsig :=
-  ([(_x, tptr t_struct_list); (_y, tptr t_struct_list)], tptr t_struct_list).
-
-Definition append_spec :=
-  ltac:(make_funcspec _append append_funsig append_spec_complex).
-
-Definition Gprog : funspecs :=   ltac:(with_library prog [ append_spec ]).
