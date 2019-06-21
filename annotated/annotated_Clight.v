@@ -69,9 +69,6 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
 
 Notation "'GIVEN' x .. y , c " :=
   (Sgiven _ (fun x => .. (Sgiven _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
-(* Notation "'GIVEN' (x1 : T1) , (x2 : T2) , .. , (xn : Tn) , c " :=
-  (Sgiven T1 (fun x1 => (Sgiven T2 (fun x2 => .. (Sgiven Tn (fun xn => c)) .. )))) (at level 65, x1 at level 99, x2 at level 99) : logic. *)
-(* Notation "'GIVEN'  x ':' T ',' c " := (Sgiven _ (fun x : T => c)) (at level 65, x at level 99) : logic. *)
 
 Definition Swhile (Inv: assert) (e: expr) (s: statement):=
   Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
@@ -124,3 +121,70 @@ Definition type_of_fundef (f: fundef) : type :=
 
 Definition program := Ctypes.program function.
 
+(** Generate VST funcspec from annotation funcspec *)
+
+Ltac move_let_inside v :=
+  lazymatch goal with
+  | v := let (a, b) := _ in _ |- _ =>
+    lazymatch goal with
+    | v := let (a, b) := ?p in fun x:?T => ?content |- _ =>
+      let temp := fresh "temp" in
+      refine (fun x => _);
+      pose (temp := (fun x:T => let (a, b) := p in content) x);
+      hnf in temp;
+      clear v;
+      rename temp into v;
+      move_let_inside v
+    | v := let (a, b) := ?p in (?pre, ?post) |- _ =>
+      exact (let (a, b) := p in pre, let (a, b) := p in post)
+    | _ => fail 0 v "is not recognized"
+    end
+  | _ => fail 0 v "must have form let (a, b) := p in _"
+  end.
+
+Ltac uncurry_funcspec spec :=
+  let spec_name := fresh "spec" in
+  let spec := eval unfold spec in spec in
+  pose (spec_name := spec);
+  repeat
+    lazymatch goal with
+    | spec_name := fun x:?T1 => fun y:?T2 => ?spec |- _ =>
+      first [ignore (T2 : _) | fail 2 "funcspec cannot have dependent type"];
+      first [
+        let spec_name1 := fresh "spec" in
+        pose (spec_name1 := (fun p : (T1*T2) => let (x, y) := p in spec));
+        clear spec_name;
+        rename spec_name1 into spec_name;
+        refine (let spec_name1 :=
+          ltac:(
+            match goal with
+            | spec_name := ?spec |- _ =>
+            let spec := eval unfold spec_name in spec_name in
+            let p := fresh "p" in
+            intro p;
+            pose (spec_name1 := spec p);
+            hnf in spec_name1;
+            clear spec_name;
+            rename spec_name1 into spec_name;
+            move_let_inside spec_name;
+            exact spec_name
+            end
+          ) in _);
+        clear spec_name;
+        rename spec_name1 into spec_name;
+        cbv beta zeta in spec_name
+      | fail 2 "Unknown error: failed to uncurry funcspec"
+      ]
+    end;
+  exact spec_name.
+
+Ltac make_funcspec name funsig spec :=
+  let spec := eval cbv beta zeta delta [spec] in spec in
+  lazymatch spec with
+  | fun x:?T => (?P, ?Q) =>
+    exact (name, NDmk_funspec funsig cc_default T (fun x => P) (fun x => Q))
+  | _ => fail 0 spec "is not in valid form of funcspec"
+  end.
+
+Notation "'ANNOTATION_WITH' x .. y , c " :=
+  (fun x => .. (fun y => c) .. ) (at level 65, x binder, y binder).
