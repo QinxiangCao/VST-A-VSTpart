@@ -26,7 +26,6 @@ forwardD.
     simpl. autorewrite with sublist. normalize.
   }
   forwardD.
-  forwardD.
 * forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.

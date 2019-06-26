@@ -47,6 +47,10 @@ Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
   | Sgiven: forall A: Type, (A -> statement) -> statement
+  (* The difference between Sgiven and Sgiven2 is that name given by Sgiven
+   * renames the existing name when conflicting, while name given by Sgiven2
+   * will be renamed. *)
+  | Sgiven2: forall A: Type, (A -> statement) -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
