@@ -38,6 +38,7 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
     fold_right Sgiven s binder_list
   end.
 
+(***************** Control flow analysis ***********************)
 Fixpoint loop_concat_break (s safter: statement) : statement :=
   let f :=
     fix f s :=
@@ -63,11 +64,16 @@ Fixpoint loop_concat_break (s safter: statement) : statement :=
 Fixpoint count_break (s: statement) : res Z :=
   match s with
   | Sgiven _ s => count_break s
+  | Ssequence s1 s2 =>
+      do cnt1 <- count_break s1;
+      do cnt2 <- count_break s2;
+      OK (cnt1 + cnt2)
   | Sifthenelse _ s1 s2 =>
       do cnt1 <- count_break s1;
       do cnt2 <- count_break s2;
       OK (cnt1 + cnt2)
   | Slabel _ s => count_break s
+  | Sbreak => OK 1
   | _ => OK 0
   end.
 
@@ -76,6 +82,37 @@ Definition check_single_break (s: statement) : res unit :=
   if cnt <=? 1
     then OK tt
     else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
+
+Fixpoint count_continue (s: statement) : res Z :=
+  match s with
+  | Sgiven _ s => count_continue s
+  | Ssequence s1 s2 =>
+      do cnt1 <- count_continue s1;
+      do cnt2 <- count_continue s2;
+      OK (cnt1 + cnt2)
+  | Sifthenelse _ s1 s2 =>
+      do cnt1 <- count_continue s1;
+      do cnt2 <- count_continue s2;
+      OK (cnt1 + cnt2)
+  | Slabel _ s => count_continue s
+  | Sswitch _ ls => count_continue_labeled ls
+  | Scontinue => OK 1
+  | _ => OK 0
+  end
+with count_continue_labeled (ls: labeled_statements) : res Z :=
+  match ls with
+  | LSnil => OK 0
+  | LScons _ s ls =>
+    do cnt1 <- count_continue s;
+    do cnt2 <- count_continue_labeled ls;
+    OK (cnt1 + cnt2)
+  end.
+
+Definition check_no_continue (s: statement) : res unit :=
+  do cnt <- count_continue s;
+  if cnt <=? 0
+    then OK tt
+    else Error (MSG "Double invariants needed for for loops with continue" :: nil).
 
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
@@ -138,6 +175,10 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
           end
         in
         let s'' := add_binder_list s' inv in
+        do _ <- match s2 with
+        | Clight.Sskip => OK tt
+        | _ => check_no_continue s''
+        end;
         OK (Sloop (LISingle inv) s'' Sskip)
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
