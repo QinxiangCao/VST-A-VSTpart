@@ -509,7 +509,8 @@ let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
 Require Import annotated_Clight.\n\
-Local Open Scope Z_scope.\n"
+Local Open Scope Z_scope.\n\
+Import AClightNotations.\n"
 
 (* Naming the compiler-generated temporaries occurring in the program *)
 
