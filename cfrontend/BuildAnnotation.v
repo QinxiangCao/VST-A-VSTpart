@@ -89,7 +89,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | _ =>
         fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
       end
-    | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
+    | inl (Given, c) => Error (MSG "Manual Given comment is not allowed in this version" :: nil)
     | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
       match s, acc with
@@ -103,7 +103,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
           => fold_cs cs_list (Ssequence s acc)
       | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
           do _ <- check_single_break (Ssequence s1 s2);
-          fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
+          fold_cs cs_list (Ssequence s acc)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
