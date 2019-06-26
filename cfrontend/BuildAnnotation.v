@@ -114,6 +114,23 @@ Definition check_no_continue (s: statement) : res unit :=
     then OK tt
     else Error (MSG "Double invariants needed for for loops with continue" :: nil).
 
+Fixpoint has_no_normal_exit (s: statement) : bool :=
+  match s with
+  | Sgiven _ s => has_no_normal_exit s
+  | Ssequence s1 s2 =>
+      has_no_normal_exit s1 || has_no_normal_exit s2
+  | Sifthenelse _ s1 s2 =>
+      has_no_normal_exit s1 && has_no_normal_exit s2
+  | Slabel _ s => has_no_normal_exit s
+  | Scontinue | Sbreak | Sreturn _ => true
+  | _ => false
+  end.
+
+Definition check_single_normal_exit (s1: statement) (s2: statement) : res unit :=
+  if has_no_normal_exit s1 || has_no_normal_exit s2
+    then OK tt
+    else Error (MSG "Missing postcondition for if statement" :: nil).
+
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
   | nil => OK acc
@@ -140,6 +157,13 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
           => fold_cs cs_list (Ssequence s acc)
       | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
           do _ <- check_single_break (Ssequence s1 s2);
+          fold_cs cs_list (Ssequence s acc)
+      (* If if statement is followed by an assertion or skip *)
+      | Sifthenelse e s1 s2, Ssequence (Sassert _) _
+      | Sifthenelse e s1 s2, Sskip
+          => fold_cs cs_list (Ssequence s acc)
+      | Sifthenelse e s1 s2, _ =>
+          do _ <- check_single_normal_exit s1 s2;
           fold_cs cs_list (Ssequence s acc)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
