@@ -52,16 +52,6 @@ struct list *append (struct list *x, struct list *y) {
       t = u;
       u = t->tail;
     }
-    {
-    /* * Assert (EX a t u,
-          PROP ()
-          LOCAL (temp _x x; temp _t t;  temp _y y)
-          SEP (listrep sh (a::s2) t -* listrep sh (s1++s2) x;
-                 data_at sh t_struct_list (a, nullval) t;
-                 listrep sh [] u;
-                 listrep sh s2 y))%assert
-    */
-    }
     t->tail = y;
     return x;
   }
