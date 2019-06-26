@@ -186,5 +186,7 @@ Ltac make_funcspec name funsig spec :=
   | _ => fail 0 spec "is not in valid form of funcspec"
   end.
 
+Module AClightNotations.
 Notation "'ANNOTATION_WITH' x .. y , c " :=
   (fun x => .. (fun y => c) .. ) (at level 65, x binder, y binder).
+End AClightNotations.
