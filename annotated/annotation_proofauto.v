@@ -17,6 +17,13 @@ Proof.
   intros. assumption.
 Qed.
 
+Lemma decorate_C_sequence1: forall P s1 s2,
+  (let d := @abbreviate _ (Ssequence s1 Sskip) in P) ->
+  (let d := @abbreviate _ (Ssequence s1 s2) in P).
+Proof.
+  intros. assumption.
+Qed.
+
 Lemma decorate_C_sequence: forall P s1 s2,
   (let d := @abbreviate _ s2 in P) ->
   (let d := @abbreviate _ (Ssequence s1 s2) in P).
@@ -44,7 +51,6 @@ Proof.
   + exact H0.
 Qed.
 
-(* may not find correct seq *)
 Lemma decorate_C_assert2:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
@@ -57,21 +63,40 @@ Proof.
   + exact H0.
 Qed.
 
-Lemma decorate_C_if_then:
+Lemma decorate_C_assert3:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 d3 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) d3) in semax Delta P c Post).
+    forall Q s1 s2 Delta P c1 c2 Post,
+      (let d := @abbreviate _ (Ssequence s1 Sskip) in semax Delta P c1 (overridePost Q Post)) ->
+      (let d := @abbreviate _ s2 in semax Delta Q c2 Post) ->
+      (let d := @abbreviate _ (Ssequence s1 s2) in semax Delta P (Clight.Ssequence c1 c2) Post).
+Proof.
+  intros. eapply semax_seq.
+  + exact H.
+  + exact H0.
+Qed.
+
+Lemma decorate_C_if_then:
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d1 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
 Proof.
   intros.
   exact H.
 Qed.
 
 Lemma decorate_C_if_else:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 d3 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) d3) in semax Delta P c Post).
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d2 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
+Proof.
+  intros.
+  exact H.
+Qed.
+
+Lemma decorate_C_if_after:
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d3 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
 Proof.
   intros.
   exact H.
@@ -388,6 +413,36 @@ Local Ltac entail_evar_post :=
     end
   end.
 
+Local Ltac assert_postcondition :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    intro d; repeat apply -> seq_assoc; revert d;
+    first [
+      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+    ];
+    [ intro d; abbreviate_semax; revert d
+    | intro d; abbreviate_semax; revert d
+    ]
+  end.
+
+Local Ltac assert_evar_postcondition :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let Post_name := fresh "Post" in
+    evar (Post_name : assert);
+    let Post := eval unfold Post_name in Post_name in
+    clear Post_name;
+    intro d; repeat apply -> seq_assoc; revert d;
+    first [
+      refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
+    ];
+    [ intro d; abbreviate_semax; revert d;
+      clear_all_Intro_tag;
+      assert Post_infer_tag by (exact I)
+    | intro d; abbreviate_semax; revert d
+    ]
+  end.
+
 Tactic Notation "forwardD" :=
   simpl rev;
   lazymatch goal with
@@ -404,21 +459,18 @@ Tactic Notation "forwardD" :=
   (* dummyassert *)
   | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
       refine (decorate_C_dummyassert _ _ _ _)
-  (* assert as postcondition *)
-  | |- let d := @abbreviate _ (Ssequence _ (Ssequence (Sassert ?P) _)) in _ => 
-      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _);
-      [ intro d; abbreviate_semax; revert d
-      | intro d; abbreviate_semax; revert d
-      ]
+  (* if with postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      assert_postcondition
   (* if *)
-  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in
-       (* semax _ _ (Clight.Sifthenelse _ _ _) _ => *)
-       _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       intro d; forward_if;
       [ ..
-      | revert d; refine (decorate_C_if_then _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_if_else _ _ _ _ _ _ _ _ _)]
-  (* while *)
+      | revert d; refine (decorate_C_if_then _ _ _ _ _ _)
+      | revert d; refine (decorate_C_if_else _ _ _ _ _ _)]
+  (* if without postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
+      assert_evar_postcondition
   (* while case is included in loop *)
   (* | |- let d := @abbreviate _ (Ssequence (Swhile ?Inv _ _) _) in
        (* semax _ _ (Clight.Ssequence (Clight.Swhile _ _) _) _ => *)
@@ -427,61 +479,40 @@ Tactic Notation "forwardD" :=
       [ ..
       | revert d; refine (decorate_C_while_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_while_after _ _ _ _ _ _ _ _ _)] *)
+  (* loop with postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      assert_postcondition
   (* loop single inv *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       semax _ _ (Clight.Sloop _ _) _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) Sskip) in _ =>
       intro d; forward_loop Inv;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)]
   (* loop double inv *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
-       semax _ _ (Clight.Sloop _ _) _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) Sskip) in _ =>
       intro d; forward_loop Inv1 continue: Inv2;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)]
-  (* loop single inv without postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
+  (* loop  without postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
       let Post_name := fresh "Post" in
       evar (Post_name : assert);
       let Post := eval unfold Post_name in Post_name in
       clear Post_name;
-      clear_all_Intro_tag;
-      assert Post_infer_tag by (exact I);
-      intro d;
-      forward_loop Inv break: Post;
-      [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | let d1 := fresh "d1" in
-        set (d1 := ltac: (fill_decorate_C_loop_after2));
-        revert d;
-        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
-      ]
-  (* loop double inv without postcondition*)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
-      let Post_name := fresh "Post" in
-      evar (Post_name : assert);
-      let Post := eval unfold Post_name in Post_name in
-      clear Post_name;
-      clear_all_Intro_tag;
-      assert Post_infer_tag by (exact I);
-      intro d;
-      forward_loop Inv1 continue: Inv2 break: Post;
-      [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)
-      | let d1 := fresh "d1" in
+      intro d; repeat apply -> seq_assoc; revert d;
+      intro d; apply semax_seq with Post;
+      [ abbreviate_semax; revert d;
+        refine (decorate_C_sequence1 _ _ _ _);
+        clear_all_Intro_tag;
+        assert Post_infer_tag by (exact I)
+      | abbreviate_semax;
+        let d1 := fresh "d" in
         set (d1 := ltac: (fill_decorate_C_loop_after2));
         revert d;
         refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
       ]
   (* given *)
-  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
-       semax _ _ _ _ =>
+  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
       refine (decorate_C_given _ _ _ _ _ _);
       first
       [ intro x
@@ -490,8 +521,7 @@ Tactic Notation "forwardD" :=
       Intros;
       revert d
       ;repeat ignore_dummyassert
-  | |- let d := @abbreviate _ (Sgiven2 _ (fun x => _)) in
-       semax _ _ _ _ =>
+  | |- let d := @abbreviate _ (Sgiven2 _ (fun x => _)) in _ =>
       refine (decorate_C_given2 _ _ _ _ _ _);
       let xx := fresh x in
       intro xx;

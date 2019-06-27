@@ -9,6 +9,7 @@ start_function f_sumarray_hint.
 forwardD.
 forwardD.
 forwardD.
+forwardD.
 { EExists. entailer!. }
 * forwardD.
   forwardD.
