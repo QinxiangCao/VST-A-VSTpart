@@ -298,8 +298,9 @@ Definition annotate_body (s: Clight.statement) : res (option (binder * assert * 
     do s' <- annotate_stmt (Clight.Ssequence s1 s2);
     OK (add_funcspec (binder, pre, post) s')
   | _ =>
-    do s' <- annotate_stmt s;
-    OK (None, s')
+    (* do s' <- annotate_stmt s; *)
+    (* Treat functions without funcspecs as not included in verification *)
+    OK (None, Sskip)
   end.
 
 Definition annotate_function (f: Clight.function) : res function :=
