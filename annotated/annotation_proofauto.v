@@ -142,60 +142,25 @@ Proof.
   exact H.
 Qed.
 
-Ltac fill_decorate_C_loop_after d1 d3 :=
-  match d1 with
-  | Sbreak => refine d3
-  | Ssequence ?d1 ?d2 =>
-      first [fill_decorate_C_loop_after d1 d3 | fill_decorate_C_loop_after d2 d3]
-  | Sgiven ?A ?d1 =>
-    match d1 with
-    | (fun x => _) =>
-        refine (Sgiven2 A _); first [intro x | let x1 := fresh x in rename x into x1; intro x];
-        let d2 := eval cbv beta in (d1 x) in fill_decorate_C_loop_after d2 d3
-    end
-  | Sifthenelse _ ?d1 ?d2 =>
-      first [fill_decorate_C_loop_after d1 d3 | fill_decorate_C_loop_after d2 d3]
-  | _ => fail
-  end.
-
-Ltac fill_decorate_C_loop_after2 :=
-  match goal with
-  | d := @abbreviate _ (Ssequence (Sloop _ ?d1 ?d2) ?d3) |- _ =>
-      fill_decorate_C_loop_after d1 d3
-  end.
-
 Lemma decorate_C_loop_after:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall (d1 d2: statement) Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ d2 in semax Delta P c Post).
+    forall d1 Inv d2 d3 Delta P c Post,
+      (let d := @abbreviate _ d3 in semax Delta P c Post) ->
+      (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
 Proof.
   intros.
   exact H.
 Qed.
 
-Definition Intro_tag {A} (x : A) := True.
-
 Lemma decorate_C_given:
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} d1 Delta P c Post,
-      (forall a, Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
       (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
 Proof.
   intros.
   Intros a.
-  apply H. apply I.
-Qed.
-
-Lemma decorate_C_given2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall {A: Type} d1 Delta P c Post,
-      (forall a, Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
-      (let d := @abbreviate _ (Sgiven2 A d1) in semax Delta (exp P) c Post).
-Proof.
-  intros.
-  Intros a.
-  apply H. apply I.
+  apply H.
 Qed.
 
 Lemma decorate_C_given':
@@ -212,54 +177,6 @@ Ltac ignore_dummyassert :=
   | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
     refine (decorate_C_dummyassert _ _ _ _)
   end.
-
-Lemma delta_derives_refl:
-  forall Delta P,
-    ENTAIL Delta, P |-- P.
-Proof.
-  intros. apply andp_left2. apply derives_refl.
-Qed.
-
-Lemma delta_derives_refl_and_Props:
-  forall Delta P Q R,
-    fold_right and True P ->
-    ENTAIL Delta, PROPx nil (LOCALx Q (SEPx R)) |-- PROPx P (LOCALx Q (SEPx R)).
-Proof.
-  intros. apply andp_left2.
-  unfold PROPx. apply andp_left2.
-  apply andp_right.
-  + apply prop_right. assumption.
-  + apply derives_refl.
-Qed.
-
-Lemma fold_right_and_app_iff_and: forall Pl Ql,
-  fold_right and True (Pl ++ Ql) <-> fold_right and True Pl /\ fold_right and True Ql.
-Proof.
-  intros. induction Pl; simpl; tauto.
-Qed.
-
-(* Create a exclusive local definition. *)
-Local Definition rev {A} := @rev A.
-
-Lemma fold_right_and_rev_iff: forall Pl,
-  fold_right and True (rev Pl) <-> fold_right and True Pl.
-Proof.
-  intros. induction Pl; simpl.
-  + tauto.
-  + rewrite fold_right_and_app_iff_and. simpl. tauto.
-Qed.
-
-Lemma fold_right_and_rev_extract: forall (P: Prop) Pl,
-  P -> fold_right and True (rev Pl) -> fold_right and True (rev (P :: Pl)).
-Proof.
-  intros *. do 2 rewrite fold_right_and_rev_iff. simpl. auto.
-Qed.
-
-Lemma fold_right_and_rev_nil:
-  fold_right and True (rev nil).
-Proof.
-  simpl. auto.
-Qed.
 
 Definition Post_infer_tag := True.
 
@@ -382,36 +299,47 @@ Ltac assert_prop P :=
   | _ => old_assert_PROP P
   end.
 
-Local Ltac clear_all_Intro_tag :=
-  repeat match goal with
-  | H : Intro_tag _ |- _ => clear H
-  end.
+Lemma derives_add_Prop_left : forall (P0 : Prop) P Q R Post,
+  P0 ->
+  (PROPx (P0 :: P) (LOCALx Q (SEPx R))) |-- Post ->
+  (PROPx P (LOCALx Q (SEPx R))) |-- Post.
+Proof.
+  intros.
+  eapply derives_trans. 2 : apply H0.
+  clear H0.
+  apply andp_prop_derives.
+  - simpl. tauto.
+  - auto.
+Qed.
+
+Axiom exp_left_revert : forall A (P: A -> environ -> mpred) Q,
+  exp P |-- Q -> (forall a, P a |-- Q).
 
 Local Ltac entail_evar_post :=
-  repeat match reverse goal with
-  | H : Intro_tag ?x |- _ =>
-    clear H;
-    Exists x;
-    (* we prefer to use (fun x => _), but x is a term instead of an ident, so we cannot find
-     * its name. *)
-    instantiate (1 := (fun xx => _)); cbv beta
+  simple apply andp_left2;
+  repeat match goal with
+  | H : ?P |- _ =>
+    first [
+      assert_fails (constr_eq P Post_infer_tag)
+    | fail 2
+    ];
+    ignore (P : Prop);
+    refine (derives_add_Prop_left _ _ _ _ _ H _);
+    clear H
   end;
-  eapply delta_derives_refl_and_Props;
-  repeat lazymatch goal with
-  | H : _ |- _ =>
-    lazymatch type of H with
-    | Post_infer_tag =>
-        apply fold_right_and_rev_nil
-    | ?P =>
-        match type of P with
-        | Prop =>
-            eapply fold_right_and_rev_extract;
-            only 1: apply H;
-            clear H
-        | _ => clear H
-        end
-    end
-  end.
+  repeat match goal with
+  | x : ?T |- _ =>
+    first [
+      assert_fails (constr_eq T Post_infer_tag)
+    | fail 2
+    ];
+    first [
+      revert x;
+      refine (exp_left_revert T (fun x => _) _ _)
+    | fail 3
+    ]
+  end;
+  apply derives_refl.
 
 Local Ltac assert_postcondition :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
@@ -437,15 +365,31 @@ Local Ltac assert_evar_postcondition :=
     | apply <- semax_seq_skip; refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
     ];
     [ intro d; abbreviate_semax; revert d;
-      clear_all_Intro_tag;
       assert Post_infer_tag by (exact I)
     | intro d; abbreviate_semax; revert d
     ]
   end.
 
 Tactic Notation "forwardD" :=
-  simpl rev;
+  repeat ignore_dummyassert;
   lazymatch goal with
+  (* given *)
+  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
+      refine (decorate_C_given _ _ _ _ _ _);
+      first
+      [ intro x
+      | let old_x := fresh x in rename x into old_x; intro x];
+      intros d;
+      Intros;
+      revert d
+  (* unnamed variable *)
+  | |- let d := @abbreviate _ _ in semax _ (EX x:?T, _) _ _ =>
+      intro d;
+      first [
+        let x := fresh x in Intros x
+      | fail 1 "Fail in Intros"
+      ];
+      revert d
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
       intro d; clear d;
@@ -456,9 +400,6 @@ Tactic Notation "forwardD" :=
         idtac
   | |- let d := @abbreviate _ _ in _ |-- _ =>
       intro d; clear d
-  (* dummyassert *)
-  | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
-      refine (decorate_C_dummyassert _ _ _ _)
   (* if with postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
       assert_postcondition
@@ -499,35 +440,14 @@ Tactic Notation "forwardD" :=
       evar (Post_name : assert);
       let Post := eval unfold Post_name in Post_name in
       clear Post_name;
-      intro d; repeat apply -> seq_assoc; revert d;
-      intro d; apply semax_seq with Post;
+      intro d; repeat apply -> seq_assoc;
+      apply semax_seq with Post;
       [ abbreviate_semax; revert d;
         refine (decorate_C_sequence1 _ _ _ _);
-        clear_all_Intro_tag;
         assert Post_infer_tag by (exact I)
-      | abbreviate_semax;
-        let d1 := fresh "d" in
-        set (d1 := ltac: (fill_decorate_C_loop_after2));
-        revert d;
-        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
+      | abbreviate_semax; revert d;
+        refine (decorate_C_sequence _ _ _ _)
       ]
-  (* given *)
-  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
-      refine (decorate_C_given _ _ _ _ _ _);
-      first
-      [ intro x
-      | let old_x := fresh x in rename x into old_x; intro x];
-      intros ? d;
-      Intros;
-      revert d
-      ;repeat ignore_dummyassert
-  | |- let d := @abbreviate _ (Sgiven2 _ (fun x => _)) in _ =>
-      refine (decorate_C_given2 _ _ _ _ _ _);
-      let xx := fresh x in
-      intro xx;
-      intros ? d;
-      Intros;
-      revert d
   (* assert *)
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
@@ -540,14 +460,16 @@ Tactic Notation "forwardD" :=
       refine (decorate_C_sequence _ _ _ _)
   | |- let d := @abbreviate _ _ in
        semax _ _ _ _ =>
-      intro d;
-      forward;
+      intro d; clear d;
+      forward; abbreviate_semax;
       (* solve if Post is an evar; otherwise remain for user *)
-      try lazymatch goal with |- ENTAIL _, _ |-- ?Post =>
+      lazymatch goal with
+      | |- ENTAIL _, _ |-- ?Post =>
         tryif is_evar Post then
           entail_evar_post
         else
           idtac
+      | _ => idtac
       end
   end.
 

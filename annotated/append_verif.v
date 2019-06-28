@@ -93,8 +93,7 @@ forwardD.
     (* else branch *)
     forwardD.
   }
-  { (* intro d. simpl annotation_proofauto.rev. Intros xx. Intros xx0. Intros xx1. Intros xx2. revert d. *)
-    forwardD.
+  { forwardD.
     forwardD.
     forwardD.
     forwardD.
@@ -103,7 +102,7 @@ forwardD.
     {
       Exists x.
       entailer!.
-      rewrite (proj1 H11 (eq_refl _)). simpl.
+      rewrite (proj1 H4 (eq_refl _)). simpl.
       unfold listrep at 3; fold listrep.
       normalize.
       pull_right (listrep sh (a0 :: s2) t -* listrep sh ((a :: s1b) ++ s2) x).
