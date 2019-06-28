@@ -39,27 +39,6 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
   end.
 
 (***************** Control flow analysis ***********************)
-Fixpoint loop_concat_break (s safter: statement) : statement :=
-  let f :=
-    fix f s :=
-      match s with
-      | Sbreak => Ssequence Sbreak safter
-      | Sgiven binder s => Sgiven binder (f s)
-      | Ssequence s1 s2 => Ssequence (f s1) (f s2)
-      | Sifthenelse e s1 s2 => Sifthenelse e (f s1) (f s2)
-      | Sloop inv s1 s2 => Sloop inv (f s1) (f s2)
-      | Slabel lbl s => Slabel lbl (f s)
-      | Sswitch e ls => Sswitch e (f' ls)
-      | _ => s
-      end
-    with f' s :=
-      match s with
-      | LSnil => LSnil
-      | LScons lbl s ls => LScons lbl (f s) (f' ls)
-      end
-    for f
-  in
-  f s.
 
 Fixpoint count_break (s: statement) : res Z :=
   match s with
@@ -191,13 +170,13 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
         do cs_list1 <- annotate_stmt_list nil s1;
         do cs_list2 <- annotate_stmt_list cs_list1 s2;
         do s' <- fold_cs cs_list2 Sskip;
-        let s' :=
+        (* let s' :=
           match s' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s'
           end
-        in
+        in *)
         let s'' := add_binder_list s' inv in
         do _ <- match s2 with
         | Clight.Sskip => OK tt
@@ -207,13 +186,13 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
         do s2' <- annotate_stmt s2;
-        let s1' :=
+        (* let s1' :=
           match s1' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s1'
           end
-        in
+        in *)
         let s1'' := add_binder_list s1' inv1 in
         let s2'' := add_binder_list s2' inv2 in
         OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
