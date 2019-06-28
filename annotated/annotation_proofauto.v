@@ -178,7 +178,7 @@ Ltac ignore_dummyassert :=
     refine (decorate_C_dummyassert _ _ _ _)
   end.
 
-Definition Post_infer_tag := True.
+Definition Post_infer_tag (_ : environ -> mpred) := True.
 
 Ltac use_annotation hint :=
   match goal with
@@ -317,29 +317,44 @@ Axiom exp_left_revert : forall A (P: A -> environ -> mpred) Q,
 
 Local Ltac entail_evar_post :=
   simple apply andp_left2;
-  repeat match goal with
-  | H : ?P |- _ =>
-    first [
-      assert_fails (constr_eq P Post_infer_tag)
-    | fail 2
-    ];
-    ignore (P : Prop);
-    refine (derives_add_Prop_left _ _ _ _ _ H _);
-    clear H
-  end;
-  repeat match goal with
-  | x : ?T |- _ =>
-    first [
-      assert_fails (constr_eq T Post_infer_tag)
-    | fail 2
-    ];
-    first [
-      revert x;
-      refine (exp_left_revert T (fun x => _) _ _)
-    | fail 3
-    ]
-  end;
-  apply derives_refl.
+  lazymatch goal with
+  | |- _ |-- ?Post =>
+    repeat
+      first [
+        lazymatch goal with
+        | H : Post_infer_tag ?Post0 |- _ =>
+          tryif constr_eq Post Post0
+            then fail 1 (* break *)
+            else clear H
+        end
+      | fail 2 "Matching Post_infer_tag not found"
+      ];
+    repeat match goal with
+    | H : ?P |- _ =>
+      first [
+        assert_fails constr_eq P (Post_infer_tag Post)
+      | fail 2 "Fail to revert Props"
+      ];
+      ignore (P : Prop);
+      refine (derives_add_Prop_left _ _ _ _ _ H _);
+      clear H
+    end;
+    repeat match goal with
+    | x : ?T |- _ =>
+      first [
+        assert_fails constr_eq T (Post_infer_tag Post)
+      | fail 2 (* break *)
+      ];
+      first [
+        subst x
+      | revert x;
+        refine (exp_left_revert T (fun x => _) _ _)
+      | fail 3 "Fail to revert existentail variables"
+      ]
+    end;
+    subst Post;
+    apply derives_refl
+  end.
 
 Local Ltac assert_postcondition :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
@@ -357,21 +372,24 @@ Local Ltac assert_evar_postcondition :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let Post_name := fresh "Post" in
     evar (Post_name : assert);
-    let Post := eval unfold Post_name in Post_name in
-    clear Post_name;
+    let Post := Post_name in
     intro d; repeat apply -> seq_assoc; revert d;
     first [
       refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
     | apply <- semax_seq_skip; refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
     ];
     [ intro d; abbreviate_semax; revert d;
-      assert Post_infer_tag by (exact I)
-    | intro d; abbreviate_semax; revert d
+      assert (Post_infer_tag Post) by (exact I)
+    | subst Post; intro d; abbreviate_semax; Intros; revert d
     ]
   end.
 
 Tactic Notation "forwardD" :=
   repeat ignore_dummyassert;
+  lazymatch goal with
+  | |- let d := @abbreviate _ _ in _ =>
+    intro d; Intros; revert d
+  end;
   lazymatch goal with
   (* given *)
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
@@ -394,7 +412,7 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
       intro d; clear d;
       (* solve if Post is an evar; otherwise remain for user *)
-      tryif is_evar Post then
+      tryif (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end) then
         entail_evar_post
       else
         idtac
@@ -438,14 +456,13 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
       let Post_name := fresh "Post" in
       evar (Post_name : assert);
-      let Post := eval unfold Post_name in Post_name in
-      clear Post_name;
+      let Post := Post_name in
       intro d; repeat apply -> seq_assoc;
       apply semax_seq with Post;
       [ abbreviate_semax; revert d;
         refine (decorate_C_sequence1 _ _ _ _);
-        assert Post_infer_tag by (exact I)
-      | abbreviate_semax; revert d;
+        assert (Post_infer_tag Post) by (exact I)
+      | subst Post; abbreviate_semax; revert d;
         refine (decorate_C_sequence _ _ _ _)
       ]
   (* assert *)
@@ -465,10 +482,14 @@ Tactic Notation "forwardD" :=
       (* solve if Post is an evar; otherwise remain for user *)
       lazymatch goal with
       | |- ENTAIL _, _ |-- ?Post =>
-        tryif is_evar Post then
-          entail_evar_post
-        else
-          idtac
+        first [
+          assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end);
+          first [
+            entail_evar_post
+          | fail 2 "Fail in entail_evar_post"
+          ]
+        | idtac
+        ]
       | _ => idtac
       end
   end.

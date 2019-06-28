@@ -20,12 +20,15 @@ forwardD.
   forwardD.
   forwardD.
   forwardD.
+  forwardD.
+  forwardD.
   assert (repable_signed (Znth i al))
     by (apply Forall_Znth; auto; omega).
   assert (repable_signed (fold_right Z.min (Znth 0 al) (sublist 0 i al)))
     by (apply Forall_fold_min;
       [apply Forall_Znth; auto; omega
       |apply Forall_sublist; auto]).
+  forwardD.
   forwardD.
   forwardD.
   {
@@ -52,7 +55,6 @@ forwardD.
   {
     Exists (i+1). entailer!.
   }
-  forwardD.
 - forwardD.
   forwardD.
   {

@@ -68,12 +68,17 @@ forwardD.
     forwardD.
     (* then branch *)
     forwardD.
+    forwardD.
     {
       destruct s1b as [| b s1c]; unfold listrep at 3; fold listrep; [ Intros; contradiction |].
       Intros z.
       Exists b s1c z.
       entailer!.
     }
+    (* else branch *)
+    forwardD.
+    (* after if *)
+    forwardD.
     forwardD.
     forwardD.
     forwardD.
@@ -90,8 +95,6 @@ forwardD.
       forget (b::s1c++s2) as s3.
       unfold listrep; fold listrep; Exists u; auto.
     }
-    (* else branch *)
-    forwardD.
   }
   { forwardD.
     forwardD.
