@@ -1,29 +1,38 @@
-#define NULL 0
+#include <stddef.h>
 
 struct list {int head; struct list *tail;};
 
 struct list *append (struct list *x, struct list *y) {
-  /* Given (sh: share) (s1: list val) (s2: list val) (x: val) (y: val), */
+  /* With sh x y s1 s2, */
+  /* Require
+       PROP(writable_share sh)
+       LOCAL (temp _x x; temp _y y)
+       SEP (listrep sh s1 x; listrep sh s2 y)
+  */
+  /* Ensure
+      EX r: val,
+       PROP()
+       LOCAL(temp ret_temp r)
+       SEP (listrep sh (s1++s2) r)
+  */
   struct list *t, *u;
   if (x==NULL)
     return y;
   else {
     t = x;
-    /* Assert (EX a: val, EX s1b: list val,
+    /* Assert (EX a s1b,
         (PROP (s1 = a :: s1b)
          LOCAL (temp _t x; temp _x x; temp _y y)
          SEP (listrep sh s1 x; listrep sh s2 y)))
     */
-    /* Given (a: val) (s1b: list val), */
-    /* Assert (EX u: val,
+    /* Assert (EX u,
         (PROP ()
          LOCAL (temp _t x; temp _x x; temp _y y)
          SEP (data_at sh t_struct_list (a ,u) x; listrep sh s1b u; listrep sh s2 y)))%assert
     */
-    /* Given u: val, */
     u = t->tail;
     /* Inv
-    (EX a: val, EX s1b: list val, EX t: val, EX u: val,
+    (EX a s1b t u,
           PROP ()
           LOCAL (temp _x x; temp _t t; temp _u u; temp _y y)
           SEP (listrep sh (a::s1b++s2) t -* listrep sh (s1++s2) x;
@@ -32,8 +41,7 @@ struct list *append (struct list *x, struct list *y) {
                  listrep sh s2 y))%assert
     */
     while (u!=NULL) {
-      /* Given (a: val) (s1b: list val) (t: val) (u: val), */
-      /* Assert (EX b: val, EX s1c: list val, EX z: val,
+      /* Assert (EX b s1c z,
             (PROP (s1b = b :: s1c)
              LOCAL (temp _x x; temp _t t; temp _u u; temp _y y)
              SEP (listrep sh (a :: s1b ++ s2) t -* listrep sh (s1 ++ s2) x;
@@ -41,7 +49,6 @@ struct list *append (struct list *x, struct list *y) {
                   data_at sh t_struct_list (b, z) u;
                   listrep sh s1c z; listrep sh s2 y)))%assert
       */
-      /* Given (b: val) (s1c: list val) (z: val), */
       t = u;
       u = t->tail;
     }
