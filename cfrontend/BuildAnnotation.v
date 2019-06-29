@@ -38,36 +38,21 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
     fold_right Sgiven s binder_list
   end.
 
-Fixpoint loop_concat_break (s safter: statement) : statement :=
-  let f :=
-    fix f s :=
-      match s with
-      | Sbreak => Ssequence Sbreak safter
-      | Sgiven binder s => Sgiven binder (f s)
-      | Ssequence s1 s2 => Ssequence (f s1) (f s2)
-      | Sifthenelse e s1 s2 => Sifthenelse e (f s1) (f s2)
-      | Sloop inv s1 s2 => Sloop inv (f s1) (f s2)
-      | Slabel lbl s => Slabel lbl (f s)
-      | Sswitch e ls => Sswitch e (f' ls)
-      | _ => s
-      end
-    with f' s :=
-      match s with
-      | LSnil => LSnil
-      | LScons lbl s ls => LScons lbl (f s) (f' ls)
-      end
-    for f
-  in
-  f s.
+(***************** Control flow analysis ***********************)
 
 Fixpoint count_break (s: statement) : res Z :=
   match s with
   | Sgiven _ s => count_break s
+  | Ssequence s1 s2 =>
+      do cnt1 <- count_break s1;
+      do cnt2 <- count_break s2;
+      OK (cnt1 + cnt2)
   | Sifthenelse _ s1 s2 =>
       do cnt1 <- count_break s1;
       do cnt2 <- count_break s2;
       OK (cnt1 + cnt2)
   | Slabel _ s => count_break s
+  | Sbreak => OK 1
   | _ => OK 0
   end.
 
@@ -76,6 +61,54 @@ Definition check_single_break (s: statement) : res unit :=
   if cnt <=? 1
     then OK tt
     else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
+
+Fixpoint count_continue (s: statement) : res Z :=
+  match s with
+  | Sgiven _ s => count_continue s
+  | Ssequence s1 s2 =>
+      do cnt1 <- count_continue s1;
+      do cnt2 <- count_continue s2;
+      OK (cnt1 + cnt2)
+  | Sifthenelse _ s1 s2 =>
+      do cnt1 <- count_continue s1;
+      do cnt2 <- count_continue s2;
+      OK (cnt1 + cnt2)
+  | Slabel _ s => count_continue s
+  | Sswitch _ ls => count_continue_labeled ls
+  | Scontinue => OK 1
+  | _ => OK 0
+  end
+with count_continue_labeled (ls: labeled_statements) : res Z :=
+  match ls with
+  | LSnil => OK 0
+  | LScons _ s ls =>
+    do cnt1 <- count_continue s;
+    do cnt2 <- count_continue_labeled ls;
+    OK (cnt1 + cnt2)
+  end.
+
+Definition check_no_continue (s: statement) : res unit :=
+  do cnt <- count_continue s;
+  if cnt <=? 0
+    then OK tt
+    else Error (MSG "Double invariants needed for for loops with continue" :: nil).
+
+Fixpoint has_no_normal_exit (s: statement) : bool :=
+  match s with
+  | Sgiven _ s => has_no_normal_exit s
+  | Ssequence s1 s2 =>
+      has_no_normal_exit s1 || has_no_normal_exit s2
+  | Sifthenelse _ s1 s2 =>
+      has_no_normal_exit s1 && has_no_normal_exit s2
+  | Slabel _ s => has_no_normal_exit s
+  | Scontinue | Sbreak | Sreturn _ => true
+  | _ => false
+  end.
+
+Definition check_single_normal_exit (s1: statement) (s2: statement) : res unit :=
+  if has_no_normal_exit s1 || has_no_normal_exit s2
+    then OK tt
+    else Error (MSG "Missing postcondition for if statement" :: nil).
 
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
@@ -89,7 +122,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | _ =>
         fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
       end
-    | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
+    | inl (Given, c) => Error (MSG "Manual Given comment is not allowed in this version" :: nil)
     | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
       match s, acc with
@@ -103,7 +136,14 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
           => fold_cs cs_list (Ssequence s acc)
       | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
           do _ <- check_single_break (Ssequence s1 s2);
-          fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
+          fold_cs cs_list (Ssequence s acc)
+      (* If if statement is followed by an assertion or skip *)
+      | Sifthenelse e s1 s2, Ssequence (Sassert _) _
+      | Sifthenelse e s1 s2, Sskip
+          => fold_cs cs_list (Ssequence s acc)
+      | Sifthenelse e s1 s2, _ =>
+          do _ <- check_single_normal_exit s1 s2;
+          fold_cs cs_list (Ssequence s acc)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
@@ -130,25 +170,29 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
         do cs_list1 <- annotate_stmt_list nil s1;
         do cs_list2 <- annotate_stmt_list cs_list1 s2;
         do s' <- fold_cs cs_list2 Sskip;
-        let s' :=
+        (* let s' :=
           match s' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s'
           end
-        in
+        in *)
         let s'' := add_binder_list s' inv in
+        do _ <- match s2 with
+        | Clight.Sskip => OK tt
+        | _ => check_no_continue s''
+        end;
         OK (Sloop (LISingle inv) s'' Sskip)
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
         do s2' <- annotate_stmt s2;
-        let s1' :=
+        (* let s1' :=
           match s1' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s1'
           end
-        in
+        in *)
         let s1'' := add_binder_list s1' inv1 in
         let s2'' := add_binder_list s2' inv2 in
         OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
@@ -233,8 +277,9 @@ Definition annotate_body (s: Clight.statement) : res (option (binder * assert * 
     do s' <- annotate_stmt (Clight.Ssequence s1 s2);
     OK (add_funcspec (binder, pre, post) s')
   | _ =>
-    do s' <- annotate_stmt s;
-    OK (None, s')
+    (* do s' <- annotate_stmt s; *)
+    (* Treat functions without funcspecs as not included in verification *)
+    OK (None, Sskip)
   end.
 
 Definition annotate_function (f: Clight.function) : res function :=
