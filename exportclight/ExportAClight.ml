@@ -333,12 +333,25 @@ let rec expr p = function
 let comment p (t, c) =
   fprintf p "%s" c*)
 
+(* Assertion *)
+let assertion p a =
+  fprintf p "(%s)" a
+
+(* Loop invariants *)
+let loop_invariant p = function
+| LISingle inv ->
+  fprintf p "@[<hov 2>(LISingle %a)@]" assertion inv
+| LIDouble (inv1, inv2) ->
+  fprintf p "@[<hov 2>(LISingle %a@ %a)@]" assertion inv1 assertion inv2
+
 (* Statements *)
 let rec stmt p = function
-  | Sassert c ->
-    fprintf p "@[<hov 2>(Sassert %s)@]" c
-  | Sgiven (c, s) ->
-    fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" c stmt s
+  | Sassert a ->
+    fprintf p "@[<hov 2>(Sassert %a)@]" assertion a
+  | Sdummyassert a ->
+    fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
+  | Sgiven (b, s) ->
+    fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
   | Sskip ->
       fprintf p "Sskip"
   | Sassign(e1, e2) ->
@@ -362,14 +375,12 @@ let rec stmt p = function
       fprintf p "@[<hv 2>(Ssequence@ %a@ %a)@]" stmt s1 stmt s2
   | Sifthenelse(e, s1, s2) ->
       fprintf p "@[<hv 2>(Sifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
-  | Sloop (inv, inv2, Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip)
-      when inv = inv2 ->
-      fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
-  | Sloop (inv, inv2, Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip)
-      when inv = inv2 ->
-      fprintf p "@[<hv 2>(Swhile@ %s@ %a@ %a)@]" inv expr e stmt s
-  | Sloop (inv1, inv2, s1, s2) ->
-      fprintf p "@[<hv 2>(Sloop@ %s@ %s@ %a@ %a)@]" inv1 inv2 stmt s1 stmt s2
+  | Sloop ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
+      fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
+  | Sloop ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
+      fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
+  | Sloop (inv, s1, s2) ->
+      fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
   | Sbreak ->
       fprintf p "Sbreak"
   | Scontinue ->
@@ -498,7 +509,8 @@ let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
 Require Import annotated_Clight.\n\
-Local Open Scope Z_scope.\n"
+Local Open Scope Z_scope.\n\
+Import AClightNotations.\n"
 
 (* Naming the compiler-generated temporaries occurring in the program *)
 
@@ -520,6 +532,7 @@ let rec name_expr = function
 
 let rec name_stmt = function
   | Sassert _ -> ()
+  | Sdummyassert _ -> ()
   | Sgiven (_, s) -> name_stmt s
   | Sskip -> ()
   | Sassign(e1, e2) -> name_expr e1; name_expr e2
@@ -530,7 +543,7 @@ let rec name_stmt = function
       name_opt_temporary optid; List.iter name_expr el
   | Ssequence(s1, s2) -> name_stmt s1; name_stmt s2
   | Sifthenelse(e, s1, s2) -> name_expr e; name_stmt s1; name_stmt s2
-  | Sloop(_, _, s1, s2) -> name_stmt s1; name_stmt s2
+  | Sloop(_, s1, s2) -> name_stmt s1; name_stmt s2
   | Sbreak -> ()
   | Scontinue -> ()
   | Sswitch(e, cases) -> name_expr e; name_lblstmts cases
@@ -555,16 +568,53 @@ let name_globdef (id, g) =
 let name_program p =
   List.iter name_globdef p.Ctypes.prog_defs
 
+let print_function_spec p (id, f) =
+  match f.fn_spec with
+  | Some ((binder, pre), post) ->
+    fprintf p "Definition f_%s_spec_annotation :=@ " (extern_atom id);
+    fprintf p "@[<hov 2>  ANNOTATION_WITH %s (%a,@ %a).@]@ @ " binder assertion pre assertion post;
+
+    fprintf p "Definition f_%s_spec_complex :=@ " (extern_atom id);
+    fprintf p "  ltac:(uncurry_funcspec f_%s_spec_annotation).@ @ " (extern_atom id);
+
+    fprintf p "Definition f_%s_funsig: funsig :=@ " (extern_atom id);
+    fprintf p "  %a.@ @ "
+          (print_pair (print_list (print_pair ident typ)) typ) (f.fn_params, f.fn_return);
+
+    fprintf p "Definition %s_spec :=@ "(extern_atom id) ;
+    fprintf p "  ltac:(make_funcspec %a f_%s_funsig f_%s_spec_complex).@ @ "
+          ident id (extern_atom id) (extern_atom id)
+  | None -> ()
+
 (* Print annotation part only *)
 let print_function_annotation p (id, f) =
+  print_function_spec p (id, f);
   fprintf p "Definition f_%s_hint :=@ " (extern_atom id);
   stmt p f.fn_body;
-  fprintf p ".@ "
+  fprintf p ".@ @ "
 
 let print_globdef_annotation p (id, gd) =
   match gd with
   | Gfun(Ctypes.Internal f) -> print_function_annotation p (id, f)
   | _ -> ()
+
+let print_Gprog p prog_defs =
+  fprintf p "Definition Gprog : funspecs :=@ ";
+  fprintf p "  ltac:(with_library prog [@[<hv>";
+  let cnt = ref 0 in
+  List.iter (fun (id, gd) ->
+    match gd with
+    | Gfun (Ctypes.Internal f) ->
+      begin match f.fn_spec with
+      | Some _ ->
+        if !cnt > 0 then fprintf p ";@ ";
+        fprintf p "%s_spec" (extern_atom id);
+        cnt := !cnt+1
+      | None -> ()
+      end
+    | _ -> ()
+  ) prog_defs;
+  fprintf p "@]]).@ @ "
 
 (* All together *)
 
@@ -576,4 +626,5 @@ let print_program p prog sourcefile normalized =
   fprintf p "%s" prologue;
   print_clightgen_info p sourcefile normalized;
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
+  print_Gprog p prog.Ctypes.prog_defs;
   fprintf p "@]@."
