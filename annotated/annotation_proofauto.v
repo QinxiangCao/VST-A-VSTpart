@@ -226,8 +226,7 @@ Function spec: " S);
   end;
   start_function_hint;
   unfold Clight.Swhile, Sfor in *;
-  revert d;
-  repeat ignore_dummyassert.
+  revert d.
 
 Ltac old_assert_PROP P :=
   assert_PROP P.
@@ -235,6 +234,7 @@ Ltac old_assert_PROP P :=
 Ltac assert_prop P :=
   lazymatch goal with
   | |- let d := @abbreviate statement _ in _ =>
+    let d := fresh d in
     intro d; old_assert_PROP P; only 2: revert d
   | _ => old_assert_PROP P
   end.
@@ -303,6 +303,7 @@ Local Ltac entail_evar_post :=
 
 Local Ltac assert_postcondition :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let d := fresh d in
     intro d; repeat apply -> seq_assoc; revert d;
     first [
       refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
@@ -315,6 +316,7 @@ Local Ltac assert_postcondition :=
 
 Local Ltac assert_evar_postcondition :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let d := fresh d in
     let Post_name := fresh "Post" in
     evar (Post_name : assert);
     let Post := Post_name in
@@ -334,6 +336,7 @@ Tactic Notation "forwardD" :=
   (* Intro Props *)
   lazymatch goal with
   | |- let d := @abbreviate _ _ in _ =>
+    let d := fresh d in
     intro d; Intros; revert d
   end;
   lazymatch goal with
@@ -345,6 +348,7 @@ Tactic Notation "forwardD" :=
       | let old_x := fresh x in rename x into old_x; intro x]
   (* unnamed variable *)
   | |- let d := @abbreviate _ _ in semax _ (EX x:?T, _) _ _ =>
+      let d := fresh d in
       intro d;
       first [
         let x := fresh x in Intros x
@@ -353,7 +357,7 @@ Tactic Notation "forwardD" :=
       revert d
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
-      intro d; clear d;
+      intros _;
       (* solve if Post is an evar; otherwise remain for user *)
       tryif (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end) then
         entail_evar_post
@@ -366,6 +370,7 @@ Tactic Notation "forwardD" :=
       assert_postcondition
   (* if *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
+      let d := fresh d in
       intro d; forward_if;
       [ ..
       | revert d; refine (decorate_C_if_then _ _ _ _ _ _)
@@ -378,11 +383,13 @@ Tactic Notation "forwardD" :=
       assert_postcondition
   (* loop single inv *)
   | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) Sskip) in _ =>
+      let d := fresh d in
       intro d; forward_loop Inv;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)]
   (* loop double inv *)
   | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) Sskip) in _ =>
+      let d := fresh d in
       intro d; forward_loop Inv1 continue: Inv2;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
@@ -396,13 +403,14 @@ Tactic Notation "forwardD" :=
       refine (decorate_C_assert P _ _ _ _ _ _ _)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ (Clight.Ssequence _ _) _ =>
+      let d := fresh d in
       intro d;
       forward;
       revert d;
       refine (decorate_C_sequence _ _ _ _)
   | |- let d := @abbreviate _ _ in
        semax _ _ _ _ =>
-      intro d; clear d;
+      intros _;
       forward; abbreviate_semax;
       (* solve if Post is an evar; otherwise leave to user *)
       lazymatch goal with
