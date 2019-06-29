@@ -9,12 +9,16 @@ start_function f_sumarray_hint.
 forwardD.
 forwardD.
 forwardD.
+forwardD.
 { EExists. entailer!. }
 * forwardD.
-  forwardD.
   assert_prop (Zlength contents = size). {
     entailer!. list_solve2.
   }
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
   forwardD.
   forwardD.
   forwardD.
@@ -25,8 +29,6 @@ forwardD.
     auto.
     simpl. autorewrite with sublist. normalize.
   }
-  forwardD.
-  forwardD.
 * forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.

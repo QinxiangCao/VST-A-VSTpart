@@ -3,13 +3,6 @@ Require Export annotated_Clight.
 
 (********** annotation handling lemmas ****************************************)
 
-Lemma decorate_C_skip: forall P,
-  P ->
-  let d := @abbreviate _ Sskip in P.
-Proof.
-  intros. assumption.
-Qed.
-
 Lemma decorate_C_dummyassert: forall Q s P,
   (let d := @abbreviate _ s in P) ->
   let d := @abbreviate _ (Ssequence (Sdummyassert Q) s) in P.
@@ -17,7 +10,7 @@ Proof.
   intros. assumption.
 Qed.
 
-Lemma decorate_C_step: forall P s1 s2,
+Lemma decorate_C_sequence: forall P s1 s2,
   (let d := @abbreviate _ s2 in P) ->
   (let d := @abbreviate _ (Ssequence s1 s2) in P).
 Proof.
@@ -37,7 +30,6 @@ Proof.
   + exact H0.
 Qed.
 
-(* may not find correct seq *)
 Lemma decorate_C_assert2:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
@@ -50,41 +42,31 @@ Proof.
   + exact H0.
 Qed.
 
-Lemma decorate_C_if_then:
+Lemma decorate_C_assert3:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 d3 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) d3) in semax Delta P c Post).
+    forall Q s1 s2 Delta P c1 c2 Post,
+      (let d := @abbreviate _ (Ssequence s1 Sskip) in semax Delta P c1 (overridePost Q Post)) ->
+      (let d := @abbreviate _ s2 in semax Delta Q c2 Post) ->
+      (let d := @abbreviate _ (Ssequence s1 s2) in semax Delta P (Clight.Ssequence c1 c2) Post).
+Proof.
+  intros. eapply semax_seq.
+  + exact H.
+  + exact H0.
+Qed.
+
+Lemma decorate_C_if_then:
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d1 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
 Proof.
   intros.
   exact H.
 Qed.
 
 Lemma decorate_C_if_else:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 d2 d3 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Sifthenelse b d1 d2) d3) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_while_body:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 Inv d2 Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Swhile Inv b d1) d2) in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_while_after:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall b d1 Inv d2 Delta P c Post,
-      (let d := @abbreviate _ d2 in semax Delta P c Post) ->
-      (let d := @abbreviate _ (Ssequence (Swhile Inv b d1) d2) in semax Delta P c Post).
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d2 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
 Proof.
   intros.
   exact H.
@@ -110,71 +92,15 @@ Proof.
   exact H.
 Qed.
 
-Ltac fill_decorate_C_loop_after d :=
-  match d with
-  | Ssequence Sbreak ?d2 => refine d2
-  | Ssequence ?d1 ?d2 =>
-      first [fill_decorate_C_loop_after d1 | fill_decorate_C_loop_after d2]
-  | Sgiven ?A ?d1 =>
-    match d1 with
-    | (fun x => _) =>
-        refine (Sgiven A _); first [intro x | let x1 := fresh x in rename x into x1; intro x];
-        let d2 := eval cbv beta in (d1 x) in fill_decorate_C_loop_after d2
-    end
-  | Sifthenelse _ ?d1 ?d2 =>
-      first [fill_decorate_C_loop_after d1 | fill_decorate_C_loop_after d2]
-  | _ => fail
-  end.
-
-Ltac fill_decorate_C_loop_after2 :=
-  match goal with
-  | d := @abbreviate _ (Ssequence (Sloop _ ?d1 ?d2) _) |- _ =>
-      fill_decorate_C_loop_after d1
-  end.
-
-Lemma decorate_C_loop_after:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall (d1 d2: statement) Delta P c Post,
-      (let d := @abbreviate _ d1 in semax Delta P c Post) ->
-      (let d := @abbreviate _ d2 in semax Delta P c Post).
-Proof.
-  intros.
-  exact H.
-Qed.
-
-Lemma decorate_C_step2:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall d1 d2 P,
-      (* should check d1 not Sassert or Sassume *)
-      (let d := @abbreviate _ d2 in P) ->
-      (let d := @abbreviate _ (Ssequence d1 d2) in P).
-Proof.
-  intros.
-  assumption.
-Qed.
-
-Lemma decorate_C_step1:
-  forall {Espec: OracleKind} {cs: compspecs},
-    forall (d1: statement) P,
-      (* should check d1 not Sassert or Sassume *)
-      P ->
-      (let d := @abbreviate _ d1 in P).
-Proof.
-  intros.
-  assumption.
-Qed.
-
-Definition Intro_tag {A} (x : A) := True.
-
 Lemma decorate_C_given:
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} d1 Delta P c Post,
-      (forall a, Intro_tag a -> let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
       (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
 Proof.
   intros.
   Intros a.
-  apply H. apply I.
+  apply H.
 Qed.
 
 Lemma decorate_C_given':
@@ -192,55 +118,7 @@ Ltac ignore_dummyassert :=
     refine (decorate_C_dummyassert _ _ _ _)
   end.
 
-Lemma delta_derives_refl:
-  forall Delta P,
-    ENTAIL Delta, P |-- P.
-Proof.
-  intros. apply andp_left2. apply derives_refl.
-Qed.
-
-Lemma delta_derives_refl_and_Props:
-  forall Delta P Q R,
-    fold_right and True P ->
-    ENTAIL Delta, PROPx nil (LOCALx Q (SEPx R)) |-- PROPx P (LOCALx Q (SEPx R)).
-Proof.
-  intros. apply andp_left2.
-  unfold PROPx. apply andp_left2.
-  apply andp_right.
-  + apply prop_right. assumption.
-  + apply derives_refl.
-Qed.
-
-Lemma fold_right_and_app_iff_and: forall Pl Ql,
-  fold_right and True (Pl ++ Ql) <-> fold_right and True Pl /\ fold_right and True Ql.
-Proof.
-  intros. induction Pl; simpl; tauto.
-Qed.
-
-(* Create a exclusive local definition. *)
-Local Definition rev {A} := @rev A.
-
-Lemma fold_right_and_rev_iff: forall Pl,
-  fold_right and True (rev Pl) <-> fold_right and True Pl.
-Proof.
-  intros. induction Pl; simpl.
-  + tauto.
-  + rewrite fold_right_and_app_iff_and. simpl. tauto.
-Qed.
-
-Lemma fold_right_and_rev_extract: forall (P: Prop) Pl,
-  P -> fold_right and True (rev Pl) -> fold_right and True (rev (P :: Pl)).
-Proof.
-  intros *. do 2 rewrite fold_right_and_rev_iff. simpl. auto.
-Qed.
-
-Lemma fold_right_and_rev_nil:
-  fold_right and True (rev nil).
-Proof.
-  simpl. auto.
-Qed.
-
-Definition Post_infer_tag := True.
+Definition Post_infer_tag (_ : environ -> mpred) := True.
 
 Ltac use_annotation hint :=
   match goal with
@@ -361,135 +239,158 @@ Ltac assert_prop P :=
   | _ => old_assert_PROP P
   end.
 
-Local Ltac clear_all_Intro_tag :=
-  repeat match goal with
-  | H : Intro_tag _ |- _ => clear H
+Lemma derives_add_Prop_left : forall (P0 : Prop) P Q R Post,
+  P0 ->
+  (PROPx (P0 :: P) (LOCALx Q (SEPx R))) |-- Post ->
+  (PROPx P (LOCALx Q (SEPx R))) |-- Post.
+Proof.
+  intros.
+  eapply derives_trans. 2 : apply H0.
+  clear H0.
+  apply andp_prop_derives.
+  - simpl. tauto.
+  - auto.
+Qed.
+
+Lemma exp_left_revert : forall A (P: A -> environ -> mpred) Q,
+  exp P |-- Q -> (forall a, P a |-- Q).
+Proof.
+  intros.
+  eapply derives_trans. 2 : apply  H.
+  eapply exp_right. apply derives_refl.
+Qed.
+
+Local Ltac entail_evar_post :=
+  simple apply andp_left2;
+  lazymatch goal with
+  | |- _ |-- ?Post =>
+    repeat
+      first [
+        lazymatch goal with
+        | H : Post_infer_tag ?Post0 |- _ =>
+          tryif constr_eq Post Post0
+            then fail 1 (* break *)
+            else clear H
+        end
+      | fail 2 "Matching Post_infer_tag not found"
+      ];
+    repeat match goal with
+    | H : ?P |- _ =>
+      first [
+        assert_fails constr_eq P (Post_infer_tag Post)
+      | fail 2 (* break *)
+      ];
+      ignore (P : Prop);
+      refine (derives_add_Prop_left _ _ _ _ _ H _);
+      clear H
+    end;
+    repeat match goal with
+    | x : ?T |- _ =>
+      first [
+        assert_fails constr_eq T (Post_infer_tag Post)
+      | fail 2 (* break *)
+      ];
+      first [
+        subst x
+      | revert x;
+        refine (exp_left_revert T (fun x => _) _ _)
+      | fail 3 "Fail to revert existentail variables"
+      ]
+    end;
+    subst Post;
+    apply derives_refl
+  end.
+
+Local Ltac assert_postcondition :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    intro d; repeat apply -> seq_assoc; revert d;
+    first [
+      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+    ];
+    [ intro d; abbreviate_semax; revert d
+    | intro d; abbreviate_semax; revert d
+    ]
+  end.
+
+Local Ltac assert_evar_postcondition :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let Post_name := fresh "Post" in
+    evar (Post_name : assert);
+    let Post := Post_name in
+    intro d; repeat apply -> seq_assoc; revert d;
+    first [
+      refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
+    ];
+    [ intro d; abbreviate_semax; revert d;
+      assert (Post_infer_tag Post) by (exact I)
+    | subst Post; intro d; abbreviate_semax; Intros; revert d
+    ]
   end.
 
 Tactic Notation "forwardD" :=
-  simpl rev;
+  repeat ignore_dummyassert;
+  (* Intro Props *)
   lazymatch goal with
+  | |- let d := @abbreviate _ _ in _ =>
+    intro d; Intros; revert d
+  end;
+  lazymatch goal with
+  (* given *)
+  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
+      refine (decorate_C_given _ _ _ _ _ _);
+      first
+      [ intro x
+      | let old_x := fresh x in rename x into old_x; intro x]
+  (* unnamed variable *)
+  | |- let d := @abbreviate _ _ in semax _ (EX x:?T, _) _ _ =>
+      intro d;
+      first [
+        let x := fresh x in Intros x
+      | fail 1 "Fail in Intros"
+      ];
+      revert d
   (* entailment *)
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
       intro d; clear d;
-      try (is_evar Post;
-        repeat match reverse goal with
-        | H : Intro_tag ?x |- _ =>
-          clear H;
-          Exists x;
-          instantiate (1 := (fun xx => _)); cbv beta
-        end;
-        eapply delta_derives_refl_and_Props;
-        repeat lazymatch goal with
-        | H : _ |- _ =>
-          lazymatch type of H with
-          | Post_infer_tag =>
-              apply fold_right_and_rev_nil
-          | ?P =>
-              match type of P with
-              | Prop =>
-                  eapply fold_right_and_rev_extract;
-                  only 1: apply H;
-                  clear H
-              | _ => clear H
-              end
-          end
-        end
-      )
-  (* dummyassert *)
-  | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
-      refine (decorate_C_dummyassert _ _ _ _)
-  (* assert as postcondition *)
-  | |- let d := @abbreviate _ (Ssequence _ (Ssequence (Sassert ?P) _)) in _ => 
-      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _);
-      [ intro d; abbreviate_semax; revert d
-      | intro d; abbreviate_semax; revert d
-      ]
+      (* solve if Post is an evar; otherwise remain for user *)
+      tryif (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end) then
+        entail_evar_post
+      else
+        idtac
+  | |- let d := @abbreviate _ _ in _ |-- _ =>
+      intro d; clear d
+  (* if with postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      assert_postcondition
   (* if *)
-  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in
-       (* semax _ _ (Clight.Sifthenelse _ _ _) _ => *)
-       _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       intro d; forward_if;
       [ ..
-      | revert d; refine (decorate_C_if_then _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_if_else _ _ _ _ _ _ _ _ _)]
-  (* while *)
-  | |- let d := @abbreviate _ (Ssequence (Swhile ?Inv _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Swhile _ _) _) _ => *)
-       _ =>
-      intro d; forward_while Inv;
-      [ ..
-      | revert d; refine (decorate_C_while_body _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_while_after _ _ _ _ _ _ _ _ _)]
+      | revert d; refine (decorate_C_if_then _ _ _ _ _ _)
+      | revert d; refine (decorate_C_if_else _ _ _ _ _ _)]
+  (* if without postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
+      assert_evar_postcondition
+  (* loop with postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      assert_postcondition
   (* loop single inv *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       semax _ _ (Clight.Sloop _ _) _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) Sskip) in _ =>
       intro d; forward_loop Inv;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)]
   (* loop double inv *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
-       semax _ _ (Clight.Sloop _ _) _ =>
+  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) Sskip) in _ =>
       intro d; forward_loop Inv1 continue: Inv2;
       [ ..
       | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)]
-  (* loop single inv without postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
-      let Post_name := fresh "Post" in
-      evar (Post_name : assert);
-      let Post := eval unfold Post_name in Post_name in
-      clear Post_name;
-      clear_all_Intro_tag;
-      assert Post_infer_tag by (exact I);
-      intro d;
-      forward_loop Inv break: Post;
-      [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | let d1 := fresh "d1" in
-        set (d1 := ltac: (fill_decorate_C_loop_after2));
-        revert d;
-        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
-      ]
-  (* loop double inv without postcondition*)
-  | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) _) in
-       (* semax _ _ (Clight.Ssequence (Clight.Sloop _ _) _) _ => *)
-       _ =>
-      let Post_name := fresh "Post" in
-      evar (Post_name : assert);
-      let Post := eval unfold Post_name in Post_name in
-      clear Post_name;
-      clear_all_Intro_tag;
-      assert Post_infer_tag by (exact I);
-      intro d;
-      forward_loop Inv1 continue: Inv2 break: Post;
-      [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)
-      | let d1 := fresh "d1" in
-        set (d1 := ltac: (fill_decorate_C_loop_after2));
-        revert d;
-        refine (decorate_C_loop_after d1 _ _ _ _ _ _); subst d1
-      ]
-  (* given *)
-  | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in
-       semax _ _ _ _ =>
-      refine (decorate_C_given _ _ _ _ _ _);
-      first
-      [ intro x
-      | let old_x := fresh x in rename x into old_x; intro x];
-      intros ? d;
-      repeat match goal with
-      | |- semax _ (EX (_ : ?P), _) _ _ =>
-        match type of P with
-        | Prop => let H := fresh "H" in Intro H
-        end
-      end;
-      Intros;
-      revert d
-      ;repeat ignore_dummyassert
+  (* loop  without postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
+      assert_evar_postcondition
+  (* assert *)
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
       refine (decorate_C_assert P _ _ _ _ _ _ _)
@@ -498,20 +399,23 @@ Tactic Notation "forwardD" :=
       intro d;
       forward;
       revert d;
-      refine (decorate_C_step2 _ _ _ _)
+      refine (decorate_C_sequence _ _ _ _)
   | |- let d := @abbreviate _ _ in
        semax _ _ _ _ =>
-      refine (decorate_C_step1 _ _ _);
-      forward
+      intro d; clear d;
+      forward; abbreviate_semax;
+      (* solve if Post is an evar; otherwise leave to user *)
+      lazymatch goal with
+      | |- ENTAIL _, _ |-- ?Post =>
+        first [
+          assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end);
+          first [
+            entail_evar_post
+          | fail 2 "Fail in entail_evar_post"
+          ]
+        | idtac
+        ]
+      | _ => idtac
+      end
   end.
 
-Tactic Notation "forwardD" constr(a) :=
-  lazymatch goal with
-  | |- let d := @abbreviate _ (Sgiven _ (fun (x:?T) => _)) in
-       semax _ _ _ _ =>
-      first
-      [ ignore (a : T)
-      | fail 1 a "must have type" T
-      ];
-      refine (decorate_C_given' a _ _ _)
-  end.
