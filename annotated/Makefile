@@ -13,8 +13,7 @@ COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
 CPROGSDIR=cprogs
-CPROGS=append sumarray2 min
-
+CPROGS=append sumarray2 min reverse
 all: clightgen
 	@test -f .depend || $(MAKE) depend
 	$(MAKE) _CoqProject $(CPROGS:=_verif.vo)
