@@ -40,75 +40,89 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
 
 (***************** Control flow analysis ***********************)
 
-Fixpoint count_break (s: statement) : res Z :=
+Fixpoint count_break (s: statement) : Z :=
   match s with
   | Sgiven _ s => count_break s
   | Ssequence s1 s2 =>
-      do cnt1 <- count_break s1;
-      do cnt2 <- count_break s2;
-      OK (cnt1 + cnt2)
+      let cnt1 := count_break s1 in
+      let cnt2 := count_break s2 in
+      cnt1 + cnt2
   | Sifthenelse _ s1 s2 =>
-      do cnt1 <- count_break s1;
-      do cnt2 <- count_break s2;
-      OK (cnt1 + cnt2)
+      let cnt1 := count_break s1 in
+      let cnt2 := count_break s2 in
+      cnt1 + cnt2
   | Slabel _ s => count_break s
-  | Sbreak => OK 1
-  | _ => OK 0
+  | Sbreak => 1
+  | _ => 0
   end.
 
 Definition check_single_break (s: statement) : res unit :=
-  do cnt <- count_break s;
+  let cnt :=  count_break s in
   if cnt <=? 1
     then OK tt
     else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
 
-Fixpoint count_continue (s: statement) : res Z :=
+Fixpoint count_continue (s: statement) : Z :=
   match s with
   | Sgiven _ s => count_continue s
   | Ssequence s1 s2 =>
-      do cnt1 <- count_continue s1;
-      do cnt2 <- count_continue s2;
-      OK (cnt1 + cnt2)
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
   | Sifthenelse _ s1 s2 =>
-      do cnt1 <- count_continue s1;
-      do cnt2 <- count_continue s2;
-      OK (cnt1 + cnt2)
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
   | Slabel _ s => count_continue s
   | Sswitch _ ls => count_continue_labeled ls
-  | Scontinue => OK 1
-  | _ => OK 0
+  | Scontinue => 1
+  | _ => 0
   end
-with count_continue_labeled (ls: labeled_statements) : res Z :=
+with count_continue_labeled (ls: labeled_statements) : Z :=
   match ls with
-  | LSnil => OK 0
+  | LSnil => 0
   | LScons _ s ls =>
-    do cnt1 <- count_continue s;
-    do cnt2 <- count_continue_labeled ls;
-    OK (cnt1 + cnt2)
+      let cnt1 := count_continue s in
+      let cnt2 := count_continue_labeled ls in
+      cnt1 + cnt2
   end.
 
 Definition check_no_continue (s: statement) : res unit :=
-  do cnt <- count_continue s;
+  let cnt :=  count_continue s in
   if cnt <=? 0
     then OK tt
     else Error (MSG "Double invariants needed for for loops with continue" :: nil).
 
-Fixpoint has_no_normal_exit (s: statement) : bool :=
+Fixpoint count_normal_exit (s: statement) : Z :=
   match s with
-  | Sgiven _ s => has_no_normal_exit s
+  | Sgiven _ s => count_normal_exit s
   | Ssequence s1 s2 =>
-      has_no_normal_exit s1 || has_no_normal_exit s2
+      let cnt1 := count_normal_exit s1 in
+      match s2 with
+      | Sskip => cnt1
+      | _ =>
+        let cnt2 := count_normal_exit s2 in
+        if (cnt1 <=? 0)
+          then 0
+          else cnt2
+      end
   | Sifthenelse _ s1 s2 =>
-      has_no_normal_exit s1 && has_no_normal_exit s2
-  | Slabel _ s => has_no_normal_exit s
-  | Scontinue | Sbreak | Sreturn _ => true
-  | _ => false
+      let cnt1 := count_normal_exit s1 in
+      let cnt2 := count_normal_exit s2 in
+      cnt1 + cnt2
+  | Sswitch _ ls => 2 (* This is not true, but currently we only case about 0/1/>1. *)
+  | Sloop _ s1 s2 =>
+      count_break s1
+  | Slabel _ s => count_normal_exit s
+  | Scontinue | Sbreak | Sreturn _ => 0
+  | _ => 1
   end.
 
-Definition check_single_normal_exit (s1: statement) (s2: statement) : res unit :=
-  if has_no_normal_exit s1 || has_no_normal_exit s2
+Definition check_single_normal_exit (s: statement) : res unit :=
+  let cnt := count_normal_exit s in
+  if (cnt <=? 1)
     then OK tt
-    else Error (MSG "Missing postcondition for if statement" :: nil).
+    else Error (MSG "Missing postcondition for if or/and loop statement" :: nil).
 
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
@@ -131,19 +145,15 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | Scontinue, Sskip
       | Sreturn _, Sskip
           => fold_cs cs_list s
-      | Sloop inv s1 s2, Ssequence (Sassert _) _ (* If loop is followed by an assertion, use it as post condition. *)
-      | Sloop inv s1 s2, Sskip (* or followed by skip *)
+      | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
+      | _, Sskip (* or followed by skip *)
           => fold_cs cs_list (Ssequence s acc)
-      | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
-          do _ <- check_single_break (Ssequence s1 s2);
+      | Sloop _ _ _, _
+      | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
+          => do _ <- check_single_normal_exit s;
           fold_cs cs_list (Ssequence s acc)
-      (* If if statement is followed by an assertion or skip *)
-      | Sifthenelse e s1 s2, Ssequence (Sassert _) _
-      | Sifthenelse e s1 s2, Sskip
-          => fold_cs cs_list (Ssequence s acc)
-      | Sifthenelse e s1 s2, _ =>
-          do _ <- check_single_normal_exit s1 s2;
-          fold_cs cs_list (Ssequence s acc)
+      | Sswitch _ _, _ =>
+          Error (MSG "Missing postcondition for switch statement" :: nil)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
