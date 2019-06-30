@@ -508,7 +508,7 @@ let print_globdef p (id, gd) =
 let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
-Require Import annotated_Clight.\n\
+Require Import AClight.AClight.\n\
 Local Open Scope Z_scope.\n\
 Import AClightNotations.\n"
 
