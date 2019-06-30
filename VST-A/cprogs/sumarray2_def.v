@@ -1,5 +1,5 @@
 Require Import VST.floyd.proofauto.
-Require Import sumarray2.
+Require Import cprogs.sumarray2_prog.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.

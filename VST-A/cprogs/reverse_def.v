@@ -1,6 +1,5 @@
-Require Import VST.floyd.proofauto.
-Require Import append.
-Require Import annotated_Clight.
+Require Import Annot.annotated_Clight.
+Require Import Annot.reverse.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.
@@ -61,3 +60,4 @@ intros.
  destruct x; try contradiction. hnf in H; subst i. contradiction H0; reflexivity.
  apply I.
 Qed.
+
