@@ -1,7 +1,7 @@
-Require Import annotation_proofauto.
-Require Import min.
-Require Import min_def.
-Require Import min_annotation.
+Require Import AClight.proofauto.
+Require Import cprogs.min_prog.
+Require Import cprogs.min_def.
+Require Import cprogs.min_annot.
 
 Lemma body_min: semax_body Vprog Gprog f_minimum minimum_spec.
 Proof.
