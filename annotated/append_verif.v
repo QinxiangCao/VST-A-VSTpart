@@ -10,9 +10,9 @@
 
 
 Require Import annotation_proofauto.
-Require Import append.
+Require Import append_prog.
 Require Import append_def.
-Require Import append_annotation.
+Require Import append_annot.
 
 (************************************************************)
 (************************************************************)

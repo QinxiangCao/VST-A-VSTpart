@@ -28,13 +28,13 @@ CLIGHTGEN=../clightgen
 depend .depend: cprogs
 	@$(COQDEP) *.v $(CPROGSDIR)/*.v > .depend
 
-$(CPROGSDIR)/%.v: %.c ../clightgen.exe
+$(CPROGSDIR)/%_prog.v: %.c ../clightgen.exe
 	$(CLIGHTGEN) -normalize -o $@ $<
 
-$(CPROGSDIR)/%_annotation.v: %.c ../clightgen.exe
-	$(CLIGHTGEN) -normalize -A -V $*_def -V $* -o $@ $<
+$(CPROGSDIR)/%_annot.v: %.c ../clightgen.exe
+	$(CLIGHTGEN) -normalize -A -V $*_def -V $*_prog -o $@ $<
 
-cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c).v $(CPROGSDIR)/$(c)_annotation.v)
+cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c)_prog.v $(CPROGSDIR)/$(c)_annot.v)
 
 %.vo: %.v
 	@echo COQC $<
