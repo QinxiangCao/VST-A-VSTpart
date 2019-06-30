@@ -5,10 +5,12 @@ include Makefile.config
 VSTDIRS=msl sepcomp veric floyd
 COMPCERT=$(VSTDIR)compcert/
 
+ACLIGHTDIR=AClight/
 CPROGSDIR=cprogs/
 CPROGS=append sumarray2 min
 
-COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d)) -R $(COMPCERT) compcert $(EXTFLAGS) -Q $(CPROGSDIR) ""
+COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
+ -R $(COMPCERT) compcert -Q $(CPROGSDIR) "" -Q $(ACLIGHTDIR) "" $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
@@ -28,7 +30,7 @@ clightgen ../clightgen.exe:
 CLIGHTGEN=../clightgen
 
 depend .depend: cprogs
-	@$(COQDEP) *.v $(CPROGSDIR)*.v > .depend
+	@$(COQDEP) $(ACLIGHTDIR)*.v $(CPROGSDIR)*.v > .depend
 
 $(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c ../clightgen.exe
 	$(CLIGHTGEN) -normalize -o $@ $<
