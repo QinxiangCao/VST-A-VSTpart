@@ -19,24 +19,30 @@ COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
-all: clightgen
+all:
 	@test -f .depend || $(MAKE) depend
 	$(MAKE) _CoqProject $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
 
+CLIGHTGEN=$(wildcard ../clightgen*)
+ifeq (,$(CLIGHTGEN))
+ $(error FAILURE: clightgen is not found in parent directory)
+endif
+ifeq ($(MAKE_CLIGHTGEN), true)
 # make sure clightgen is built in parent directory
-.PHONY: clightgen depend
-clightgen ../clightgen.exe:
+.PHONY: clightgen
+clightgen $(CLIGHTGEN):
 	$(MAKE) -C .. clightgen
+all: clightgen
+endif
 
-CLIGHTGEN=../clightgen
-
+.PHONY: depend
 depend .depend: cprogs
 	@$(COQDEP) $(ACLIGHTDIR)*.v $(CPROGSDIR)*.v > .depend
 
-$(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c ../clightgen.exe
+$(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
 	$(CLIGHTGEN) -normalize -o $@ $<
 
-$(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c ../clightgen.exe
+$(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
 	$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v)
