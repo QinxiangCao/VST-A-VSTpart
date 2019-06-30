@@ -1,6 +1,5 @@
 Require Import VST.floyd.proofauto.
-Require Import append.
-Require Import annotated_Clight.
+Require Import cprogs.append_prog.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.

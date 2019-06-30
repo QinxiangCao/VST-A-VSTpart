@@ -1,7 +1,7 @@
-Require Import annotation_proofauto.
-Require Import sumarray2.
-Require Import sumarray2_def.
-Require Import sumarray2_annotation.
+Require Import AClight.proofauto.
+Require Import cprogs.sumarray2_prog.
+Require Import cprogs.sumarray2_def.
+Require Import cprogs.sumarray2_annot.
 
 Lemma body_sumarray: semax_body Vprog Gprog f_sumarray sumarray_spec.
 Proof.
@@ -9,12 +9,16 @@ start_function f_sumarray_hint.
 forwardD.
 forwardD.
 forwardD.
+forwardD.
 { EExists. entailer!. }
 * forwardD.
-  forwardD.
   assert_prop (Zlength contents = size). {
     entailer!. list_solve2.
   }
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
   forwardD.
   forwardD.
   forwardD.
@@ -25,8 +29,6 @@ forwardD.
     auto.
     simpl. autorewrite with sublist. normalize.
   }
-  forwardD.
-  forwardD.
 * forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
