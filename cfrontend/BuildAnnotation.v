@@ -38,44 +38,91 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
     fold_right Sgiven s binder_list
   end.
 
-Fixpoint loop_concat_break (s safter: statement) : statement :=
-  let f :=
-    fix f s :=
-      match s with
-      | Sbreak => Ssequence Sbreak safter
-      | Sgiven binder s => Sgiven binder (f s)
-      | Ssequence s1 s2 => Ssequence (f s1) (f s2)
-      | Sifthenelse e s1 s2 => Sifthenelse e (f s1) (f s2)
-      | Sloop inv s1 s2 => Sloop inv (f s1) (f s2)
-      | Slabel lbl s => Slabel lbl (f s)
-      | Sswitch e ls => Sswitch e (f' ls)
-      | _ => s
-      end
-    with f' s :=
-      match s with
-      | LSnil => LSnil
-      | LScons lbl s ls => LScons lbl (f s) (f' ls)
-      end
-    for f
-  in
-  f s.
+(***************** Control flow analysis ***********************)
 
-Fixpoint count_break (s: statement) : res Z :=
+Fixpoint count_break (s: statement) : Z :=
   match s with
   | Sgiven _ s => count_break s
+  | Ssequence s1 s2 =>
+      let cnt1 := count_break s1 in
+      let cnt2 := count_break s2 in
+      cnt1 + cnt2
   | Sifthenelse _ s1 s2 =>
-      do cnt1 <- count_break s1;
-      do cnt2 <- count_break s2;
-      OK (cnt1 + cnt2)
+      let cnt1 := count_break s1 in
+      let cnt2 := count_break s2 in
+      cnt1 + cnt2
   | Slabel _ s => count_break s
-  | _ => OK 0
+  | Sbreak => 1
+  | _ => 0
   end.
 
 Definition check_single_break (s: statement) : res unit :=
-  do cnt <- count_break s;
+  let cnt :=  count_break s in
   if cnt <=? 1
     then OK tt
     else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
+
+Fixpoint count_continue (s: statement) : Z :=
+  match s with
+  | Sgiven _ s => count_continue s
+  | Ssequence s1 s2 =>
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
+  | Sifthenelse _ s1 s2 =>
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
+  | Slabel _ s => count_continue s
+  | Sswitch _ ls => count_continue_labeled ls
+  | Scontinue => 1
+  | _ => 0
+  end
+with count_continue_labeled (ls: labeled_statements) : Z :=
+  match ls with
+  | LSnil => 0
+  | LScons _ s ls =>
+      let cnt1 := count_continue s in
+      let cnt2 := count_continue_labeled ls in
+      cnt1 + cnt2
+  end.
+
+Definition check_no_continue (s: statement) : res unit :=
+  let cnt :=  count_continue s in
+  if cnt <=? 0
+    then OK tt
+    else Error (MSG "Double invariants needed for for loops with continue" :: nil).
+
+Fixpoint count_normal_exit (s: statement) : Z :=
+  match s with
+  | Sgiven _ s => count_normal_exit s
+  | Ssequence s1 s2 =>
+      let cnt1 := count_normal_exit s1 in
+      match s2 with
+      | Sskip => cnt1
+      | _ =>
+        let cnt2 := count_normal_exit s2 in
+        if (cnt1 <=? 0)
+          then 0
+          else cnt2
+      end
+  | Sifthenelse _ s1 s2 =>
+      let cnt1 := count_normal_exit s1 in
+      let cnt2 := count_normal_exit s2 in
+      cnt1 + cnt2
+  | Sswitch _ ls => 2 (* This is not true, but currently we only case about 0/1/>1. *)
+  | Sloop _ s1 s2 =>
+      count_break s1
+  | Slabel _ s => count_normal_exit s
+  | Scontinue | Sbreak | Sreturn _ => 0
+  | _ => 1
+  end.
+
+Definition check_single_normal_exit (s: statement) : res unit :=
+  let cnt := count_normal_exit s in
+  if (cnt <=? 1)
+    then OK tt
+    else Error (MSG "Missing postcondition for if or/and loop statement" :: nil).
 
 Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
   match cs_list with
@@ -89,7 +136,7 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | _ =>
         fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
       end
-    | inl (Given, c) => fold_cs cs_list (Sgiven c acc)
+    | inl (Given, c) => Error (MSG "Manual Given comment is not allowed in this version" :: nil)
     | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
       match s, acc with
@@ -98,12 +145,15 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       | Scontinue, Sskip
       | Sreturn _, Sskip
           => fold_cs cs_list s
-      | Sloop inv s1 s2, Ssequence (Sassert _) _ (* If loop is followed by an assertion, use it as post condition. *)
-      | Sloop inv s1 s2, Sskip (* or followed by skip *)
+      | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
+      | _, Sskip (* or followed by skip *)
           => fold_cs cs_list (Ssequence s acc)
-      | Sloop inv s1 s2, safter => (* If loop is not followed by an assertion or skip, check whether it only have onr break *)
-          do _ <- check_single_break (Ssequence s1 s2);
-          fold_cs cs_list (Ssequence (Sloop inv (loop_concat_break s1 safter) (loop_concat_break s2 safter)) Sskip)
+      | Sloop _ _ _, _
+      | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
+          => do _ <- check_single_normal_exit s;
+          fold_cs cs_list (Ssequence s acc)
+      | Sswitch _ _, _ =>
+          Error (MSG "Missing postcondition for switch statement" :: nil)
       | _, _ => fold_cs cs_list (Ssequence s acc)
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
@@ -130,25 +180,29 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
         do cs_list1 <- annotate_stmt_list nil s1;
         do cs_list2 <- annotate_stmt_list cs_list1 s2;
         do s' <- fold_cs cs_list2 Sskip;
-        let s' :=
+        (* let s' :=
           match s' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s'
           end
-        in
+        in *)
         let s'' := add_binder_list s' inv in
+        do _ <- match s2 with
+        | Clight.Sskip => OK tt
+        | _ => check_no_continue s''
+        end;
         OK (Sloop (LISingle inv) s'' Sskip)
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
         do s2' <- annotate_stmt s2;
-        let s1' :=
+        (* let s1' :=
           match s1' with
           | Ssequence (Sifthenelse e Sskip Sbreak) s1'
             => Ssequence (Sifthenelse e s1' Sbreak) Sskip
           | _ => s1'
           end
-        in
+        in *)
         let s1'' := add_binder_list s1' inv1 in
         let s2'' := add_binder_list s2' inv2 in
         OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
@@ -233,8 +287,9 @@ Definition annotate_body (s: Clight.statement) : res (option (binder * assert * 
     do s' <- annotate_stmt (Clight.Ssequence s1 s2);
     OK (add_funcspec (binder, pre, post) s')
   | _ =>
-    do s' <- annotate_stmt s;
-    OK (None, s')
+    (* do s' <- annotate_stmt s; *)
+    (* Treat functions without funcspecs as not included in verification *)
+    OK (None, Sskip)
   end.
 
 Definition annotate_function (f: Clight.function) : res function :=
