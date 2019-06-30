@@ -1,7 +1,7 @@
-Require Import annotation_proofauto.
-Require Import sumarray2_prog.
-Require Import sumarray2_def.
-Require Import sumarray2_annot.
+Require Import AClight.annotation_proofauto.
+Require Import cprogs.sumarray2_prog.
+Require Import cprogs.sumarray2_def.
+Require Import cprogs.sumarray2_annot.
 
 Lemma body_sumarray: semax_body Vprog Gprog f_sumarray sumarray_spec.
 Proof.

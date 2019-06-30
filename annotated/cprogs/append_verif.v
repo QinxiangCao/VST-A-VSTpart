@@ -9,10 +9,10 @@
 (************************************************************)
 
 
-Require Import annotation_proofauto.
-Require Import append_prog.
-Require Import append_def.
-Require Import append_annot.
+Require Import AClight.annotation_proofauto.
+Require Import cprogs.append_prog.
+Require Import cprogs.append_def.
+Require Import cprogs.append_annot.
 
 (************************************************************)
 (************************************************************)

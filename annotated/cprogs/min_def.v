@@ -1,5 +1,5 @@
 Require Import VST.floyd.proofauto.
-Require Import min_prog.
+Require Import cprogs.min_prog.
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 

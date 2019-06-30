@@ -11,7 +11,7 @@ DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
 CPROGS=append sumarray2 min
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
- -R $(COMPCERT) compcert -Q $(CPROGSDIR) "" -Q $(ACLIGHTDIR) "" $(EXTFLAGS)
+ -R $(COMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
@@ -37,7 +37,7 @@ $(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c ../clightgen.exe
 	$(CLIGHTGEN) -normalize -o $@ $<
 
 $(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c ../clightgen.exe
-	$(CLIGHTGEN) -normalize -A -V $*_def -V $*_prog -o $@ $<
+	$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v)
 

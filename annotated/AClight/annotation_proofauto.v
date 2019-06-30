@@ -1,5 +1,5 @@
 Require Export VST.floyd.proofauto.
-Require Export annotated_Clight.
+Require Export AClight.annotated_Clight.
 
 (********** annotation handling lemmas ****************************************)
 
