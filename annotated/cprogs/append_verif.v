@@ -9,7 +9,7 @@
 (************************************************************)
 
 
-Require Import AClight.annotation_proofauto.
+Require Import AClight.proofauto.
 Require Import cprogs.append_prog.
 Require Import cprogs.append_def.
 Require Import cprogs.append_annot.

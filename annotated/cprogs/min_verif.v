@@ -1,4 +1,4 @@
-Require Import AClight.annotation_proofauto.
+Require Import AClight.proofauto.
 Require Import cprogs.min_prog.
 Require Import cprogs.min_def.
 Require Import cprogs.min_annot.

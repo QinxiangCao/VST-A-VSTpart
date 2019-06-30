@@ -1,4 +1,4 @@
-Require Import AClight.annotation_proofauto.
+Require Import AClight.proofauto.
 Require Import cprogs.sumarray2_prog.
 Require Import cprogs.sumarray2_def.
 Require Import cprogs.sumarray2_annot.
