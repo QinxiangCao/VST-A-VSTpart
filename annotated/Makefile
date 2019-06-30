@@ -7,6 +7,7 @@ COMPCERT=$(VSTDIR)compcert/
 
 ACLIGHTDIR=AClight/
 CPROGSDIR=cprogs/
+DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
 CPROGS=append sumarray2 min
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
@@ -49,10 +50,10 @@ _CoqProject:
 
 .PHONY: clean
 clean:
-	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v $(CPROGSDIR)*.vo $(CPROGSDIR)*.glob $(CPROGSDIR).*.aux
-	@rm -f *.vo
-	@rm -f *.glob
-	@rm -f .*.aux
+	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
+	@rm -f $(patsubst %, %/*.vo, $(DIRS))
+	@rm -f $(patsubst %, %/*.glob, $(DIRS))
+	@rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	@rm -f .depend
 	@rm -f _CoqProject
 
