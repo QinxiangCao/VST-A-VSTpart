@@ -1,5 +1,6 @@
 Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
+Require AClight.advanced_cancel.
 
 (********** annotation handling lemmas ****************************************)
 
@@ -427,3 +428,4 @@ Tactic Notation "forwardD" :=
       end
   end.
 
+Export AClight.advanced_cancel.
