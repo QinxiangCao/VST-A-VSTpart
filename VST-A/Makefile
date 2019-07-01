@@ -8,7 +8,7 @@ COMPCERT=$(VSTDIR)compcert/
 ACLIGHTDIR=AClight/
 CPROGSDIR=cprogs/
 DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
-CPROGS=append sumarray2 min
+CPROGS=append sumarray2 reverse min
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
  -R $(COMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)

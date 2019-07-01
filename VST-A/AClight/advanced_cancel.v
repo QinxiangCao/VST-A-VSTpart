@@ -1,9 +1,22 @@
 Require Import VST.floyd.base.
+Require Import VST.floyd.find_nth_tactic.
 Require Import VST.floyd.seplog_tactics.
 Local Open Scope logic.
 
+Ltac backtrack_find_nth_rec tac :=
+  first [ simple eapply find_nth_preds_rec_nil
+        | (simple eapply find_nth_preds_rec_cons_head; tac) +
+          (simple eapply find_nth_preds_rec_cons_tail; backtrack_find_nth_rec tac)].
+
+Ltac backtrack_find_nth tac :=
+  eapply find_nth_preds_constr; backtrack_find_nth_rec tac.
+
 Inductive syntactic_cancel: list mpred -> list mpred -> list mpred -> list mpred -> Prop :=
 | syntactic_cancel_nil: forall R, syntactic_cancel R nil R nil
+| syntactic_cancel_free: forall R L0 L F Res,
+    emp |-- L0 ->
+    syntactic_cancel R L F Res ->
+    syntactic_cancel R (L0 :: L) F Res
 | syntactic_cancel_cons_succeed_full: forall n R0 R L0 L F Res,
     nth_error R n = Some R0 ->
     R0 |-- L0 ->
@@ -77,6 +90,11 @@ Proof.
   intros.
   revert F H0; induction H; intros.
   + auto.
+  + apply IHsyntactic_cancel in H1.
+    simpl.
+    rewrite sepcon_assoc.
+    eapply derives_trans; [| apply sepcon_derives; [apply H | apply H1]].
+    rewrite emp_sepcon; auto.
   + apply IHsyntactic_cancel in H2.
     simpl.
     rewrite sepcon_assoc.
@@ -125,6 +143,9 @@ Qed.
 Ltac advanced_syntactic_cancel local_tac :=
   repeat first
          [ simple apply syntactic_cancel_nil
+         | simple apply syntactic_cancel_free;
+           [ local_tac
+           | ]
          | simple eapply syntactic_cancel_cons;
            [ find_nth local_tac
            | match goal with
@@ -144,7 +165,45 @@ Ltac advanced_syntactic_cancel local_tac :=
            ]
          ].
 
+Ltac try_one_syntactic_cancel local_tac :=
+          (simple apply syntactic_cancel_free;
+           [ local_tac
+           | ])
+          +
+          (simple eapply syntactic_cancel_cons;
+           [ backtrack_find_nth local_tac
+           | match goal with
+             | |- _ /\ (emp = emp \/ _) \/ _ =>
+                    left;
+                    split; [| left; reflexivity]
+             | |- _ /\ (_ \/ None = None) \/ _ =>
+                    left;
+                    split; [| left; reflexivity]
+                  (* This is intensional "left".
+                     This is used to instantiate the unused F0 *)
+             | |- _ \/ (_ /\ isSome (Some _)) =>
+                    right;
+                    split; [| exact I]
+             end;
+             cbv iota; unfold delete_nth; cbv zeta iota
+           ]).
+
+Ltac conservative_syntactic_cancel local_ctac :=
+  repeat progress
+    (eapply syntactic_cancel_spec3;
+     [advanced_syntactic_cancel local_ctac |
+      cbv iota; cbv zeta beta ]).
+
+Ltac aggresive_syntactic_cancel local_atac local_ctac :=
+  once repeat
+   (conservative_syntactic_cancel local_ctac;
+    first [ apply derives_refl
+          | eapply syntactic_cancel_spec3;
+            [ try_one_syntactic_cancel local_atac;
+              advanced_syntactic_cancel local_ctac
+            | cbv iota; cbv zeta beta ]]).
 (*
+Module Test.
 Section Test.
 
 Parameters A B C D E F: mpred.
@@ -167,15 +226,47 @@ eapply symbolic_cancel_setup;
   | construct_fold_right_sepcon
   | fold_abnormal_mpred
   | cbv iota beta delta [before_symbol_cancel];
-    eapply syntactic_cancel_spec3].
+    conservative_syntactic_cancel foo].
 
-
-  advanced_syntactic_cancel foo.
-
-  cbv iota; cbv zeta beta.
 
   auto.
 Qed.
 
 End Test.
+End Test.
+
+Module Test2.
+Section Test2.
+
+Parameter A: nat -> nat -> mpred.
+Parameter B: nat -> mpred.
+Axiom Foo: forall x y, A x y * B y |-- B x.
+
+Ltac cfoo :=
+  idtac;
+  match goal with
+  | |- ?P * _ |-- ?P => rewrite <- (sepcon_emp P) at 2; apply derives_refl
+  | |- A ?x _ * _ |-- B ?x => apply (Foo x)
+  end.
+
+Ltac afoo :=
+  idtac;
+  match goal with
+  | |- ?P * _ |-- ?P => rewrite <- (sepcon_emp P) at 2; apply derives_refl
+  | |- A ?x _ * _ |-- B _ => apply (Foo x)
+  | |- B ?x * _ |-- B _ => rewrite (sepcon_emp (B x)); apply derives_refl
+  end.
+
+Goal forall x y, exists z, A x y * B y |-- B z.
+  intros.
+  eexists.
+  eapply symbolic_cancel_setup;
+  [ construct_fold_right_sepcon
+  | construct_fold_right_sepcon
+  | fold_abnormal_mpred
+  | cbv iota beta delta [before_symbol_cancel]].
+  aggresive_syntactic_cancel afoo cfoo.
+Qed.
+End Test2.
+End Test2.
 *)

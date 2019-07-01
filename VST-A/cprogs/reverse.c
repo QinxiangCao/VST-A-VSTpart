@@ -13,7 +13,7 @@ struct list *reverse (struct list *p) {
           EX q: val,
 	    PROP  ()
 	    LOCAL (temp ret_temp q)
-	    SEP   (listrep sh (rev l) p)
+	    SEP   (listrep sh (rev l) q)
   */
   struct list *w, *t, *v;
   w = NULL;

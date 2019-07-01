@@ -61,7 +61,7 @@ intros.
  apply I.
 Qed.
 
-Lemma listrep_q_null: forall sh l p,
+Lemma listrep_is_null: forall sh l p,
   p = nullval ->
   listrep sh l p |-- !! (p = nullval /\ l = nil) && emp.
 Proof.
@@ -104,6 +104,15 @@ Proof.
   rewrite sepcon_emp; auto.
 Qed.
 
+Lemma ecancel_nil_list: forall sh p,
+  p = nullval ->
+  emp |-- listrep sh nil p.
+Proof.
+  intros.
+  subst; unfold listrep.
+  entailer!.
+Qed.
+
 Lemma ecancel_head: forall sh (p q x: val) l,
   data_at sh t_struct_list (x, q) p * listrep sh l q |-- listrep sh (x :: l) p.
 Proof.
@@ -119,6 +128,8 @@ Ltac local_listrep_cancel :=
   | |- data_at ?sh t_struct_list ?v ?p * _ |--
        data_at ?sh t_struct_list _ ?p =>
          exact (ecancel_cell sh p v)
+  | |- emp |-- listrep ?sh nil ?p =>
+         refine (ecancel_nil_list sh p _); solve [auto]
   | |- listrep ?sh ?l ?p * _ |--
        listrep ?sh _ ?p =>
          exact (ecancel_list sh p l)
@@ -127,23 +138,57 @@ Ltac local_listrep_cancel :=
          exact (ecancel_head sh p q x l)
   end.
 
+Ltac local_listrep_attempt :=
+  idtac;
+  match goal with
+  | |- data_at ?sh t_struct_list ?v ?p * _ |--
+       data_at ?sh t_struct_list _ _ =>
+         exact (ecancel_cell sh p v)
+  | |- emp |-- listrep ?sh _ ?p =>
+         refine (ecancel_nil_list sh p _); solve [auto]
+  | |- listrep ?sh ?l ?p * _ |--
+       listrep ?sh _ _ =>
+         exact (ecancel_list sh p l)
+  | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
+       listrep ?sh _ _ =>
+         refine (ecancel_head sh p q x _)
+  end.
+
 Ltac listrep_cancel :=
   eapply symbolic_cancel_setup;
   [ construct_fold_right_sepcon
   | construct_fold_right_sepcon
   | fold_abnormal_mpred
   | cbv iota beta delta [before_symbol_cancel];
-    eapply syntactic_cancel_spec3;
-    advanced_syntactic_cancel local_listrep_cancel;
-    cbv iota; cbv zeta beta;
+    aggresive_syntactic_cancel
+      local_listrep_attempt
+      local_listrep_cancel;
     first [ simple apply syntactic_cancel_solve3
           | match goal with
             | |- fold_right_sepcon ?A |-- fold_right_sepcon ?B => rewrite <- (fold_left_sepconx_eq A), <- (fold_left_sepconx_eq B)
             end;
             unfold fold_left_sepconx; cbv iota beta ]].
 
-Goal forall sh (p q x: val) l,
-  data_at sh t_struct_list (x, q) p * listrep sh l q |-- listrep sh (x :: l) p.
+Ltac listrep_entailer :=
+  match goal with
+  | |- ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |-- _ =>
+         repeat EExists; go_lower
+  | |- @derives mpred _ _ (exp _) =>
+         repeat EExists
+  end;
+  saturate_local;
+  apply andp_right; [apply prop_right | solve [listrep_cancel]];
+  repeat split; auto.
+
+Goal forall sh (p q x r: val) l,
+  r = nullval ->
+  exists z w: val,
+  data_at sh t_struct_list (x, q) p * listrep sh l q |--
+  listrep sh (x :: l) w * listrep sh nil r * listrep sh nil z.
 intros.
+eexists.
+eexists.
+
 listrep_cancel.
+
 Qed.
