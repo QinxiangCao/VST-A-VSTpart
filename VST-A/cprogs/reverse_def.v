@@ -1,6 +1,5 @@
-Require Import Annot.annotated_Clight.
-Require Import Annot.advanced_cancel.
-Require Import Annot.reverse.
+Require Import AClight.proofauto.
+Require Import cprogs.reverse_prog.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.

@@ -9,10 +9,10 @@
 (************************************************************)
 
 
-Require Import Annot.annotation_proofauto.
-Require Import Annot.reverse.
-Require Import Annot.reverse_def.
-Require Import Annot.reverse_annotation.
+Require Import AClight.proofauto.
+Require Import cprogs.reverse_prog.
+Require Import cprogs.reverse_def.
+Require Import cprogs.reverse_annot.
 
 (************************************************************)
 (************************************************************)
@@ -29,6 +29,7 @@ Proof.
 start_function f_reverse_hint.
 forwardD.
 forwardD.
+(*
 forwardD.
 {
   Exists nullval p (@nil val) l.
@@ -67,3 +68,4 @@ forwardD.
   }
   forwardD.
 Abort.
+*)
