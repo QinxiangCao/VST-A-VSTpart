@@ -122,6 +122,15 @@ Proof.
   entailer!.
 Qed.
 
+Lemma listrep_unify: forall sh p l1 l2,
+  l1 = l2 ->
+  listrep sh l1 p |-- listrep sh l2 p.
+Proof.
+  intros.
+  subst.
+  auto.
+Qed.
+
 Ltac local_listrep_cancel :=
   idtac;
   match goal with
@@ -154,6 +163,14 @@ Ltac local_listrep_attempt :=
          refine (ecancel_head sh p q x _)
   end.
 
+Ltac global_listrep_cancel :=
+  idtac;
+  match goal with
+  | |- listrep ?sh ?l1 ?p |--
+       listrep ?sh ?l2 _ =>
+         refine (listrep_unify sh p l1 l2 _)
+  end.
+
 Ltac listrep_cancel :=
   eapply symbolic_cancel_setup;
   [ construct_fold_right_sepcon
@@ -167,9 +184,35 @@ Ltac listrep_cancel :=
           | match goal with
             | |- fold_right_sepcon ?A |-- fold_right_sepcon ?B => rewrite <- (fold_left_sepconx_eq A), <- (fold_left_sepconx_eq B)
             end;
-            unfold fold_left_sepconx; cbv iota beta ]].
+            unfold fold_left_sepconx; cbv iota beta;
+            first
+            [ simple apply derives_refl
+            | global_listrep_cancel ] ]].
+
+Ltac pre_process :=
+  let RHS := fresh "RHS" in 
+  match goal with
+  | |- _ |-- ?P => set (RHS := P)
+  end;
+  repeat
+  match goal with
+  | H: isptr ?p |- context [listrep ?sh ?l ?p] =>
+         sep_apply (listrep_isptr sh l p);
+         let x := fresh "x" in
+         let ll := fresh "l" in
+         let pp := fresh "p" in
+         Intros x ll pp
+  | H: ?p = nullval |- context [listrep ?sh ?l ?p] =>
+         sep_apply (listrep_is_null sh l p);
+         Intros
+  | |- context [listrep ?sh ?l nullval] =>
+         sep_apply (listrep_is_null sh l nullval);
+         Intros
+  end;
+  subst RHS.
 
 Ltac listrep_entailer :=
+  pre_process;
   match goal with
   | |- ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |-- _ =>
          repeat EExists; go_lower
@@ -177,8 +220,9 @@ Ltac listrep_entailer :=
          repeat EExists
   end;
   saturate_local;
-  apply andp_right; [apply prop_right | solve [listrep_cancel]];
-  repeat split; auto.
+  first [ apply andp_right; [apply prop_right | try listrep_cancel];
+          [repeat split; auto | ..]
+        | try listrep_cancel].
 
 Goal forall sh (p q x r: val) l,
   r = nullval ->
@@ -190,5 +234,15 @@ eexists.
 eexists.
 
 listrep_cancel.
+
+Qed.
+
+Goal forall sh (p q x r: val) l,
+  r = nullval ->
+  data_at sh t_struct_list (x, q) p * listrep sh l q |--
+  EX z w: val,
+  listrep sh (x :: l) w * listrep sh nil r * listrep sh nil z.
+intros.
+listrep_entailer.
 
 Qed.
