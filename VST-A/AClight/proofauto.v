@@ -428,4 +428,15 @@ Tactic Notation "forwardD" :=
       end
   end.
 
+Ltac verify :=
+  repeat
+  match goal with
+  | |- let d := @abbreviate statement _ in
+       semax _ _ _ _ =>
+       forwardD
+  | |- let d := @abbreviate statement _ in
+       ENTAIL _, _ |-- _ =>
+       intro
+  end.
+
 Export AClight.advanced_cancel.
