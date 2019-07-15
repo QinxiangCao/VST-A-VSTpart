@@ -122,8 +122,6 @@ Ltac ignore_dummyassert :=
     refine (annotation_apply_dummyassert _ _ _ _)
   end.
 
-Definition Post_infer_tag (_ : environ -> mpred) := True.
-
 Ltac use_annotation hint :=
   match goal with
   | |- ?P => let d1 := eval hnf in hint in
@@ -268,30 +266,20 @@ Local Ltac entail_evar_post :=
   simple apply andp_left2;
   lazymatch goal with
   | |- _ |-- ?Post =>
-    repeat
-      first [
-        lazymatch goal with
-        | H : Post_infer_tag ?Post0 |- _ =>
-          tryif constr_eq Post Post0
-            then fail 1 (* break *)
-            else clear H
-        end
-      | fail 2 "Matching Post_infer_tag not found"
-      ];
     repeat match goal with
-    | H : ?P |- _ =>
+    | x : ?T |- _ =>
       first [
-        assert_fails constr_eq P (Post_infer_tag Post)
+        assert_fails constr_eq x Post
       | fail 2 (* break *)
       ];
-      ignore (P : Prop);
-      refine (derives_add_Prop_left _ _ _ _ _ H _);
-      clear H
+      ignore (T : Prop);
+      refine (derives_add_Prop_left _ _ _ _ _ x _);
+      clear x
     end;
     repeat match goal with
     | x : ?T |- _ =>
       first [
-        assert_fails constr_eq T (Post_infer_tag Post)
+        assert_fails constr_eq x Post
       | fail 2 (* break *)
       ];
       first [
@@ -329,8 +317,7 @@ Local Ltac assert_evar_postcondition :=
       refine (apply_seq Post _ _ _ _ _ _ _ _ _)
     | apply <- semax_seq_skip; refine (apply_seq Post _ _ _ _ _ _ _ _ _)
     ];
-    [ intro d; abbreviate_semax; revert d;
-      assert (Post_infer_tag Post) by (exact I)
+    [ intro d; abbreviate_semax; revert d
     | subst Post; intro d; abbreviate_semax; Intros; revert d
     ]
   end.
