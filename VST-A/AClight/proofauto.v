@@ -2,23 +2,26 @@ Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
 Require AClight.advanced_cancel.
 
-(********** annotation handling lemmas ****************************************)
+(******************** applying Clight-A proof rules ***************************)
 
-Lemma decorate_C_dummyassert: forall Q s P,
+(* annotation_apply -> only effects annotation *)
+(* apply -> applys proof rule *)
+
+Lemma annotation_apply_dummyassert: forall Q s P,
   (let d := @abbreviate _ s in P) ->
   let d := @abbreviate _ (Ssequence (Sdummyassert Q) s) in P.
 Proof.
   intros. assumption.
 Qed.
 
-Lemma decorate_C_sequence: forall P s1 s2,
+Lemma annotation_apply_seqAssign: forall P s1 s2,
   (let d := @abbreviate _ s2 in P) ->
   (let d := @abbreviate _ (Ssequence s1 s2) in P).
 Proof.
   intros. assumption.
 Qed.
 
-Lemma decorate_C_assert:
+Lemma apply_seqAssertion:
   forall {Espec: OracleKind} {cs: compspecs},
     forall P' d1 Delta P c Post,
       ENTAIL Delta, P |-- P' ->
@@ -31,7 +34,7 @@ Proof.
   + exact H0.
 Qed.
 
-Lemma decorate_C_assert2:
+Lemma apply_seqComplex:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
       (let d := @abbreviate _ (Ssequence s1 Sskip) in semax Delta P c1 (overridePost Q Post)) ->
@@ -43,7 +46,7 @@ Proof.
   + exact H0.
 Qed.
 
-Lemma decorate_C_assert3:
+Lemma apply_seq:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
       (let d := @abbreviate _ (Ssequence s1 Sskip) in semax Delta P c1 (overridePost Q Post)) ->
@@ -55,7 +58,7 @@ Proof.
   + exact H0.
 Qed.
 
-Lemma decorate_C_if_then:
+Lemma annotation_apply_if_then:
   forall e d1 d2 d3 (P: Prop),
     (let d := @abbreviate _ d1 in P) ->
     (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
@@ -64,7 +67,7 @@ Proof.
   exact H.
 Qed.
 
-Lemma decorate_C_if_else:
+Lemma annotation_apply_if_else:
   forall e d1 d2 d3 (P: Prop),
     (let d := @abbreviate _ d2 in P) ->
     (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
@@ -73,7 +76,7 @@ Proof.
   exact H.
 Qed.
 
-Lemma decorate_C_loop_body:
+Lemma annotation_apply_loop_body:
   forall {Espec: OracleKind} {cs: compspecs},
     forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d1 in semax Delta P c Post) ->
@@ -83,7 +86,7 @@ Proof.
   exact H.
 Qed.
 
-Lemma decorate_C_loop_incr:
+Lemma annotation_apply_loop_incr:
   forall {Espec: OracleKind} {cs: compspecs},
     forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d2 in semax Delta P c Post) ->
@@ -93,7 +96,7 @@ Proof.
   exact H.
 Qed.
 
-Lemma decorate_C_given:
+Lemma apply_given:
   forall {Espec: OracleKind} {cs: compspecs},
     forall {A: Type} d1 Delta P c Post,
       (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
@@ -104,7 +107,7 @@ Proof.
   apply H.
 Qed.
 
-Lemma decorate_C_given':
+Lemma annotation_apply_given':
     forall {A: Type} a d1 (P : Prop),
       (let d := @abbreviate _ (d1 a) in P) ->
       (let d := @abbreviate _ (Sgiven A d1) in P).
@@ -116,7 +119,7 @@ Qed.
 Ltac ignore_dummyassert :=
   match goal with
   | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
-    refine (decorate_C_dummyassert _ _ _ _)
+    refine (annotation_apply_dummyassert _ _ _ _)
   end.
 
 Definition Post_infer_tag (_ : environ -> mpred) := True.
@@ -132,7 +135,7 @@ Ltac specialize_annotation d x :=
   revert d;
   match goal with
   | |- let d := @abbreviate _ (Sgiven _ (fun (y:?T) => ?d1)) in _ =>
-    refine (decorate_C_given' x _ _ _)
+    refine (annotation_apply_given' x _ _ _)
   end; intro d.
 
 Ltac destruct_and_bind_annotation d :=
@@ -307,8 +310,8 @@ Local Ltac assert_postcondition :=
     let d := fresh d in
     intro d; repeat apply -> seq_assoc; revert d;
     first [
-      refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
-    | apply <- semax_seq_skip; refine (decorate_C_assert2 _ _ _ _ _ _ _ _ _ _)
+      refine (apply_seqComplex _ _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (apply_seqComplex _ _ _ _ _ _ _ _ _ _)
     ];
     [ intro d; abbreviate_semax; revert d
     | intro d; abbreviate_semax; revert d
@@ -323,8 +326,8 @@ Local Ltac assert_evar_postcondition :=
     let Post := Post_name in
     intro d; repeat apply -> seq_assoc; revert d;
     first [
-      refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
-    | apply <- semax_seq_skip; refine (decorate_C_assert3 Post _ _ _ _ _ _ _ _ _)
+      refine (apply_seq Post _ _ _ _ _ _ _ _ _)
+    | apply <- semax_seq_skip; refine (apply_seq Post _ _ _ _ _ _ _ _ _)
     ];
     [ intro d; abbreviate_semax; revert d;
       assert (Post_infer_tag Post) by (exact I)
@@ -343,7 +346,7 @@ Tactic Notation "forwardD" :=
   lazymatch goal with
   (* given *)
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
-      refine (decorate_C_given _ _ _ _ _ _);
+      refine (apply_given _ _ _ _ _ _);
       first
       [ intro x
       | let old_x := fresh x in rename x into old_x; intro x]
@@ -374,8 +377,8 @@ Tactic Notation "forwardD" :=
       let d := fresh d in
       intro d; forward_if;
       [ ..
-      | revert d; refine (decorate_C_if_then _ _ _ _ _ _)
-      | revert d; refine (decorate_C_if_else _ _ _ _ _ _)]
+      | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
+      | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
   (* if without postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
       assert_evar_postcondition
@@ -387,28 +390,28 @@ Tactic Notation "forwardD" :=
       let d := fresh d in
       intro d; forward_loop Inv;
       [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)]
+      | revert d; refine (annotation_apply_loop_body _ _ _ _ _ _ _ _ _)]
   (* loop double inv *)
   | |- let d := @abbreviate _ (Ssequence (Sloop (LIDouble ?Inv1 ?Inv2) _ _) Sskip) in _ =>
       let d := fresh d in
       intro d; forward_loop Inv1 continue: Inv2;
       [ ..
-      | revert d; refine (decorate_C_loop_body _ _ _ _ _ _ _ _ _)
-      | revert d; refine (decorate_C_loop_incr _ _ _ _ _ _ _ _ _)]
+      | revert d; refine (annotation_apply_loop_body _ _ _ _ _ _ _ _ _)
+      | revert d; refine (annotation_apply_loop_incr _ _ _ _ _ _ _ _ _)]
   (* loop  without postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
       assert_evar_postcondition
   (* assert *)
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
-      refine (decorate_C_assert P _ _ _ _ _ _ _)
+      refine (apply_seqAssertion P _ _ _ _ _ _ _)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ (Clight.Ssequence _ _) _ =>
       let d := fresh d in
       intro d;
       forward;
       revert d;
-      refine (decorate_C_sequence _ _ _ _)
+      refine (annotation_apply_seqAssign _ _ _ _)
   | |- let d := @abbreviate _ _ in
        semax _ _ _ _ =>
       intros _;
