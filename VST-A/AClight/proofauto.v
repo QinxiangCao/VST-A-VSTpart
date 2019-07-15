@@ -363,7 +363,7 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
       intros _;
       (* solve if Post is an evar; otherwise remain for user *)
-      tryif (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end) then
+      tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
         entail_evar_post
       else
         idtac
@@ -419,14 +419,10 @@ Tactic Notation "forwardD" :=
       (* solve if Post is an evar; otherwise leave to user *)
       lazymatch goal with
       | |- ENTAIL _, _ |-- ?Post =>
-        first [
-          assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end);
-          first [
-            entail_evar_post
-          | fail 2 "Fail in entail_evar_post"
-          ]
-        | idtac
-        ]
+        tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
+          entail_evar_post
+        else
+          idtac
       | _ => idtac
       end
   end.
