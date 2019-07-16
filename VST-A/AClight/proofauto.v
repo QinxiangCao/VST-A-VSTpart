@@ -34,6 +34,18 @@ Proof.
   + exact H0.
 Qed.
 
+Lemma apply_impAssertion:
+    forall P' d1 Delta P Q,
+      ENTAIL Delta, P |-- P' ->
+      (let d := @abbreviate _ d1 in ENTAIL Delta, P' |-- Q) ->
+      (let d := @abbreviate _ (Ssequence (Sassert P') d1) in ENTAIL Delta, P |-- Q).
+Proof.
+  intros.
+  eapply ENTAIL_trans.
+  + exact H.
+  + exact H0.
+Qed.
+
 Lemma apply_seqComplex:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Q s1 s2 Delta P c1 c2 Post,
@@ -101,6 +113,16 @@ Lemma apply_given:
     forall {A: Type} d1 Delta P c Post,
       (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
       (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
+Proof.
+  intros.
+  Intros a.
+  apply H.
+Qed.
+
+Lemma apply_impGiven:
+  forall {A: Type} d1 Delta P Q,
+    (forall a, let d := @abbreviate _ (d1 a) in ENTAIL Delta, (P a) |-- Q) ->
+    (let d := @abbreviate _ (Sgiven A d1) in ENTAIL Delta, (exp P) |-- Q).
 Proof.
   intros.
   Intros a.
@@ -333,7 +355,14 @@ Tactic Notation "forwardD" :=
   lazymatch goal with
   (* given *)
   | |- let d := @abbreviate _ (Sgiven _ (fun x => _)) in _ =>
-      refine (apply_given _ _ _ _ _ _);
+      lazymatch goal with
+      | |- let d := _ in semax _ _ _ _ =>
+        refine (apply_given _ _ _ _ _ _)
+      | |- let d := _ in ENTAIL _, _ |-- _ =>
+        refine (apply_impGiven _ _ _ _ _)
+      | _ =>
+        fail "no matching pattern when processing Sgiven"
+      end;
       first
       [ intro x
       | let old_x := fresh x in rename x into old_x; intro x]
@@ -381,9 +410,15 @@ Tactic Notation "forwardD" :=
       apply_seq_evar
   (* } *)
   (* assert *)
-  | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
-       semax _ _ _ _ =>
-      refine (apply_seqAssertion P _ _ _ _ _ _ _)
+  | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in _ =>
+      lazymatch goal with
+      | |- let d := _ in semax _ _ _ _ =>
+        refine (apply_seqAssertion _ _ _ _ _ _ _ _)
+      | |- let d := _ in ENTAIL _, _ |-- _ =>
+        refine (apply_impAssertion _ _ _ _ _ _)
+      | _ =>
+        fail "no matching pattern when processing Sassert"
+      end
   (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ _ _ =>
