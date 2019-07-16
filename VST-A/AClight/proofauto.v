@@ -415,7 +415,7 @@ Tactic Notation "forwardD" :=
       | |- let d := _ in semax _ _ _ _ =>
         refine (apply_seqAssertion _ _ _ _ _ _ _ _)
       | |- let d := _ in ENTAIL _, _ |-- _ =>
-        refine (apply_impAssertion _ _ _ _ _ _)
+        refine (apply_impAssertion _ _ _ _ _ _ _)
       | _ =>
         fail "no matching pattern when processing Sassert"
       end
