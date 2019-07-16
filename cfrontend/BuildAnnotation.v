@@ -141,10 +141,13 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     | inr s =>
       match s, acc with
       | Sskip, _ => fold_cs cs_list acc
+      (* no longer use these special cases that annotation not ending with Sskip
+         These special cases are for printing with Swhile, but we are no longer using Swhile
       | Sbreak, Sskip
       | Scontinue, Sskip
       | Sreturn _, Sskip
           => fold_cs cs_list s
+      *)
       | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
       | _, Sskip (* or followed by skip *)
           => fold_cs cs_list (Ssequence s acc)
