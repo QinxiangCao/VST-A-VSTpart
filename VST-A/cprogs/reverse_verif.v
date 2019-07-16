@@ -59,6 +59,7 @@ forwardD.
       listrep_entailer.
     }
     forwardD.
+    forwardD.
   }
   {
     forwardD.
@@ -68,11 +69,12 @@ forwardD.
     forwardD.
     forwardD.
     forwardD.
-    intro. (** FIXME why need this. *)
+    forwardD.
     listrep_entailer.
     subst; simpl. rewrite app_ass. auto.
   }
 }
+forwardD.
 forwardD.
 forwardD.
 forwardD.

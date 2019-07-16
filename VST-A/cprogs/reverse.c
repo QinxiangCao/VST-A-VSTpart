@@ -23,7 +23,7 @@ struct list *reverse (struct list *p) {
           PROP  (l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert
-  */	  
+  */
   while (v) {
     /* Assert
          (EX t x l2',
@@ -39,4 +39,3 @@ struct list *reverse (struct list *p) {
   }
   return w;
 }
-

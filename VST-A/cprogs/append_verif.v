@@ -84,6 +84,7 @@ forwardD.
     forwardD.
     forwardD.
     forwardD.
+    forwardD.
     {
       Exists b s1c u z.
       simpl app.
@@ -97,6 +98,7 @@ forwardD.
     }
   }
   { forwardD.
+    forwardD.
     forwardD.
     forwardD.
     forwardD.
