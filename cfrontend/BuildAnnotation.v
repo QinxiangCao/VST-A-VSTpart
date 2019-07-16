@@ -131,11 +131,11 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
     match cs with
     | inl (Inv, c) => Error (MSG "Dangling loop invariant" :: nil)
     | inl (Assert, c) =>
-      match acc with
+      (* match acc with
       | Sskip => fold_cs cs_list (Sassert c)
-      | _ =>
+      | _ => *)
         fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
-      end
+      (* end *)
     | inl (Given, c) => Error (MSG "Manual Given comment is not allowed in this version" :: nil)
     | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
