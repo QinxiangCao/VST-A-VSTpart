@@ -346,16 +346,6 @@ Tactic Notation "forwardD" :=
       | fail 1 "Fail in Intros"
       ];
       revert d
-  (* entailment *)
-  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
-      intros _;
-      (* solve if Post is an evar; otherwise remain for user *)
-      tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
-        entail_evar_post
-      else
-        idtac
-  | |- let d := @abbreviate _ _ in _ |-- _ =>
-      intro d; clear d
   (* if with postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
       apply_seqComplex
@@ -394,13 +384,46 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
       refine (apply_seqAssertion P _ _ _ _ _ _ _)
+  (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
-       semax _ _ (Clight.Ssequence _ _) _ =>
+       semax _ _ _ _ =>
       let d := fresh d in
       intro d;
       forward;
       revert d;
       refine (annotation_apply_seqAssign _ _ _ _)
+  (* skip *)
+  | |- let d := @abbreviate _ Sskip in _ =>
+      intros _;
+      (* skip in annotation may or may not correspond to a skip in program *)
+      lazymatch goal with
+      | |- semax _ _ Clight.Sskip _ =>
+          forward
+      | _ =>
+          idtac
+      end;
+      lazymatch goal with
+      | |- ENTAIL _, _ |-- ?Post =>
+        tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
+          entail_evar_post
+        else
+          idtac
+      | |- _ |-- _ => idtac
+      | _ => fail "Resulting goal is not an entailment"
+      end
+  | |- _ =>
+      fail "Annotation unsupported by VST-A"
+  (*
+  | |- let d := @abbreviate _ _ in _ |-- _ =>
+      intro d; clear d
+  (* entailment *)
+  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
+      intros _;
+      (* solve if Post is an evar; otherwise remain for user *)
+      tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
+        entail_evar_post
+      else
+        idtac
   | |- let d := @abbreviate _ _ in
        semax _ _ _ _ =>
       intros _;
@@ -414,17 +437,14 @@ Tactic Notation "forwardD" :=
           idtac
       | _ => idtac
       end
+  *)
   end.
 
 Ltac verify :=
   repeat
   match goal with
-  | |- let d := @abbreviate statement _ in
-       semax _ _ _ _ =>
-       forwardD
-  | |- let d := @abbreviate statement _ in
-       ENTAIL _, _ |-- _ =>
-       intro
+  | |- let d := @abbreviate statement _ in _ =>
+      forwardD
   end.
 
 Export AClight.advanced_cancel.
