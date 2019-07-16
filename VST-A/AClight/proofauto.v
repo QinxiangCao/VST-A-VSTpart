@@ -116,7 +116,7 @@ Proof.
   apply H.
 Qed.
 
-Ltac ignore_dummyassert :=
+Ltac apply_dummyassert :=
   match goal with
   | |- let d := @abbreviate _ (Ssequence (Sdummyassert _) _) in _ =>
     refine (annotation_apply_dummyassert _ _ _ _)
@@ -293,7 +293,7 @@ Local Ltac entail_evar_post :=
     apply derives_refl
   end.
 
-Local Ltac assert_postcondition :=
+Local Ltac apply_seqComplex :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     intro d; repeat apply -> seq_assoc; revert d;
@@ -306,7 +306,7 @@ Local Ltac assert_postcondition :=
     ]
   end.
 
-Local Ltac assert_evar_postcondition :=
+Local Ltac apply_seq_evar :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     let Post_name := fresh "Post" in
@@ -323,7 +323,7 @@ Local Ltac assert_evar_postcondition :=
   end.
 
 Tactic Notation "forwardD" :=
-  repeat ignore_dummyassert;
+  repeat apply_dummyassert;
   (* Intro Props *)
   lazymatch goal with
   | |- let d := @abbreviate _ _ in _ =>
@@ -358,7 +358,10 @@ Tactic Notation "forwardD" :=
       intro d; clear d
   (* if with postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
-      assert_postcondition
+      apply_seqComplex
+  (* loop with postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      apply_seqComplex
   (* if *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       let d := fresh d in
@@ -366,12 +369,6 @@ Tactic Notation "forwardD" :=
       [ ..
       | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
       | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
-  (* if without postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
-      assert_evar_postcondition
-  (* loop with postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
-      assert_postcondition
   (* loop single inv *)
   | |- let d := @abbreviate _ (Ssequence (Sloop (LISingle ?Inv) _ _) Sskip) in _ =>
       let d := fresh d in
@@ -385,9 +382,14 @@ Tactic Notation "forwardD" :=
       [ ..
       | revert d; refine (annotation_apply_loop_body _ _ _ _ _ _ _ _ _)
       | revert d; refine (annotation_apply_loop_incr _ _ _ _ _ _ _ _ _)]
+  (* { *) (* These two rules must come after rules for if and loop *)
+  (* if without postcondition *)
+  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
+      apply_seq_evar
   (* loop  without postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
-      assert_evar_postcondition
+      apply_seq_evar
+  (* } *)
   (* assert *)
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in
        semax _ _ _ _ =>
