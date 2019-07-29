@@ -269,3 +269,6 @@ Ltac forwardM_if :=
     | forwardM_cond
     ]
   ).
+
+Ltac forward := forwardM.
+Ltac forward_if := forwardM_if.

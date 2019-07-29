@@ -23,7 +23,6 @@ forwardD.
   forwardD.
   forwardD.
   forwardD.
-  forwardD.
   { Exists (i+1). entailer!.
     f_equal. f_equal.
     rewrite (sublist_split 0 i (i+1)) by omega.
@@ -32,7 +31,6 @@ forwardD.
     simpl. autorewrite with sublist. normalize.
   }
 * forwardD.
-  forwardD.
   forwardD.
   { entailer!. assert (i = Zlength contents) by list_solve2. subst i.
     autorewrite with sublist in *. reflexivity.
@@ -66,4 +64,7 @@ forward_call (*  s = sumarray(four+2,2); *)
 { split. auto. computable. }
 revert d.
 forwardD.
+intro d.
+rewrite FF_sepcon.
+apply semax_ff.
 Qed.

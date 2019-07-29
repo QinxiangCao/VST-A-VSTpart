@@ -60,7 +60,6 @@ forwardD.
   }
 - forwardD.
   forwardD.
-  forwardD.
   {
     entailer!.
     autorewrite with sublist.
@@ -87,7 +86,7 @@ forwardD.
   forwardD.
   forwardD.
   forwardD.
-  forwardD.
+  intro d; Intros; revert d.
   assert (repable_signed (Znth i al))
     by (apply Forall_Znth; auto; omega).
   assert (repable_signed (fold_right Z.min (Znth 0 al) (sublist 0 i al)))
@@ -122,7 +121,6 @@ forwardD.
     - omega.
   }
 - forwardD.
-  forwardD.
   forwardD.
   {
     entailer!.
