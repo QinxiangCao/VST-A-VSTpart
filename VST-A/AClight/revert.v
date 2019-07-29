@@ -1,6 +1,6 @@
 Require Import VST.floyd.proofauto.
 
-Lemma derives_add_Prop_left : forall (P0 : Prop) P Q R Post,
+Lemma revert_Prop : forall (P0 : Prop) P Q R Post,
   P0 ->
   (PROPx (P0 :: P) (LOCALx Q (SEPx R))) |-- Post ->
   (PROPx P (LOCALx Q (SEPx R))) |-- Post.
@@ -13,7 +13,7 @@ Proof.
   - auto.
 Qed.
 
-Lemma exp_left_revert : forall A (P: A -> environ -> mpred) Q,
+Lemma revert_exp : forall A (P: A -> environ -> mpred) Q,
   exp P |-- Q -> (forall a, P a |-- Q).
 Proof.
   intros.
@@ -21,8 +21,8 @@ Proof.
   eapply exp_right. apply derives_refl.
 Qed.
 
-Ltac entail_evar_post :=
-  simple apply andp_left2;
+(** revert all Props appear after Post in context to PROP *)
+Ltac revert_Props :=
   lazymatch goal with
   | |- _ |-- ?Post =>
     repeat match goal with
@@ -32,9 +32,17 @@ Ltac entail_evar_post :=
       | fail 2 (* break *)
       ];
       ignore (T : Prop);
-      refine (derives_add_Prop_left _ _ _ _ _ x _);
+      refine (revert_Prop _ _ _ _ _ x _);
       clear x
-    end;
+    | _ =>
+      fail 2 "Post not found in context"
+    end
+  end.
+
+(** revert all variables excluding asserts appear after Post in context to EX quantifiers *)
+Ltac revert_exps :=
+  lazymatch goal with
+  | |- _ |-- ?Post =>
     repeat match goal with
     | x : ?T |- _ =>
       first [
@@ -44,10 +52,21 @@ Ltac entail_evar_post :=
       first [
         subst x
       | revert x;
-        refine (exp_left_revert T (fun x => _) _ _)
+        refine (revert_exp T (fun x => _) _ _)
       | fail 3 "Fail to revert existentail variables"
       ]
-    end;
+    end
+  end.
+
+Ltac revert_exp_and_Prop :=
+  simple apply andp_left2;
+  revert_Props;
+  revert_exps.
+
+Ltac entail_evar_post :=
+  lazymatch goal with
+  | |- _ |-- ?Post =>
+    revert_exp_and_Prop;
     subst Post;
     apply derives_refl
   end.
