@@ -1,6 +1,7 @@
 Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
 Require AClight.advanced_cancel.
+Require Import AClight.revert.
 
 (******************** applying Clight-A proof rules ***************************)
 
@@ -263,7 +264,7 @@ Ltac assert_prop P :=
   | _ => old_assert_PROP P
   end.
 
-Local Ltac apply_seqComplex :=
+(*Local*) Ltac apply_seqComplex :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     intro d; repeat apply -> seq_assoc; revert d;
@@ -276,7 +277,7 @@ Local Ltac apply_seqComplex :=
     ]
   end.
 
-Local Ltac apply_seq_evar :=
+(*Local*) Ltac apply_seq_evar :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     let Post_name := fresh "Post" in

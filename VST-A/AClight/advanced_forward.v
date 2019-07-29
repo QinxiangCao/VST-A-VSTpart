@@ -1,61 +1,10 @@
 Require Export VST.floyd.proofauto.
+Require Import AClight.revert.
 (* Require Import AClight.AClight. *)
 
 (* Two layers : (1) intro and revert (2) multi-cond *)
 
 (********************* Part I : intro and revert ***********************)
-
-Lemma derives_add_Prop_left : forall (P0 : Prop) P Q R Post,
-  P0 ->
-  (PROPx (P0 :: P) (LOCALx Q (SEPx R))) |-- Post ->
-  (PROPx P (LOCALx Q (SEPx R))) |-- Post.
-Proof.
-  intros.
-  eapply derives_trans. 2 : apply H0.
-  clear H0.
-  apply andp_prop_derives.
-  - simpl. tauto.
-  - auto.
-Qed.
-
-Lemma exp_left_revert : forall A (P: A -> environ -> mpred) Q,
-  exp P |-- Q -> (forall a, P a |-- Q).
-Proof.
-  intros.
-  eapply derives_trans. 2 : apply  H.
-  eapply exp_right. apply derives_refl.
-Qed.
-
-(*Local *)  Ltac entail_evar_post :=
-  simple apply andp_left2;
-  lazymatch goal with
-  | |- _ |-- ?Post =>
-    repeat match goal with
-    | x : ?T |- _ =>
-      first [
-        assert_fails constr_eq x Post
-      | fail 2 (* break *)
-      ];
-      ignore (T : Prop);
-      refine (derives_add_Prop_left _ _ _ _ _ x _);
-      clear x
-    end;
-    repeat match goal with
-    | x : ?T |- _ =>
-      first [
-        assert_fails constr_eq x Post
-      | fail 2 (* break *)
-      ];
-      first [
-        subst x
-      | revert x;
-        refine (exp_left_revert T (fun x => _) _ _)
-      | fail 3 "Fail to revert existentail variables"
-      ]
-    end;
-    subst Post;
-    apply derives_refl
-  end.
 
 (*Local *) Ltac semax_seq_evar :=
   let Post_name := fresh "Post" in
@@ -102,7 +51,18 @@ Ltac forwardE :=
       forward;
       entail_evar_post
     | ]
-  | |- semax _ _ _ _ => (* single statement *)
+  | |- semax _ _ _ (overridePost ?Post _) => (* single statement *)
+    tryif is_evar Post then
+      let Post_name := fresh "Post" in
+      evar (Post_name : assert);
+      unify Post Post_name;
+      fold Post_name;
+      repeat_Intros;
+      forward;
+      entail_evar_post
+    else
+      repeat_Intros; forward
+  | |- semax _ _ _ _ =>
     repeat_Intros; forward
   end.
 
@@ -121,37 +81,63 @@ Proof.
   destruct x; auto.
 Qed.
 
+Lemma semax_overridePost_orp1:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta P c Q1 Q2 Q',
+      semax Delta P c (overridePost Q1 Q') ->
+      semax Delta P c (overridePost (Q1 || Q2) Q').
+Proof.
+  intros.
+  eapply semax_post1. 2 : rewrite overridePost_overridePost; eauto.
+  rewrite overridePost_normal'. apply orp_right1. auto.
+Qed.
+
+Lemma semax_overridePost_orp2:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta P c Q1 Q2 Q',
+      semax Delta P c (overridePost Q2 Q') ->
+      semax Delta P c (overridePost (Q1 || Q2) Q').
+Proof.
+  intros.
+  eapply semax_post1. 2 : rewrite overridePost_overridePost; eauto.
+  rewrite overridePost_normal'. apply orp_right2. auto.
+Qed.
+
 Lemma semax_orp_parallel:
   forall {Espec: OracleKind} {cs: compspecs},
-    forall Delta P1 P2 c Q1 Q2 Qbrk Qcon Qret,
-      semax Delta P1 c (Build_ret_assert Q1 Qbrk Qcon Qret) ->
-      semax Delta P2 c (Build_ret_assert Q2 Qbrk Qcon Qret) ->
-      semax Delta (orp P1 P2) c (Build_ret_assert (orp Q1 Q2) Qbrk Qcon Qret).
+    forall Delta P1 P2 c Q1 Q2 Q',
+      semax Delta P1 c (overridePost Q1 Q') ->
+      semax Delta P2 c (overridePost Q2 Q') ->
+      semax Delta (orp P1 P2) c (overridePost (orp Q1 Q2) Q').
 Proof.
   intros.
   apply semax_orp.
-  - eapply semax_post1. 2 : eauto.
-    change (ENTAIL Delta, Q1 |-- Q1 || Q2).
-    apply orp_right1. auto.
-  - eapply semax_post1. 2 : eauto.
-    change (ENTAIL Delta, Q2 |-- Q1 || Q2).
-    apply orp_right2. auto.
+  - apply semax_overridePost_orp1. auto.
+  - apply semax_overridePost_orp2. auto.
 Qed.
 
+Hint Rewrite orp_FF FF_orp : remove_FF_precondition.
+
 Ltac forwardM :=
-  repeat rewrite orp_FF;
-  repeat rewrite FF_orp;
+  lazymatch goal with
+  | |- semax _ ?P _ _ =>
+    first [
+      has_evar P;
+      fail 1 "Precondition should not have evar"
+    | idtac
+    ]
+  end;
+  autorewrite with remove_FF_precondition;
   repeat apply -> seq_assoc;
   lazymatch goal with
-  | |- semax _ (orp _ _) (Ssequence _ _) _ =>
-    semax_seq_evar; [
-      repeat simple eapply semax_orp_parallel;
-      forwardE;
-      entail_evar_post
+  | |- semax _ (@orp _ _ _ _) (Ssequence _ _) _ =>
+    simple eapply semax_seq; [
+      repeat eapply semax_orp_parallel;
+      forwardE
     | abbreviate_semax
     ]
   | |- semax _ _ _ _ =>
-    repeat simple eapply semax_orp_parallel;
+    repeat simple eapply semax_orp;
     forwardE
   end.
 
@@ -213,8 +199,7 @@ Ltac normalizeE_typed_test :=
   ].
 
 Ltac normalizeM_typed_test :=
-  repeat rewrite FF_orp;
-  repeat rewrite orp_FF;
+  autorewrite with remove_FF_precondition;
   repeat rewrite distrib_orp_andp;
   repeat apply orp_derives;
   normalizeE_typed_test.
@@ -237,21 +222,21 @@ Proof.
   apply andp_right; auto.
 Qed.
 
+
 Ltac forwardM_if :=
-  repeat rewrite orp_FF;
-  repeat rewrite FF_orp;
+  autorewrite with remove_FF_precondition;
   repeat apply -> seq_assoc;
   lazymatch goal with
   | |- semax _ _ (Sifthenelse _ _ _) _ =>
     idtac
-  | |- semax _ _ (Ssequence (Sifthenelse _ _ _)) _ =>
+  | |- semax _ _ (Ssequence (Sifthenelse _ _ _) _) _ =>
     simple eapply semax_seq
   end;
   only 1 : (
     simple apply semax_ifthenelse'; [
       reflexivity
     | entailer
-    | forwardM_cond
-    | forwardM_cond
+    | forwardM_cond; apply semax_overridePost_orp1
+    | forwardM_cond; apply semax_overridePost_orp2
     ]
   ).
