@@ -117,6 +117,12 @@ Ltac remove_FF_precondition :=
     repeat rewrite orp_FF;
     repeat rewrite FF_orp;
     subst Q_name
+  | |- ENTAIL ?Delta, ?P |-- ?Q =>
+    let Q_name := fresh "Q" in
+    set (Q_name := Q);
+    repeat rewrite orp_FF;
+    repeat rewrite FF_orp;
+    subst Q_name
   end.
 
 Ltac forwardM :=
@@ -227,10 +233,20 @@ Ltac normalizeE_typed_test :=
   | entail_evar_post
   ].
 
+Lemma ENTAIL_orp_derives : forall Delta P1 P2 Q1 Q2,
+  ENTAIL Delta, P1 |-- Q1 ->
+  ENTAIL Delta, P2 |-- Q2 ->
+  ENTAIL Delta, P1 || P2 |-- Q1 || Q2.
+Proof.
+  intros.
+  repeat rewrite orp_is_exp. Intros x.
+  destruct x; [Exists true | Exists false]; auto.
+Qed.
+
 Ltac normalizeM_typed_test :=
-  autorewrite with remove_FF_precondition;
+  remove_FF_precondition;
   repeat rewrite distrib_orp_andp;
-  repeat apply orp_derives;
+  repeat apply ENTAIL_orp_derives;
   normalizeE_typed_test.
 
 Ltac forwardM_cond :=
@@ -251,9 +267,23 @@ Proof.
   apply andp_right; auto.
 Qed.
 
+Lemma ENTAIL_orp_left : forall Delta P1 P2 Q,
+  ENTAIL Delta, P1 |-- Q ->
+  ENTAIL Delta, P2 |-- Q ->
+  ENTAIL Delta, P1 || P2 |-- Q.
+Proof.
+  intros.
+  rewrite orp_is_exp. Intros x.
+  destruct x; auto.
+Qed.
+
+Ltac entailerM :=
+  remove_FF_precondition;
+  repeat simple apply ENTAIL_orp_left;
+  entailer.
 
 Ltac forwardM_if :=
-  autorewrite with remove_FF_precondition;
+  remove_FF_precondition;
   repeat apply -> seq_assoc;
   lazymatch goal with
   | |- semax _ _ (Sifthenelse _ _ _) _ =>
@@ -264,11 +294,8 @@ Ltac forwardM_if :=
   only 1 : (
     simple apply semax_ifthenelse'; [
       reflexivity
-    | entailer
+    | entailerM
     | forwardM_cond
     | forwardM_cond
     ]
   ).
-
-Ltac forward := forwardM.
-Ltac forward_if := forwardM_if.

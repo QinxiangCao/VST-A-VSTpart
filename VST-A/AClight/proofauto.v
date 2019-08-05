@@ -327,14 +327,18 @@ Tactic Notation "forwardD" :=
       revert d
   (* if with postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
-      apply_seqComplex
+      let d := fresh d in
+      intro d; forwardM_if;
+      [ ..
+      | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
+      | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
   (* loop with postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
       apply_seqComplex
   (* if *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       let d := fresh d in
-      intro d; forward_if;
+      intro d; forwardM_if;
       [ ..
       | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
       | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
@@ -374,7 +378,7 @@ Tactic Notation "forwardD" :=
        semax _ _ _ _ =>
       let d := fresh d in
       intro d;
-      forward;
+      forwardM;
       revert d;
       refine (annotation_apply_seqAssign _ _ _ _)
   (* skip *)
@@ -383,7 +387,7 @@ Tactic Notation "forwardD" :=
       (* skip in annotation may or may not correspond to a skip in program *)
       lazymatch goal with
       | |- semax _ _ Clight.Sskip _ =>
-          forward
+          forwardM
       | _ =>
           idtac
       end;
