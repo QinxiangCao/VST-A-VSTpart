@@ -200,7 +200,6 @@ Lemma body_is_leap_year: semax_body Vprog Gprog f_is_leap_year is_leap_year_spec
 Proof.
   start_function f_is_leap_year_hint.
   forwardD.
-  forwardD.
   { entailer!. inversion H0. inversion H2. }
   forwardD.
   forwardD.

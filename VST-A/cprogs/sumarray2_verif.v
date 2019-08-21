@@ -22,7 +22,6 @@ forwardD.
   forwardD.
   forwardD.
   forwardD.
-  forwardD.
   { Exists (i+1). entailer!.
     f_equal. f_equal.
     rewrite (sublist_split 0 i (i+1)) by omega.

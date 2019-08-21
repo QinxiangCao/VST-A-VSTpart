@@ -90,6 +90,15 @@ Proof.
   exact H.
 Qed.
 
+Lemma annotation_apply_if_after:
+  forall e d1 d2 d3 (P: Prop),
+    (let d := @abbreviate _ d3 in P) ->
+    (let d := @abbreviate _ (Ssequence (Sifthenelse e d1 d2) d3) in P).
+Proof.
+  intros.
+  exact H.
+Qed.
+
 Lemma annotation_apply_loop_body:
   forall {Espec: OracleKind} {cs: compspecs},
     forall d1 Inv d2 d3 Delta P c Post,
@@ -104,6 +113,16 @@ Lemma annotation_apply_loop_incr:
   forall {Espec: OracleKind} {cs: compspecs},
     forall d1 Inv d2 d3 Delta P c Post,
       (let d := @abbreviate _ d2 in semax Delta P c Post) ->
+      (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
+Proof.
+  intros.
+  exact H.
+Qed.
+
+Lemma annotation_apply_loop_after:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall d1 Inv d2 d3 Delta P c Post,
+      (let d := @abbreviate _ d3 in semax Delta P c Post) ->
       (let d := @abbreviate _ (Ssequence (Sloop Inv d1 d2) d3) in semax Delta P c Post).
 Proof.
   intros.
@@ -294,7 +313,7 @@ Ltac assert_prop P :=
     ]
   end.
 
-Tactic Notation "forwardD" :=
+Ltac forwardD :=
   repeat apply_dummyassert;
   (* Intro Props *)
   lazymatch goal with
@@ -326,15 +345,15 @@ Tactic Notation "forwardD" :=
       ];
       revert d
   (* if with postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+  (* | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
       let d := fresh d in
       intro d; forwardM_if;
       [ ..
       | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
-      | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
+      | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)] *)
   (* loop with postcondition *)
-  | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
-      apply_seqComplex
+  (* | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) (Ssequence (Sassert ?P) _)) in _ =>
+      apply_seqComplex *)
   (* if *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       let d := fresh d in
@@ -358,7 +377,12 @@ Tactic Notation "forwardD" :=
   (* { *) (* These two rules must come after rules for if and loop *)
   (* if without postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) _) in _ =>
-      apply_seq_evar
+      let d := fresh d in
+      intro d; forwardM_if;
+      [ ..
+      | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
+      | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)
+      | revert d; refine (annotation_apply_if_after _ _ _ _ _ _)]
   (* loop  without postcondition *)
   | |- let d := @abbreviate _ (Ssequence (Sloop _ _ _) _) in _ =>
       apply_seq_evar
@@ -367,9 +391,15 @@ Tactic Notation "forwardD" :=
   | |- let d := @abbreviate _ (Ssequence (Sassert ?P) _) in _ =>
       lazymatch goal with
       | |- let d := _ in semax _ _ _ _ =>
-        refine (apply_seqAssertion _ _ _ _ _ _ _ _)
+        refine (apply_seqAssertion _ _ _ _ _ _ _ _);
+        [ remove_FF_precondition;
+          repeat apply ENTAIL_orp_left
+        | ]
       | |- let d := _ in ENTAIL _, _ |-- _ =>
-        refine (apply_impAssertion _ _ _ _ _ _ _)
+        refine (apply_impAssertion _ _ _ _ _ _ _);
+        [ remove_FF_precondition;
+          repeat apply ENTAIL_orp_left
+        | ]
       | _ =>
         fail "no matching pattern when processing Sassert"
       end

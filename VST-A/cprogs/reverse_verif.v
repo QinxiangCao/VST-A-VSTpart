@@ -29,7 +29,7 @@ Proof.
 start_function f_reverse_hint.
 verify.
 + listrep_entailer.
-+ listrep_entailer.
++ Intros. listrep_entailer.
 + listrep_entailer.
   subst; simpl. rewrite app_ass. auto.
 + listrep_entailer.
@@ -54,11 +54,13 @@ forwardD.
   forwardD.
   {
     forwardD.
+  }
+  {
     forwardD.
-    {
-      listrep_entailer.
-    }
-    forwardD.
+  }
+  forwardD.
+  {
+    Intros. listrep_entailer.
   }
   {
     forwardD.
