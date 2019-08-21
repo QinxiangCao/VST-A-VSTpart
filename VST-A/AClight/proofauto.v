@@ -1,8 +1,8 @@
 Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
 Require AClight.advanced_cancel.
-Require Import AClight.revert.
-Require Import AClight.advanced_forward.
+Require Export AClight.revert.
+Require Export AClight.advanced_forward.
 
 (******************** applying Clight-A proof rules ***************************)
 
