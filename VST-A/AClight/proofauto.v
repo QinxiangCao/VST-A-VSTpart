@@ -1,6 +1,6 @@
 Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
-Require AClight.advanced_cancel.
+Require Export AClight.advanced_cancel.
 Require Export AClight.revert.
 Require Export AClight.advanced_forward.
 
@@ -465,5 +465,3 @@ Ltac verify :=
   | |- let d := @abbreviate statement _ in _ =>
       forwardD
   end.
-
-Export AClight.advanced_cancel.
