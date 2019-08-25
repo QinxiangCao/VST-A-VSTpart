@@ -280,6 +280,7 @@ Qed.
 Ltac entailerM :=
   remove_FF_precondition;
   repeat simple apply ENTAIL_orp_left;
+  repeat_Intros;
   entailer.
 
 Ltac forwardM_if :=
@@ -298,4 +299,53 @@ Ltac forwardM_if :=
     | forwardM_cond
     | forwardM_cond
     ]
+  ).
+
+Ltac forwardM_loop Inv :=
+  (* check type of Inv *)
+  first [
+    ignore (Inv : assert)
+  | fail "1" Inv "must have Type assert"
+  ];
+  remove_FF_precondition;
+  repeat apply -> seq_assoc;
+  lazymatch goal with
+  | |- semax _ _ (Sloop _ _) _ =>
+    idtac
+  | |- semax _ _ (Ssequence (Sloop _ _) _) _ =>
+    semax_seq_evar
+  end;
+  only 1 : (
+    simple apply semax_pre with Inv;
+    only 2 : (
+      let Inv' := fresh "Inv" in
+      evar (Inv' : assert);
+      simple apply semax_loop with Inv'
+    )
+  ).
+
+Ltac forwardM_loop_conInv Inv conInv :=
+  (* check type of Inv *)
+  first [
+    ignore (Inv : assert)
+  | fail "1" Inv "must have Type assert"
+  ];
+  (* check type of conInv *)
+  first [
+    ignore (conInv : assert)
+  | fail "1" conInv "must have Type assert"
+  ];
+  remove_FF_precondition;
+  repeat apply -> seq_assoc;
+  lazymatch goal with
+  | |- semax _ _ (Sloop _ _) _ =>
+    idtac
+  | |- semax _ _ (Ssequence (Sloop _ _) _) _ =>
+    semax_seq_evar
+  end;
+  only 1 : (
+    simple apply semax_pre with Inv;
+    only 2 : (
+      simple apply semax_loop with conInv
+    )
   ).
