@@ -1,20 +1,20 @@
 #include <stddef.h>
 
 unsigned sumarray(unsigned a[], int n) {
-  /* With a sh contents size, */
-  /* Require
+  /*@ With a sh contents size, */
+  /*@ Require
       PROP  (readable_share sh; 0 <= size <= Int.max_signed)
       LOCAL (temp _a a; temp _n (Vint (Int.repr size)))
       SEP   (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a)
   */
-  /* Ensure
+  /*@ Ensure
       PROP ()
       LOCAL(temp ret_temp  (Vint (Int.repr (sum_Z contents))))
       SEP (data_at sh (tarray tuint size) (map Vint (map Int.repr contents)) a)
   */
   int i; unsigned s;
   s=0;
-  /* Inv (EX i,
+  /*@ Inv (EX i,
     PROP  (0 <= i <= size)
     LOCAL (temp _a a;
           temp _i (Vint (Int.repr i));
@@ -31,11 +31,11 @@ unsigned sumarray(unsigned a[], int n) {
 unsigned four[4] = {1,2,3,4};
 
 int main(void) {
-  /* With gv, */
-  /* Require
+  /*@ With gv, */
+  /*@ Require
       main_pre prog nil gv
   */
-  /* Ensure
+  /*@ Ensure
       PROP()
       LOCAL (temp ret_temp (Vint (Int.repr (3+4))))
       SEP(TT)

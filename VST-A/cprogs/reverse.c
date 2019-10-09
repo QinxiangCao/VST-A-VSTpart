@@ -3,13 +3,13 @@
 struct list {unsigned head; struct list *tail;};
 
 struct list *reverse (struct list *p) {
-  /* With sh p l, */
-  /* Require
+  /*@ With sh p l, */
+  /*@ Require
             PROP  (writable_share sh)
 	    LOCAL (temp _p p)
 	    SEP   (listrep sh l p)
   */
-  /* Ensure
+  /*@ Ensure
           EX q: val,
 	    PROP  ()
 	    LOCAL (temp ret_temp q)
@@ -18,14 +18,14 @@ struct list *reverse (struct list *p) {
   struct list *w, *t, *v;
   w = NULL;
   v = p;
-  /* Inv
+  /*@ Inv
        (EX w v l1 l2,
           PROP  (l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert
   */
   while (v) {
-    /* Assert
+    /*@ Assert
          (EX t x l2',
 	    PROP  (l2 = x :: l2')
 	    LOCAL (temp _w w; temp _v v)
