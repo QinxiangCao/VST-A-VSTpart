@@ -1,4 +1,4 @@
-Require Import Ctypes Clight AClight Comment.
+Require Import Ctypes ClightC AClight.
 Require Import Coqlib Errors String List.
 
 (* *********************************************************************)
@@ -15,13 +15,6 @@ Require Import Coqlib Errors String List.
 
 (** Pulling local scalar variables whose address is not taken
   into temporary variables. *)
-
-(* Require Import FSets.
-Require FSetAVL.
-Require Import Coqlib Ordered Errors.
-Require Import AST Linking.
-Require Import Ctypes Cop Clight.
-Require Compopts.*)
 
 Open Scope error_monad_scope.
 Open Scope string_scope.
@@ -175,9 +168,9 @@ Fixpoint find_inv (cs_list: list (comment + statement)) : res (loop_invariant * 
   | _ => Error (MSG "Missing loop invariant" :: nil)
   end.
 
-Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
-  let fix annotate_stmt_list (cs_list: list (comment + statement)) (s: Clight.statement) : res (list (comment + statement)) :=
-    let annotate_loop (inv: loop_invariant) (s1 s2: Clight.statement) : res statement :=
+Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
+  let fix annotate_stmt_list (cs_list: list (comment + statement)) (s: ClightC.statement) : res (list (comment + statement)) :=
+    let annotate_loop (inv: loop_invariant) (s1 s2: ClightC.statement) : res statement :=
       match inv with
       | LISingle inv =>
         do cs_list1 <- annotate_stmt_list nil s1;
@@ -192,7 +185,7 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
         in *)
         let s'' := add_binder_list s' inv in
         do _ <- match s2 with
-        | Clight.Sskip => OK tt
+        | ClightC.Sskip => OK tt
         | _ => check_no_continue s''
         end;
         OK (Sloop (LISingle inv) s'' Sskip)
@@ -212,41 +205,41 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
       end
     in
     match s with
-    | Clight.Slcomment c s =>
+    | ClightC.Slcomment c s =>
         annotate_stmt_list (inl c :: cs_list) s
-    | Clight.Srcomment s c =>
+    | ClightC.Srcomment s c =>
         do cs_list1 <- annotate_stmt_list cs_list s;
         OK (inl c :: cs_list1)
-    | Clight.Ssequence s1 s2 =>
+    | ClightC.Ssequence s1 s2 =>
         do cs_list1 <- annotate_stmt_list cs_list s1;
         do cs_list2 <- annotate_stmt_list cs_list1 s2;
         OK cs_list2
-    | Clight.Sloop s1 s2 =>
+    | ClightC.Sloop s1 s2 =>
       do (inv, cs_list) <- find_inv cs_list;
       do s <- annotate_loop inv s1 s2;
       OK (inr s :: cs_list)
     | _ =>
       do s' <-
         match s with
-        | Clight.Sifthenelse a s1 s2 =>
+        | ClightC.Sifthenelse a s1 s2 =>
             do s1' <- annotate_stmt s1;
             do s2' <- annotate_stmt s2;
             OK (Sifthenelse a s1' s2')
-        | Clight.Sswitch a ls =>
+        | ClightC.Sswitch a ls =>
             do ls' <- annotate_lblstmt ls;
             OK (Sswitch a ls')
-        | Clight.Slabel lbl s =>
+        | ClightC.Slabel lbl s =>
             do s' <- annotate_stmt s;
             OK (Slabel lbl s')
-        | Clight.Sskip => OK Sskip
-        | Clight.Sassign a1 a2 => OK (Sassign a1 a2)
-        | Clight.Sset id a => OK (Sset id a)
-        | Clight.Scall optid a al => OK (Scall optid a al)
-        | Clight.Sbuiltin optid ef tyargs al => OK (Sbuiltin optid ef tyargs al)
-        | Clight.Sbreak => OK Sbreak
-        | Clight.Scontinue => OK Scontinue
-        | Clight.Sreturn opta => OK (Sreturn opta)
-        | Clight.Sgoto lbl => OK (Sgoto lbl)
+        | ClightC.Sskip => OK Sskip
+        | ClightC.Sassign a1 a2 => OK (Sassign a1 a2)
+        | ClightC.Sset id a => OK (Sset id a)
+        | ClightC.Scall optid a al => OK (Scall optid a al)
+        | ClightC.Sbuiltin optid ef tyargs al => OK (Sbuiltin optid ef tyargs al)
+        | ClightC.Sbreak => OK Sbreak
+        | ClightC.Scontinue => OK Scontinue
+        | ClightC.Sreturn opta => OK (Sreturn opta)
+        | ClightC.Sgoto lbl => OK (Sgoto lbl)
         | _ => Error (MSG "Internal error: invalid argument s in annotate_simple_stmt" :: nil)
         end;
       OK (inr s' :: cs_list)
@@ -256,10 +249,10 @@ Fixpoint annotate_stmt (s: Clight.statement) : res statement :=
   do s' <- fold_cs cs_list Sskip;
   OK s'
 
-with annotate_lblstmt (ls: Clight.labeled_statements) : res labeled_statements :=
+with annotate_lblstmt (ls: ClightC.labeled_statements) : res labeled_statements :=
   match ls with
-  | Clight.LSnil => OK LSnil
-  | Clight.LScons c s ls1 =>
+  | ClightC.LSnil => OK LSnil
+  | ClightC.LScons c s ls1 =>
       do s' <- annotate_stmt s;
       do ls1' <- annotate_lblstmt ls1;
       OK (LScons c s' ls1')
@@ -275,19 +268,19 @@ Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
             s)))
   end.
 
-Definition annotate_body (s: Clight.statement) : res (option (binder * assert * assert) * statement) :=
+Definition annotate_body (s: ClightC.statement) : res (option (binder * assert * assert) * statement) :=
   match s with
-  | Clight.Slcomment (With, binder) (
-      Clight.Slcomment (Require, pre) (
-        Clight.Slcomment (Ensure, post) s)) =>
+  | ClightC.Slcomment (With, binder) (
+      ClightC.Slcomment (Require, pre) (
+        ClightC.Slcomment (Ensure, post) s)) =>
     do s' <- annotate_stmt s;
     OK (add_funcspec (binder, pre, post) s')
-  | Clight.Ssequence (
-      Clight.Slcomment (With, binder) (
-        Clight.Slcomment (Require, pre) (
-          Clight.Slcomment (Ensure, post) s1)))
+  | ClightC.Ssequence (
+      ClightC.Slcomment (With, binder) (
+        ClightC.Slcomment (Require, pre) (
+          ClightC.Slcomment (Ensure, post) s1)))
       s2 =>
-    do s' <- annotate_stmt (Clight.Ssequence s1 s2);
+    do s' <- annotate_stmt (ClightC.Ssequence s1 s2);
     OK (add_funcspec (binder, pre, post) s')
   | _ =>
     (* do s' <- annotate_stmt s; *)
@@ -295,25 +288,25 @@ Definition annotate_body (s: Clight.statement) : res (option (binder * assert * 
     OK (None, Sskip)
   end.
 
-Definition annotate_function (f: Clight.function) : res function :=
-  do (spec, body') <- annotate_body f.(Clight.fn_body);
-  OK {| fn_return := f.(Clight.fn_return);
-        fn_callconv := f.(Clight.fn_callconv);
-        fn_params := f.(Clight.fn_params);
-        fn_vars := f.(Clight.fn_vars);
-        fn_temps := f.(Clight.fn_temps);
+Definition annotate_function (f: ClightC.function) : res function :=
+  do (spec, body') <- annotate_body f.(ClightC.fn_body);
+  OK {| fn_return := f.(ClightC.fn_return);
+        fn_callconv := f.(ClightC.fn_callconv);
+        fn_params := f.(ClightC.fn_params);
+        fn_vars := f.(ClightC.fn_vars);
+        fn_temps := f.(ClightC.fn_temps);
         fn_body := body';
         fn_spec := spec |}.
 
 (** Whole-program transformation *)
 
-Definition annotate_fundef (fd: Clight.fundef) : res fundef :=
+Definition annotate_fundef (fd: ClightC.fundef) : res fundef :=
   match fd with
   | Internal f => do tf <- annotate_function f; OK (Internal tf)
   | External ef targs tres cconv => OK (External ef targs tres cconv)
   end.
 
-Definition annotate_program (p: Clight.program) : res program :=
+Definition annotate_program (p: ClightC.program) : res program :=
   do p1 <- AST.transform_partial_program annotate_fundef p;
   OK {| prog_defs := AST.prog_defs p1;
         prog_public := AST.prog_public p1;

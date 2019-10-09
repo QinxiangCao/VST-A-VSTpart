@@ -1,4 +1,6 @@
 open String
+open Comment
+open ClightC
 
 let get_binder_list (s : string) : string list * string =
   (* print_endline s; *)
@@ -45,3 +47,32 @@ let get_binder_list (s : string) : string list * string =
       (List.rev acc, make cnt '(' ^ sub s (!i-1) (l-(!i-1)))
   in
   loop [] 0
+
+let parse_comment s =
+  let open String in
+  let open Cabs in
+  let s = trim s in
+  let startwith s t =
+    let l = length t in
+    try let ss = sub s 0 l in
+      if ss = t then Some (sub s l (length s - l)) else None
+    with _ -> None
+  in
+  let step acc (name, ct) =
+    match acc with
+    | Some _ -> acc
+    | None ->
+      begin match startwith s name with
+      | Some s -> Some (ct, s)
+      | None -> None
+      end
+  in
+  let comment_types = [
+    ("Assert", Assert);
+    ("Given", Given);
+    ("Inv", Inv);
+    ("With", With);
+    ("Require", Require);
+    ("Ensure", Ensure);
+  ] in
+  List.fold_left step None comment_types

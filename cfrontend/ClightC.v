@@ -30,25 +30,26 @@ Require Import Globalenvs.
 Require Import Smallstep.
 Require Import Ctypes.
 Require Import Cop.
+Require Import String.
 Require Import Clight.
-Require Import ClightC.
 
-(* Abstract assertion encoded as string *)
-Definition assert : Type := Comment.string.
-Definition binder : Type := Comment.string.
+Inductive comment_type :=
+  | Assert
+  | Given
+  | Inv
+  | With
+  | Require
+  | Ensure.
 
-Inductive loop_invariant :=
-  | LISingle : assert -> loop_invariant
-  | LIDouble : assert -> assert -> loop_invariant.
+Definition comment := (comment_type * Comment.string)%type.
+
+(** * Abstract syntax *)
 
 (** ** Statements *)
 
-(** This is statement with annotation *)
-
 Inductive statement : Type :=
-  | Sassert : assert -> statement
-  | Sdummyassert : assert -> statement
-  | Sgiven: binder -> statement -> statement         (* abstract given clause *)
+  | Slcomment : comment -> statement -> statement
+  | Srcomment : statement -> comment -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
@@ -56,7 +57,7 @@ Inductive statement : Type :=
   | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
   | Ssequence : statement -> statement -> statement  (**r sequence *)
   | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
-  | Sloop: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
+  | Sloop: statement -> statement -> statement (**r infinite loop *)
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
   | Sreturn : option expr -> statement      (**r [return] statement *)
@@ -68,9 +69,6 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
   | LSnil: labeled_statements
   | LScons: option Z -> statement -> labeled_statements -> labeled_statements.
                       (**r [None] is [default], [Some x] is [case x] *)
-
-Definition Swhile (Inv : assert) (e: expr) (s: statement):=
-  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
 
 (** ** Functions *)
 
@@ -85,8 +83,7 @@ Record function : Type := mkfunction {
   fn_params: list (ident * type);
   fn_vars: list (ident * type);
   fn_temps: list (ident * type);
-  fn_body: statement;
-  fn_spec: option (binder * assert * assert)
+  fn_body: statement
 }.
 
 Definition var_names (vars: list(ident * type)) : list ident :=
@@ -120,4 +117,3 @@ Definition type_of_fundef (f: fundef) : type :=
 - a proof that this environment is consistent with the definitions. *)
 
 Definition program := Ctypes.program function.
-
