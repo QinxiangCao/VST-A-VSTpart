@@ -191,64 +191,104 @@ Ltac destruct_and_bind_annotation d :=
       specialize_annotation d a;
       specialize_annotation d b
     end
+  | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ match ?p with (a,b) => _ end * _) _ _ =>
+    destruct p as [a b];
+    lazymatch goal with
+    | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ match ?p with (a,b) => _ end * _) _ _ =>
+      destruct_and_bind_annotation d;
+      specialize_annotation d b
+    | _ =>
+      specialize_annotation d a;
+      specialize_annotation d b
+    end
+  | |- @semax _ _ _ ((match ?p with (a,b) => _ end) eq_refl * _) _ _ =>
+    destruct p as [a b];
+    lazymatch goal with
+    | |- @semax _ _ _ ((match ?p with (a,b) => _ end) eq_refl * _) _ _ =>
+      destruct_and_bind_annotation d;
+      specialize_annotation d b
+    | _ =>
+      specialize_annotation d a;
+      specialize_annotation d b
+    end
+  | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ ((match ?p with (a,b) => _ end) eq_refl) * _) _ _ =>
+    destruct p as [a b];
+    lazymatch goal with
+    | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ ((match ?p with (a,b) => _ end) eq_refl) * _) _ _ =>
+      destruct_and_bind_annotation d;
+      specialize_annotation d b
+    | _ =>
+      specialize_annotation d a;
+      specialize_annotation d b
+    end
   end.
 
 Ltac start_function hint :=
-  let d := fresh "d" in
-  let hint := eval hnf in hint in
-  pose (d := @abbreviate statement hint);
-  leaf_function;
-  match goal with |- semax_body _ _ ?F ?spec =>
-    let D := constr:(Clight.type_of_function F) in
-    let S := constr:(type_of_funspec (snd spec)) in
-    let D := eval hnf in D in let D := eval simpl in D in 
-    let S := eval hnf in S in let S := eval simpl in S in 
-    tryif (unify D S) then idtac else
-    tryif function_types_compatible D S 
-    then idtac "Warning: the function-body parameter/return types are not identical to the funspec types, although they are compatible:
-Function body:" D "
-Function spec:" S
-    else
-   (fail "Function signature (param types, return type) from function-body does not match function signature from funspec
-Function body: " D "
-Function spec: " S);
-    check_normalized F
-  end;
-  match goal with |- semax_body ?V ?G ?F ?spec =>
+ let d := fresh "d" in
+ let hint := eval hnf in hint in
+ pose (d := @abbreviate statement hint);
+ leaf_function;
+ match goal with |- semax_body ?V ?G ?F ?spec =>
+    check_normalized F;
     let s := fresh "spec" in
-    pose (s:=spec); hnf in s;
-    match goal with
-    | s :=  (DECLARE _ WITH _: globals
+    pose (s:=spec); hnf in s; cbn zeta in s; (* dependent specs defined with Program Definition often have extra lets *)
+   repeat lazymatch goal with
+    | s := (_, NDmk_funspec _ _ _ _ _) |- _ => fail
+    | s := (_, mk_funspec _ _ _ _ _ _ _) |- _ => fail
+    | s := (_, ?a _ _ _ _) |- _ => unfold a in s
+    | s := (_, ?a _ _ _) |- _ => unfold a in s
+    | s := (_, ?a _ _) |- _ => unfold a in s
+    | s := (_, ?a _) |- _ => unfold a in s
+    | s := (_, ?a) |- _ => unfold a in s
+    end;
+    lazymatch goal with
+    | s :=  (_,  WITH _: globals
                PRE  [] main_pre _ nil _
                POST [ tint ] _) |- _ => idtac
     | s := ?spec' |- _ => check_canonical_funspec spec'
-    end;
-    change (semax_body V G F s); subst s
+   end;
+   change (semax_body V G F s); subst s
+ end;
+ let DependedTypeList := fresh "DependedTypeList" in
+ unfold NDmk_funspec; 
+ match goal with |- semax_body _ _ _ (pair _ (mk_funspec _ _ _ ?Pre _ _ _)) =>
+   split; [split3; [check_parameter_types' | check_return_type
+          | try (apply compute_list_norepet_e; reflexivity);
+             fail "Duplicate formal parameter names in funspec signature"  ] 
+         |];
+   match Pre with
+   | (fun _ x => match _ with (a,b) => _ end) => intros Espec DependedTypeList x (* preventing destructing too early and losing track of WITH-variables *)
+   | (fun _ i => _) => intros Espec DependedTypeList i; specialize_annotation d i
+   end;
+   simpl Clight.fn_body; simpl Clight.fn_params; simpl Clight.fn_return
+ end;
+ try match goal with |- semax _ (fun rho => ?A rho * ?B rho) _ _ =>
+     change (fun rho => ?A rho * ?B rho) with (A * B)
   end;
-  let DependedTypeList := fresh "DependedTypeList" in
-  match goal with |- semax_body _ _ _ (pair _ (NDmk_funspec _ _ _ ?Pre _)) =>
-    match Pre with
-    | (fun x => match _ with (a,b) => _ end) => intros Espec DependedTypeList x
-    | (fun i => _) => intros Espec DependedTypeList i; specialize_annotation d i
-    end;
-    simpl Clight.fn_body; simpl Clight.fn_params; simpl Clight.fn_return
-  end;
-  simpl functors.MixVariantFunctor._functor in *;
-  simpl rmaps.dependent_type_functor_rec;
-  clear DependedTypeList;
-  lazymatch goal with
-  | |- @semax _ _ _ (match ?p with (a,b) => _ end * _) _ _ =>
-      destruct_and_bind_annotation d
-  | _ => idtac
-  end;
-  simplify_func_tycontext;
-  try expand_main_pre;
-  process_stackframe_of;
-  repeat change_mapsto_gvar_to_data_at;  (* should really restrict this to only in main,
+ simpl functors.MixVariantFunctor._functor in *;
+ simpl rmaps.dependent_type_functor_rec;
+ clear DependedTypeList;
+ repeat match goal with
+ | |- @semax _ _ _ (match ?p with (a,b) => _ end * _) _ _ =>
+   destruct_and_bind_annotation d
+ | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ match ?p with (a,b) => _ end * _) _ _ =>
+   destruct_and_bind_annotation d
+ | |- @semax _ _ _ ((match ?p with (a,b) => _ end) eq_refl * _) _ _ =>
+   destruct_and_bind_annotation d
+ | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ ((match ?p with (a,b) => _ end) eq_refl) * _) _ _ =>
+   destruct_and_bind_annotation d
+ | _ => idtac
+ end;
+ first [apply elim_close_precondition; [solve [auto 50 with closed] | solve [auto 50 with closed] | ]
+        | erewrite compute_close_precondition by reflexivity];
+ simplify_func_tycontext;
+ try expand_main_pre;
+ process_stackframe_of;
+ repeat change_mapsto_gvar_to_data_at;  (* should really restrict this to only in main,
                                   but it needs to come after process_stackframe_of *)
-  repeat rewrite <- data_at__offset_zero;
-  try apply start_function_aux1;
-  repeat (apply semax_extract_PROP;
+ repeat rewrite <- data_at__offset_zero;
+ try apply start_function_aux1;
+ repeat (apply semax_extract_PROP;
               match goal with
               | |- _ ?sh -> _ =>
                  match type of sh with
@@ -258,20 +298,22 @@ Function spec: " S);
                  end
                | |- _ => intro
                end);
-  first [ eapply eliminate_extra_return'; [ reflexivity | reflexivity | ]
+(*
+ first [ eapply eliminate_extra_return'; [ reflexivity | reflexivity | ]
         | eapply eliminate_extra_return; [ reflexivity | reflexivity | ]
         | idtac];
-  abbreviate_semax;
-  lazymatch goal with 
-  | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
-  | _ => idtac
-  end;
-  try match goal with DS := @abbreviate (PTree.t funspec) PTree.Leaf |- _ =>
+*)
+ abbreviate_semax;
+ lazymatch goal with 
+ | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
+ | _ => idtac
+ end;
+ try match goal with DS := @abbreviate (PTree.t funspec) PTree.Leaf |- _ =>
      clearbody DS
-  end;
-  start_function_hint;
-  unfold Clight.Swhile, Sfor in *;
-  revert d.
+ end;
+ start_function_hint;
+ unfold Clight.Swhile, Sfor in *;
+ revert d.
 
 Ltac old_assert_PROP P :=
   assert_PROP P.

@@ -1,5 +1,5 @@
 ifeq (,$(wildcard ./Makefile.config))
- $(error FAILURE: You need a file Makefile.config to indicate VST location)
+ $(error FAILURE: You need a file Makefile.config to indicate locations of VST and clightgen)
 endif
 include Makefile.config
 VSTDIRS=msl sepcomp veric floyd
@@ -23,7 +23,7 @@ all:
 	@test -f .depend || $(MAKE) depend
 	$(MAKE) _CoqProject $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
 
-CLIGHTGEN=$(wildcard ../clightgen*)
+CLIGHTGEN=$(wildcard $(CLIGHTGENDIR)/clightgen*)
 ifeq (,$(CLIGHTGEN))
  $(error FAILURE: clightgen is not found in parent directory)
 endif
