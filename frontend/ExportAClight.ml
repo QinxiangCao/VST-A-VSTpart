@@ -24,6 +24,9 @@ open Clight
 open ExportClight
 open AClight
 
+(* additional flags *)
+let option_V = ref []
+
 (*(* Options, lists, pairs *)
 
 let print_option fn p = function
@@ -619,7 +622,7 @@ let print_Gprog p prog_defs =
 (* All together *)
 
 let print_program p prog sourcefile normalized =
-  List.iter (fprintf p "Require Import %s.@ ") !Clflags.option_V;
+  List.iter (fprintf p "Require Import %s.@ ") !option_V;
   Hashtbl.clear temp_names;
   name_program prog;
   fprintf p "@[<v 0>";

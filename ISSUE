@@ -1,0 +1,13 @@
+1. "PROP" or "LOCAL" only in assertions
+2. localize and unlocalize
+3. auto unfold listrep
+4. R/W for listrep's head
+5. Examples for wand-frame
+6. multi-break in loops
+7. Make annotated programs' structure consistent with verification structure: break with no post-loop condition and if with one branch break/continue/return
+8. forward_call
+9. offset_val v.s. field_address
+10. A tactic lib "repeat forwardD" to gather all entailments together.
+11. strange verification flow in loop bodies. This might be solved by 10.
+12. A ad-hoc solver for listrep and/or lseg_rec.
+

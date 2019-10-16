@@ -3,7 +3,7 @@ ifeq (,$(wildcard ./Makefile.config))
 endif
 include Makefile.config
 VSTDIRS=msl sepcomp veric floyd
-COMPCERT=$(VSTDIR)compcert/
+VSTCOMPCERT=$(VSTDIR)compcert/
 
 ACLIGHTDIR=AClight/
 CPROGSDIR=cprogs/
@@ -11,7 +11,7 @@ DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
 CPROGS=append sumarray2 reverse min
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
- -R $(COMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
+ -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
@@ -19,11 +19,11 @@ COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
-all:
-	@test -f .depend || $(MAKE) depend
+all: .depend _CoqProject frontend
 	$(MAKE) _CoqProject $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
 
-CLIGHTGEN=$(wildcard $(CLIGHTGENDIR)/clightgen*)
+CLIGHTGEN=$(wildcard ./main*)
+#CLIGHTGEN=$(wildcard $(COMPCERTANNOTDIR)/clightgen*)
 ifeq (,$(CLIGHTGEN))
  $(error FAILURE: clightgen is not found in parent directory)
 endif
@@ -54,8 +54,15 @@ cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v
 _CoqProject:
 	@echo '$(COQFLAGS)' > _CoqProject
 
+_CoqProject .depend: Makefile
+
+.PHONY: frontend
+frontend:
+	$(MAKE) -f Makefile.frontend
+
 .PHONY: clean
 clean:
+#	$(MAKE) -f Makefile.frontend clean
 	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
 	@rm -f $(patsubst %, %/*.vo, $(DIRS))
 	@rm -f $(patsubst %, %/*.glob, $(DIRS))
@@ -64,5 +71,5 @@ clean:
 	@rm -f _CoqProject
 
 ifneq ($(MAKECMDGOALS),clean)
- -include .depend
+ include .depend
 endif

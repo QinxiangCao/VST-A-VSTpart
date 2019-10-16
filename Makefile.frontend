@@ -1,0 +1,130 @@
+include Makefile.config
+
+include $(COMPCERTDIR)/Makefile.config
+include $(COMPCERTDIR)/Makefile.menhir
+
+ifeq ($(wildcard $(COMPCERTDIR)/$(ARCH)_$(BITSIZE)),)
+ARCHDIRS=$(ARCH)
+else
+ARCHDIRS=$(ARCH)_$(BITSIZE) $(ARCH)
+endif
+
+RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
+
+FRONTENDDIR=frontend
+FILES=AClight.v BuildAnnotation.v ClassifyComment.v ClightC.v #Main.ml CommentParser.ml ExportAClight.ml
+
+COQFLAGS=$(foreach d, $(RECDIRS), -R $(COMPCERTDIR)/$(d) compcert.$(d)) -R $(FRONTENDDIR) frontend
+
+DEPFLAGS:=$(COQFLAGS)
+COQC=$(COQBIN)coqc
+COQTOP=$(COQBIN)coqtop
+COQEXEC="$(COQBIN)coqtop" $(COQFLAGS) -batch -load-vernac-source
+COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
+COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
+
+all:
+	@$(MAKE) -f Makefile.frontend extraction
+	@$(MAKE) -f Makefile.frontend .depend.extr
+	@$(MAKE) -f Makefile.frontend main
+	@cp $(COMPCERTDIR)/compcert.ini compcert.ini
+
+.PHONY: depend
+depend: .depend.frontend
+
+.depend.frontend:
+	@$(COQDEP) $(patsubst %, $(FRONTENDDIR)/%, $(FILES)) > .depend.frontend
+
+%.vo: %.v
+	@echo "COQC $*.v"
+	@$(COQC) $(COQFLAGS) $*.v
+
+ifneq ($(MAKECMDGOALS),clean)
+ include .depend.frontend
+endif
+
+EXTRACTIONDIR=$(FRONTENDDIR)/extraction
+
+extraction: $(EXTRACTIONDIR)/STAMP
+
+$(EXTRACTIONDIR)/STAMP: $(patsubst %.v, $(FRONTENDDIR)/%.vo, $(FILES)) $(EXTRACTIONDIR)/extraction.v
+	@rm -f $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli
+	@$(COQEXEC) $(EXTRACTIONDIR)/extraction.v
+	@touch $(EXTRACTIONDIR)/STAMP
+
+
+# Build Ocaml
+
+DIRS=\
+  $(patsubst %, $(COMPCERTDIR)/%, extraction \
+  lib common $(ARCH) backend cfrontend cparser driver \
+  exportclight debug)\
+  $(FRONTENDDIR) $(EXTRACTIONDIR)
+
+INCLUDES=$(patsubst %,-I %, $(DIRS))
+
+# Control of warnings:
+
+WARNINGS=-w +a-4-9-27 -strict-sequence -safe-string -warn-error +a #Deprication returns with ocaml 4.03
+$(EXTRACTIONDIR)/%.cmx: WARNINGS +=-w -20-27-32..34-39-41-44..45
+$(EXTRACTIONDIR)/%.cmo: WARNINGS +=-w -20-27-32..34-39-41-44..45
+
+COMPFLAGS+=-g $(INCLUDES) $(MENHIR_INCLUDES) #$(WARNINGS)
+ifeq ($(OCAML_OPT_COMP),true)
+DOTOPT=.opt
+else
+DOTOPT=
+endif
+
+OCAMLC=ocamlc$(DOTOPT) $(COMPFLAGS)
+OCAMLOPT=ocamlopt$(DOTOPT) $(COMPFLAGS)
+OCAMLDEP=ocamldep$(DOTOPT) -slash $(INCLUDES)
+
+MODORDER=$(COMPCERTDIR)/tools/modorder .depend.extr
+
+
+LIBS=str.cmxa unix.cmxa $(MENHIR_LIBS)
+LIBS_BYTE=$(patsubst %.cmxa,%.cma,$(patsubst %.cmx,%.cmo,$(LIBS)))
+
+EXECUTABLES=ccomp ccomp.byte cchecklink cchecklink.byte clightgen clightgen.byte
+
+.depend.extr: $(EXTRACTIONDIR)/STAMP
+	@echo "Analyzing OCaml dependencies"
+	@$(OCAMLDEP) $(foreach d,$(DIRS),$(wildcard $(d)/*.ml)) >.depend.extr || { rm -f .depend.extr; exit 2; }
+	@$(OCAMLDEP) $(foreach d,$(DIRS),$(wildcard $(d)/*.mli)) >>.depend.extr || { rm -f .depend.extr; exit 2; }
+
+%.cmi: %.mli
+	@echo "OCAMLC   $<"
+	@$(OCAMLC) -c $<
+%.cmo: %.ml
+	@echo "OCAMLC   $<"
+	@$(OCAMLC) -c $<
+%.cmx: %.ml
+	@echo "OCAMLOPT $<"
+	@$(OCAMLOPT) -c $<
+
+MAIN_OBJS:=$(shell $(MODORDER) $(FRONTENDDIR)/Annotgen.cmx)
+
+main: $(MAIN_OBJS)
+	@echo $(MAIN_OBJS)
+	@echo "Linking $@"
+	@$(OCAMLOPT) -o $@ $(LIBS) $(LINK_OPT) $+
+
+main.byte: $(MAIN_OBJS:.cmx=.cmo)
+	@echo "Linking $@"
+	@$(OCAMLC) -o $@ $(LIBS_BYTE) $+
+
+clean:
+	rm -f $(FRONTENDDIR)/*.vo
+	rm -f $(FRONTENDDIR)/.*.aux
+	rm -f $(FRONTENDDIR)/*.glob
+	#rm -f driver/Version.ml
+	#rm -f compcert.ini
+	rm -f $(EXTRACTIONDIR)/STAMP $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli .depend.extr
+	#rm -f tools/ndfun tools/modorder tools/*.cm? tools/*.o
+	#rm -f $(GENERATED) .depend
+	#rm -f .lia.cache
+
+ifeq ($(MAKECMDGOALS),main)
+ include .depend.extr
+endif
