@@ -19,31 +19,20 @@ COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
-all: .depend _CoqProject frontend
-	$(MAKE) _CoqProject $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
+all: _CoqProject
+	$(MAKE) $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
 
-CLIGHTGEN=$(wildcard ./main*)
-#CLIGHTGEN=$(wildcard $(COMPCERTANNOTDIR)/clightgen*)
-ifeq (,$(CLIGHTGEN))
- $(error FAILURE: clightgen is not found in parent directory)
-endif
-ifeq ($(MAKE_CLIGHTGEN), true)
-# make sure clightgen is built in parent directory
-.PHONY: clightgen
-clightgen $(CLIGHTGEN):
-	$(MAKE) -C .. clightgen
-all: clightgen
-endif
+CLIGHTGEN=$(wildcard ./aclightgen*)
 
 .PHONY: depend
 depend .depend: cprogs
 	@$(COQDEP) $(ACLIGHTDIR)*.v $(CPROGSDIR)*.v > .depend
 
 $(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
-	$(CLIGHTGEN) -normalize -o $@ $<
+	@$(CLIGHTGEN) -normalize -o $@ $<
 
 $(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
-	$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
+	@$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v)
 
@@ -57,19 +46,26 @@ _CoqProject:
 _CoqProject .depend: Makefile
 
 .PHONY: frontend
-frontend:
-	$(MAKE) -f Makefile.frontend
+frontend: frontend/STAMP
+
+frontend/STAMP:
+	@$(MAKE) -f Makefile.frontend
 
 .PHONY: clean
 clean:
-#	$(MAKE) -f Makefile.frontend clean
-	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
 	@rm -f $(patsubst %, %/*.vo, $(DIRS))
 	@rm -f $(patsubst %, %/*.glob, $(DIRS))
 	@rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	@rm -f .depend
+	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
 	@rm -f _CoqProject
+	@$(MAKE) -f Makefile.frontend clean
 
 ifneq ($(MAKECMDGOALS),clean)
- include .depend
+ include frontend/STAMP
+ ifneq (, $(wildcard frontend/STAMP))
+  ifneq ($(MAKECMDGOALS),frontend)
+   include .depend
+  endif
+ endif
 endif

@@ -12,7 +12,7 @@ endif
 RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
 
 FRONTENDDIR=frontend
-FILES=AClight.v BuildAnnotation.v ClassifyComment.v ClightC.v #Main.ml CommentParser.ml ExportAClight.ml
+FILES=AClight.v BuildAnnotation.v ClassifyComment.v ClightC.v
 
 COQFLAGS=$(foreach d, $(RECDIRS), -R $(COMPCERTDIR)/$(d) compcert.$(d)) -R $(FRONTENDDIR) frontend
 
@@ -23,25 +23,17 @@ COQEXEC="$(COQBIN)coqtop" $(COQFLAGS) -batch -load-vernac-source
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
-all:
-	@$(MAKE) -f Makefile.frontend extraction
-	@$(MAKE) -f Makefile.frontend .depend.extr
-	@$(MAKE) -f Makefile.frontend main
-	@cp $(COMPCERTDIR)/compcert.ini compcert.ini
+.PHONY: all
+all: compcert.ini $(FRONTENDDIR)/STAMP
 
 .PHONY: depend
-depend: .depend.frontend
-
-.depend.frontend:
+depend .depend.frontend:
+	@echo "Analyzing Coq dependencies"
 	@$(COQDEP) $(patsubst %, $(FRONTENDDIR)/%, $(FILES)) > .depend.frontend
 
 %.vo: %.v
 	@echo "COQC $*.v"
 	@$(COQC) $(COQFLAGS) $*.v
-
-ifneq ($(MAKECMDGOALS),clean)
- include .depend.frontend
-endif
 
 EXTRACTIONDIR=$(FRONTENDDIR)/extraction
 
@@ -86,7 +78,7 @@ MODORDER=$(COMPCERTDIR)/tools/modorder .depend.extr
 LIBS=str.cmxa unix.cmxa $(MENHIR_LIBS)
 LIBS_BYTE=$(patsubst %.cmxa,%.cma,$(patsubst %.cmx,%.cmo,$(LIBS)))
 
-EXECUTABLES=ccomp ccomp.byte cchecklink cchecklink.byte clightgen clightgen.byte
+EXECUTABLES=aclightgen aclightgen.byte
 
 .depend.extr: $(EXTRACTIONDIR)/STAMP
 	@echo "Analyzing OCaml dependencies"
@@ -103,28 +95,44 @@ EXECUTABLES=ccomp ccomp.byte cchecklink cchecklink.byte clightgen clightgen.byte
 	@echo "OCAMLOPT $<"
 	@$(OCAMLOPT) -c $<
 
-MAIN_OBJS:=$(shell $(MODORDER) $(FRONTENDDIR)/Annotgen.cmx)
+ifeq ($(wildcard .depend.extr),.depend.extr) # if .depend.extr exists
 
-main: $(MAIN_OBJS)
-	@echo $(MAIN_OBJS)
+ACLIGHTGEN_OBJS:=$(shell $(MODORDER) $(FRONTENDDIR)/AClightgen.cmx)
+
+aclightgen: $(ACLIGHTGEN_OBJS)
 	@echo "Linking $@"
 	@$(OCAMLOPT) -o $@ $(LIBS) $(LINK_OPT) $+
 
-main.byte: $(MAIN_OBJS:.cmx=.cmo)
+aclightgen.byte: $(ACLIGHTGEN_OBJS:.cmx=.cmo)
 	@echo "Linking $@"
 	@$(OCAMLC) -o $@ $(LIBS_BYTE) $+
 
-clean:
-	rm -f $(FRONTENDDIR)/*.vo
-	rm -f $(FRONTENDDIR)/.*.aux
-	rm -f $(FRONTENDDIR)/*.glob
-	#rm -f driver/Version.ml
-	#rm -f compcert.ini
-	rm -f $(EXTRACTIONDIR)/STAMP $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli .depend.extr
-	#rm -f tools/ndfun tools/modorder tools/*.cm? tools/*.o
-	#rm -f $(GENERATED) .depend
-	#rm -f .lia.cache
+$(FRONTENDDIR)/STAMP: aclightgen
+	@touch $(FRONTENDDIR)/STAMP
 
-ifeq ($(MAKECMDGOALS),main)
- include .depend.extr
+endif # endif .depend.extr exists
+
+compcert.ini: $(COMPCERTDIR)/compcert.ini
+	@cp $(COMPCERTDIR)/compcert.ini compcert.ini
+
+.PHONY: clean
+clean:
+	@rm -f compcert.ini $(FRONTENDDIR)/STAMP
+	@rm -f $(EXECUTABLES)
+	@for d in $(FRONTENDDIR) $(EXTRACTIONDIR); do rm -f $$d/*.cm[iotx] $$d/*cmti $$d/*.o; done
+	@rm -f $(EXTRACTIONDIR)/STAMP $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli
+	@rm -f .depend.extr
+	@rm -f $(FRONTENDDIR)/*.vo
+	@rm -f $(FRONTENDDIR)/.*.aux
+	@rm -f $(FRONTENDDIR)/*.glob
+	@rm -f .depend.frontend
+
+ifneq ($(MAKECMDGOALS), clean)
+ include .depend.frontend
+ ifeq ($(wildcard .depend.frontend), .depend.frontend) # if .depend.frontend exists
+  include $(EXTRACTIONDIR)/STAMP # force making $(EXTRACTIONDIR)/STAMP
+	ifeq ($(wildcard $(EXTRACTIONDIR)/STAMP), $(EXTRACTIONDIR)/STAMP) # if $(EXTRACTIONDIR)/STAMP exists
+   include .depend.extr
+	endif # endif $(EXTRACTIONDIR)/STAMP exists
+ endif # endif .depend.frontend exists
 endif
