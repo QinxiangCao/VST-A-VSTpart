@@ -3,38 +3,38 @@ ifeq (,$(wildcard ./Makefile.config))
 endif
 include Makefile.config
 VSTDIRS=msl sepcomp veric floyd
-VSTCOMPCERT=$(VSTDIR)compcert/
+VSTCOMPCERT=$(VSTDIR)/compcert
 
-ACLIGHTDIR=AClight/
-CPROGSDIR=cprogs/
+ACLIGHTDIR=AClight
+CPROGSDIR=cprogs
 DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
 CPROGS=append sumarray2 reverse min
 
-COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
+COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
  -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
 COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
-COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
+COQDOC=$(COQBIN)coqdoc -d doc/html -g $(DEPFLAGS)
 
 all: _CoqProject
-	$(MAKE) $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
+	$(MAKE) $(addprefix $(CPROGSDIR)/, $(CPROGS:=_verif.vo))
 
 CLIGHTGEN=$(wildcard ./aclightgen*)
 
 .PHONY: depend
 depend .depend: cprogs
-	@$(COQDEP) $(ACLIGHTDIR)*.v $(CPROGSDIR)*.v > .depend
+	@$(COQDEP) $(ACLIGHTDIR)/*.v $(CPROGSDIR)/*.v > .depend
 
-$(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
+$(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(CLIGHTGEN)
 	@$(CLIGHTGEN) -normalize -o $@ $<
 
-$(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
+$(CPROGSDIR)/%_annot.v: $(CPROGSDIR)/%.c $(CLIGHTGEN)
 	@$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
 
-cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v)
+cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c)_prog.v $(CPROGSDIR)/$(c)_annot.v)
 
 %.vo: %.v
 	@echo COQC $<
@@ -57,7 +57,7 @@ clean:
 	@rm -f $(patsubst %, %/*.glob, $(DIRS))
 	@rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	@rm -f .depend
-	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
+	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
 	@$(MAKE) -f Makefile.frontend clean
 
