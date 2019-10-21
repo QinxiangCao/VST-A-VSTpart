@@ -9,10 +9,14 @@ else
 ARCHDIRS=$(ARCH)_$(BITSIZE) $(ARCH)
 endif
 
-RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
-
 FRONTENDDIR=frontend
+EXTRACTIONDIR=$(FRONTENDDIR)/extraction
 FILES=AClight.v BuildAnnotation.v ClassifyComment.v ClightC.v
+EXECUTABLES=aclightgen aclightgen.byte
+
+# Coq compilation variables
+
+RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
 
 COQFLAGS=$(foreach d, $(RECDIRS), -R $(COMPCERTDIR)/$(d) compcert.$(d)) -R $(FRONTENDDIR) frontend
 
@@ -23,29 +27,7 @@ COQEXEC="$(COQBIN)coqtop" $(COQFLAGS) -batch -load-vernac-source
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 
-.PHONY: all
-all: compcert.ini $(FRONTENDDIR)/STAMP
-
-.PHONY: depend
-depend .depend.frontend:
-	@echo "Analyzing Coq dependencies"
-	@$(COQDEP) $(patsubst %, $(FRONTENDDIR)/%, $(FILES)) > .depend.frontend
-
-%.vo: %.v
-	@echo "COQC $*.v"
-	@$(COQC) $(COQFLAGS) $*.v
-
-EXTRACTIONDIR=$(FRONTENDDIR)/extraction
-
-extraction: $(EXTRACTIONDIR)/STAMP
-
-$(EXTRACTIONDIR)/STAMP: $(patsubst %.v, $(FRONTENDDIR)/%.vo, $(FILES)) $(EXTRACTIONDIR)/extraction.v
-	@rm -f $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli
-	@$(COQEXEC) $(EXTRACTIONDIR)/extraction.v
-	@touch $(EXTRACTIONDIR)/STAMP
-
-
-# Build Ocaml
+# Ocaml compilation variables
 
 DIRS=\
   $(patsubst %, $(COMPCERTDIR)/%, extraction \
@@ -56,7 +38,6 @@ DIRS=\
 INCLUDES=$(patsubst %,-I %, $(DIRS))
 
 # Control of warnings:
-
 WARNINGS=-w +a-4-9-27 -strict-sequence -safe-string -warn-error +a #Deprication returns with ocaml 4.03
 $(EXTRACTIONDIR)/%.cmx: WARNINGS +=-w -20-27-32..34-39-41-44..45
 $(EXTRACTIONDIR)/%.cmo: WARNINGS +=-w -20-27-32..34-39-41-44..45
@@ -74,16 +55,49 @@ OCAMLDEP=ocamldep$(DOTOPT) -slash $(INCLUDES)
 
 MODORDER=$(COMPCERTDIR)/tools/modorder .depend.extr
 
-
 LIBS=str.cmxa unix.cmxa $(MENHIR_LIBS)
 LIBS_BYTE=$(patsubst %.cmxa,%.cma,$(patsubst %.cmx,%.cmo,$(LIBS)))
 
-EXECUTABLES=aclightgen aclightgen.byte
+.PHONY: all
+all: compcert.ini $(FRONTENDDIR)/STAMP
+
+ifneq ($(MAKECMDGOALS), clean) # only if the goal is not clean, include actual make rules
+
+.PHONY: depend
+depend .depend.frontend:
+	@echo "Analyzing Coq dependencies"
+	@$(COQDEP) $(patsubst %, $(FRONTENDDIR)/%, $(FILES)) > .depend.frontend
+
+include .depend.frontend
+
+ifneq (, $(wildcard .depend.frontend)) # the following rules are only applicable when .depend.frontend is included
+
+%.vo: %.v
+	@echo "COQC $*.v"
+	@$(COQC) $(COQFLAGS) $*.v
+
+extraction: $(EXTRACTIONDIR)/STAMP
+
+$(EXTRACTIONDIR)/STAMP: $(patsubst %.v, $(FRONTENDDIR)/%.vo, $(FILES)) $(EXTRACTIONDIR)/extraction.v
+	@echo "Making extraction"
+	@rm -f $(EXTRACTIONDIR)/*.ml $(EXTRACTIONDIR)/*.mli
+	@$(COQEXEC) $(EXTRACTIONDIR)/extraction.v
+	@touch $(EXTRACTIONDIR)/STAMP
+
+include $(EXTRACTIONDIR)/STAMP # an empty file, to force reloading Makefile after making extraction
+
+ifneq (, $(wildcard $(EXTRACTIONDIR)/STAMP)) # the following rules are only applicable when $(EXTRACTIONDIR)/STAMP exists
+
+# Build Ocaml
 
 .depend.extr: $(EXTRACTIONDIR)/STAMP
 	@echo "Analyzing OCaml dependencies"
 	@$(OCAMLDEP) $(foreach d,$(DIRS),$(wildcard $(d)/*.ml)) >.depend.extr || { rm -f .depend.extr; exit 2; }
 	@$(OCAMLDEP) $(foreach d,$(DIRS),$(wildcard $(d)/*.mli)) >>.depend.extr || { rm -f .depend.extr; exit 2; }
+
+include .depend.extr
+
+ifneq (, $(wildcard .depend.extr)) # the following rules are only applicable when .depend.extr is included
 
 %.cmi: %.mli
 	@echo "OCAMLC   $<"
@@ -94,8 +108,6 @@ EXECUTABLES=aclightgen aclightgen.byte
 %.cmx: %.ml
 	@echo "OCAMLOPT $<"
 	@$(OCAMLOPT) -c $<
-
-ifeq ($(wildcard .depend.extr),.depend.extr) # if .depend.extr exists
 
 ACLIGHTGEN_OBJS:=$(shell $(MODORDER) $(FRONTENDDIR)/AClightgen.cmx)
 
@@ -110,10 +122,14 @@ aclightgen.byte: $(ACLIGHTGEN_OBJS:.cmx=.cmo)
 $(FRONTENDDIR)/STAMP: aclightgen
 	@touch $(FRONTENDDIR)/STAMP
 
-endif # endif .depend.extr exists
+endif # if .depend.extr exists
+endif # if $(EXTRACTIONDIR)/STAMP exists
+endif # if .depend.frontend exists
 
 compcert.ini: $(COMPCERTDIR)/compcert.ini
 	@cp $(COMPCERTDIR)/compcert.ini compcert.ini
+
+endif # if the goal is not clean
 
 .PHONY: clean
 clean:
@@ -126,13 +142,3 @@ clean:
 	@rm -f $(FRONTENDDIR)/.*.aux
 	@rm -f $(FRONTENDDIR)/*.glob
 	@rm -f .depend.frontend
-
-ifneq ($(MAKECMDGOALS), clean)
- include .depend.frontend
- ifeq ($(wildcard .depend.frontend), .depend.frontend) # if .depend.frontend exists
-  include $(EXTRACTIONDIR)/STAMP # force making $(EXTRACTIONDIR)/STAMP
-	ifeq ($(wildcard $(EXTRACTIONDIR)/STAMP), $(EXTRACTIONDIR)/STAMP) # if $(EXTRACTIONDIR)/STAMP exists
-   include .depend.extr
-	endif # endif $(EXTRACTIONDIR)/STAMP exists
- endif # endif .depend.frontend exists
-endif
