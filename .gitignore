@@ -18,8 +18,9 @@
 .nia.cache
 .nra.cache
 .csdp.cache
-experiment
 *.exe
-.depend
-_CoqProject
-Makefile.config
+.depend*
+/_CoqProject
+/Makefile.config
+/compcert.ini
+/frontend/STAMP

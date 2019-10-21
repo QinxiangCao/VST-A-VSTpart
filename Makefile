@@ -1,68 +1,81 @@
-ifeq (,$(wildcard ./Makefile.config))
- $(error FAILURE: You need a file Makefile.config to indicate locations of VST and clightgen)
+ifeq (, $(wildcard ./Makefile.config))
+_:=$(shell (\
+  echo "VSTDIR= \# /path/to/VST";\
+  echo "COMPCERTDIR= \# /path/to/CompCert"\
+) > ./Makefile.config)
+$(error FAILURE: Please fill paths to VST and CompCert in Makefile.config)
 endif
+
 include Makefile.config
 VSTDIRS=msl sepcomp veric floyd
-COMPCERT=$(VSTDIR)compcert/
+VSTCOMPCERT=$(VSTDIR)/compcert
 
-ACLIGHTDIR=AClight/
-CPROGSDIR=cprogs/
-DIRS= $(ACLIGHTDIR) $(CPROGSDIR)
+ACLIGHTDIR=AClight
+CPROGSDIR=cprogs
+FRONTENDDIR=frontend
+DIRS=$(ACLIGHTDIR) $(CPROGSDIR)
 CPROGS=append sumarray2 reverse min sgn leap_year
 
-COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)$(d) VST.$(d))\
- -R $(COMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
+COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
+ -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
 COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
-COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
+COQDOC=$(COQBIN)coqdoc -d doc/html -g $(DEPFLAGS)
 
-all:
-	@test -f .depend || $(MAKE) depend
-	$(MAKE) _CoqProject $(addprefix $(CPROGSDIR), $(CPROGS:=_verif.vo))
+all: _CoqProject frontend
+	$(MAKE) $(addprefix $(CPROGSDIR)/, $(CPROGS:=_verif.vo))
 
-CLIGHTGEN=$(wildcard $(CLIGHTGENDIR)/clightgen*)
-ifeq (,$(CLIGHTGEN))
- $(error FAILURE: clightgen is not found in parent directory)
-endif
-ifeq ($(MAKE_CLIGHTGEN), true)
-# make sure clightgen is built in parent directory
-.PHONY: clightgen
-clightgen $(CLIGHTGEN):
-	$(MAKE) -C .. clightgen
-all: clightgen
-endif
+_CoqProject: Makefile
+	@echo '$(COQFLAGS)' > _CoqProject
+
+ifneq ($(MAKECMDGOALS),clean) # only if the goal is not clean, include actual make rules
+
+.PHONY: frontend
+frontend frontend/STAMP:
+	@$(MAKE) -f Makefile.frontend
+
+ifneq ($(MAKECMDGOALS),frontend)
+
+include frontend/STAMP # an empty file, to force reloading Makefile after making aclightgen
+
+ACLIGHTGEN=$(wildcard ./aclightgen*)
+
+ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHTGEN) exists
 
 .PHONY: depend
 depend .depend: cprogs
-	@$(COQDEP) $(ACLIGHTDIR)*.v $(CPROGSDIR)*.v > .depend
+	@$(COQDEP) $(ACLIGHTDIR)/*.v $(CPROGSDIR)/*.v > .depend
 
-$(CPROGSDIR)%_prog.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
-	$(CLIGHTGEN) -normalize -o $@ $<
+$(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
+	@$(ACLIGHTGEN) -normalize -o $@ $<
 
-$(CPROGSDIR)%_annot.v: $(CPROGSDIR)%.c $(CLIGHTGEN)
-	$(CLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
+$(CPROGSDIR)/%_annot.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
+	@$(ACLIGHTGEN) -normalize -A -V cprogs.$*_def -V cprogs.$*_prog -o $@ $<
 
-cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)$(c)_prog.v $(CPROGSDIR)$(c)_annot.v)
+cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c)_prog.v $(CPROGSDIR)/$(c)_annot.v)
+
+include .depend
+
+ifneq (, $(wildcard .depend)) # the following rules are only applicable when .depend exists
 
 %.vo: %.v
 	@echo COQC $<
 	@$(COQC) $(COQFLAGS) $<
 
-_CoqProject:
-	@echo '$(COQFLAGS)' > _CoqProject
+endif # if .depend exists
+endif # if $(ACLIGHTGEN) exists
+endif # if the goal is not frontend
+endif # if the goal is not clean
 
 .PHONY: clean
 clean:
-	@rm -f $(CPROGSDIR)*_prog.v $(CPROGSDIR)*_annot.v
 	@rm -f $(patsubst %, %/*.vo, $(DIRS))
 	@rm -f $(patsubst %, %/*.glob, $(DIRS))
 	@rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	@rm -f .depend
+	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
-
-ifneq ($(MAKECMDGOALS),clean)
- -include .depend
-endif
+	@$(MAKE) -f Makefile.frontend clean
