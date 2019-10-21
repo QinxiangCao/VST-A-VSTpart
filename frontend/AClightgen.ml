@@ -52,7 +52,6 @@ let compile_c_ast sourcename csyntax ofile =
     close_out oc
   end;
   (* Print Clight in Coq syntax *)
-  let oc = open_out ofile in
   if !option_C then
     let aclight =
       match ClassifyComment.classify_program clight with
@@ -63,10 +62,12 @@ let compile_c_ast sourcename csyntax ofile =
         end
       | Errors.Error msg -> fatal_error loc "%a" print_error msg
     in
+    let oc = open_out ofile in
     ExportAClight.print_program (Format.formatter_of_out_channel oc)
                                aclight sourcename !option_normalize;
     close_out oc
   else
+    let oc = open_out ofile in
     ExportClight.print_program (Format.formatter_of_out_channel oc)
                                clight sourcename !option_normalize;
     close_out oc

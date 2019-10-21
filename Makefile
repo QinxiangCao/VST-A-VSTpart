@@ -25,7 +25,7 @@ COQTOP=$(COQBIN)coqtop
 COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc -d doc/html -g $(DEPFLAGS)
 
-all: _CoqProject
+all: _CoqProject frontend
 	$(MAKE) $(addprefix $(CPROGSDIR)/, $(CPROGS:=_verif.vo))
 
 _CoqProject: Makefile
@@ -34,9 +34,7 @@ _CoqProject: Makefile
 ifneq ($(MAKECMDGOALS),clean) # only if the goal is not clean, include actual make rules
 
 .PHONY: frontend
-frontend: frontend/STAMP
-
-frontend/STAMP:
+frontend frontend/STAMP:
 	@$(MAKE) -f Makefile.frontend
 
 ifneq ($(MAKECMDGOALS),frontend)

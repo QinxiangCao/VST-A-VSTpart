@@ -58,8 +58,8 @@ MODORDER=$(COMPCERTDIR)/tools/modorder .depend.extr
 LIBS=str.cmxa unix.cmxa $(MENHIR_LIBS)
 LIBS_BYTE=$(patsubst %.cmxa,%.cma,$(patsubst %.cmx,%.cmo,$(LIBS)))
 
-.PHONY: all
-all: compcert.ini $(FRONTENDDIR)/STAMP
+.PHONY: frontend
+frontend: compcert.ini $(FRONTENDDIR)/STAMP
 
 ifneq ($(MAKECMDGOALS), clean) # only if the goal is not clean, include actual make rules
 
