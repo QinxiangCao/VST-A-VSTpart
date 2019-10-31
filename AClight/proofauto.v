@@ -235,6 +235,7 @@ Ltac start_function hint :=
           | try (apply compute_list_norepet_e; reflexivity);
              fail "Duplicate formal parameter names in funspec signature"  ] 
          |];
+   simpl functors.MixVariantFunctor._functor in *;
    match Pre with
    | (fun _ x => match _ with (a,b) => _ end) => intros Espec DependedTypeList x (* preventing destructing too early and losing track of WITH-variables *)
    | (fun _ i => _) => intros Espec DependedTypeList i; specialize_annotation d i
