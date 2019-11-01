@@ -45,12 +45,7 @@ let compile_c_ast sourcename csyntax ofile =
     | Errors.Error msg ->
       fatal_error loc "%a" print_error msg in
   (* Dump Clight in C syntax if requested *)
-  if !option_dclight then begin
-    let ofile = Filename.chop_suffix sourcename ".c" ^ ".light.c" in
-    let oc = open_out ofile in
-    PrintClight.print_program (Format.formatter_of_out_channel oc) clight;
-    close_out oc
-  end;
+  PrintClight.print_if_2 clight;
   (* Print Clight in Coq syntax *)
   if !option_C then
     let aclight =

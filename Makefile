@@ -19,6 +19,10 @@ CPROGS=append sumarray2 reverse min sgn leap_year
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
  -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
 
+ifneq (, $(RAMIFYCOQDIR))
+ COQFLAGS += -Q $(RAMIFYCOQDIR) RamifyCoq
+endif
+
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
 COQTOP=$(COQBIN)coqtop

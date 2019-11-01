@@ -33,7 +33,7 @@ unsigned four[4] = {1,2,3,4};
 int main(void) {
   /*@ With gv, */
   /*@ Require
-      main_pre prog nil gv
+      main_pre prog tt nil gv
   */
   /*@ Ensure
       PROP()
