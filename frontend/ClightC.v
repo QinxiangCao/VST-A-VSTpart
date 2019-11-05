@@ -39,7 +39,9 @@ Inductive comment_type :=
   | Inv
   | With
   | Require
-  | Ensure.
+  | Ensure
+  | Local
+  | Unlocal.
 
 Definition comment := (comment_type * Comment.string)%type.
 
