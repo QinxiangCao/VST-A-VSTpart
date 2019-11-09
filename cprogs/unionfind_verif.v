@@ -32,7 +32,7 @@ Qed.
 
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
-  start_function f_find_hint. forwardD.
+  start_function f_find_hint. intro d. unfold MORE_COMMANDS. unfold abbreviate. reform 1%nat. eapply semax_seq. forwardD.
   remember (vgamma g x) as rpa eqn:?H. destruct rpa as [r pa].
   (* p = x -> parent; *)
   localize [data_at sh node_type (vgamma2cdata (vgamma g x)) (pointer_val_val x)]. rewrite <- H0. simpl vgamma2cdata.

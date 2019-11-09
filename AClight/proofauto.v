@@ -336,6 +336,21 @@ Local Ltac apply_seq_evar :=
     ]
   end.
 
+(* Lemma localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta G L c L' G',
+      semax Delta L c L' ->
+      G |-- L * (L' -* G') ->
+      semax Delta G c G'.
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
+ *)
+(* Lemma apply_localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall {A: Type} d1 Delta P c Post,
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post). *)
+
 Tactic Notation "forwardD" :=
   repeat apply_dummyassert;
   (* Intro Props *)
@@ -411,6 +426,13 @@ Tactic Notation "forwardD" :=
       | _ =>
         fail "no matching pattern when processing Sassert"
       end
+  (* localize *)
+  (* | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G) _) in _ =>
+      let d := fresh d in
+      intro d;
+      split_first_n_statements snum;
+      revert d; *)
+      
   (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ _ _ =>
