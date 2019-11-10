@@ -27,9 +27,22 @@ struct Node* find(struct Node* x) {
         SEP (whole_graph sh g')
     */
     struct Node *p, *p0;
-    //@ Local data_at sh node_type (vgamma2cdata (vgamma g x)) (pointer_val_val x)
+    /*@ Local
+          PROP ()
+          LOCAL (temp _x (pointer_val_val x))
+          SEP (data_at sh node_type (vgamma2cdata (vgamma g x)) (pointer_val_val x))
+    */
+    /*@ Assert EX r pa,
+          PROP ((r, pa) = vgamma g x)
+          LOCAL (temp _x (pointer_val_val x))
+          SEP (data_at sh node_type (vgamma2cdata (r, pa)) (pointer_val_val x))
+    */
     p = x -> parent;
-    //@ Unlocal whole_graph sh g
+    /*@ Unlocal EX r pa,
+          PROP ((r, pa) = vgamma g x)
+          LOCAL (temp _x (pointer_val_val x); temp _p (pointer_val_val pa))
+          SEP (whole_graph sh g)
+    */
     if (p != x) {
         p0 = find(p);
         p = p0;

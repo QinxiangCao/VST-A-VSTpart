@@ -121,6 +121,7 @@ Fixpoint count_statement (s: statement) : nat :=
   match s with
   | Sskip => 0
   | Sassert _ => 0
+  | Sdummyassert _ => 0
   | Sgiven _ s => count_statement s
   | Ssequence s1 s2 => count_statement s1 + count_statement s2
   | Slocal _ n _ _ => n

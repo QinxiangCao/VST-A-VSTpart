@@ -1,5 +1,6 @@
 Require Import VST.floyd.proofauto.
 Require Import AClight.ramification.
+Require AClight.AClight.
 
 Fixpoint fold_Ssequence (sl: list statement) : statement :=
   match sl with
@@ -18,6 +19,11 @@ Ltac split_by_number s n :=
 
 Ltac split_semax_statement n :=
   match goal with
+  | MORE_COMMANDS := abbreviate : Clight.statement |- _ =>
+      subst MORE_COMMANDS;
+      unfold abbreviate
+  end;
+  match goal with
   | |- semax ?Delta ?P ?c ?Q =>
       let c' := split_by_number c n in
       apply semax_unfold_Ssequence with c';
@@ -26,8 +32,9 @@ Ltac split_semax_statement n :=
 
 Ltac localize n L G' :=
   split_semax_statement n;
-  eapply semax_ramification_P;
-  swap 1 2.
+  [ eapply semax_ramification_P;
+    swap 1 2
+  | ].
 
 Lemma exp_wand : forall T (P : T -> mpred) Q,
   ALL x, P x -* Q |-- (EX x, P x) -* Q.

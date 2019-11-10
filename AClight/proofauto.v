@@ -2,6 +2,7 @@ Require Export VST.floyd.proofauto.
 Require Export AClight.AClight.
 Require AClight.advanced_cancel.
 Require Import AClight.revert.
+Require Import AClight.localization.
 
 (******************** applying Clight-A proof rules ***************************)
 
@@ -137,6 +138,37 @@ Lemma annotation_apply_given':
 Proof.
   intros.
   apply H.
+Qed.
+
+Local Opaque FF.
+
+Lemma FF_ENTAIL:
+  forall Delta Q,
+    ENTAIL Delta, FF |-- Q.
+Proof.
+  intros. rewrite andp_FF. apply FF_left.
+Qed.
+
+Hint Resolve FF_ENTAIL : core.
+
+Lemma apply_localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta G L L' G' G'brk G'con G'ret snum s c,
+      (let d := @abbreviate _ s in semax Delta L c (normal_ret_assert L')) ->
+      (G |-- L * ramification.ModBox c (L' -* G')) ->
+      (let d := @abbreviate _ (Ssequence (Slocal L snum s G') Sskip) in semax Delta G c
+      {| RA_normal := G';
+         RA_break := G'brk;
+         RA_continue := G'con;
+         RA_return := G'ret |}).
+Proof.
+  intros.
+  apply semax_post with (normal_ret_assert G').
+  { simpl RA_normal; auto. }
+  { simpl RA_break; auto. }
+  { simpl RA_continue; auto. }
+  { simpl RA_return; auto. }
+  eapply ramification.semax_ramification_P; eauto.
 Qed.
 
 Ltac apply_dummyassert :=
@@ -336,6 +368,18 @@ Local Ltac apply_seq_evar :=
     ]
   end.
 
+Ltac apply_localize :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let d := fresh d in
+    let L'_name := fresh "L'" in
+    evar (L'_name : assert);
+    let L' := L'_name in
+    refine (apply_localize _ _ _ L' _ _ _ _ _ _ _ _ _);
+    [ intro d; abbreviate_semax; revert d
+    | subst L'
+    ]
+  end.
+
 (* Lemma localize:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Delta G L c L' G',
@@ -427,20 +471,24 @@ Tactic Notation "forwardD" :=
         fail "no matching pattern when processing Sassert"
       end
   (* localize *)
-  (* | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G) _) in _ =>
+  | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') Sskip) in _ =>
+      apply_localize
+  | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') _) in _ =>
       let d := fresh d in
       intro d;
-      split_first_n_statements snum;
-      revert d; *)
-      
+      split_semax_statement snum;
+      revert d;
+      refine (apply_seq G' _ _ _ _ _ _ _ _ _);
+      only 1: apply_localize
   (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ _ _ =>
       let d := fresh d in
       intro d;
       forward;
-      revert d;
-      refine (annotation_apply_seqAssign _ _ _ _)
+      try (idtac;
+        [.. | revert d; refine (annotation_apply_seqAssign _ _ _ _)]
+      )
   (* skip *)
   | |- let d := @abbreviate _ Sskip in _ =>
       intros _;

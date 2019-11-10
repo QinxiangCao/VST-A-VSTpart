@@ -29,10 +29,19 @@ Proof.
   simpl vertex_at at 1. unfold binode. entailer!.
 Qed.
 
+Import AClight.revert.
+Import AClight.localization.
 
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
-  start_function f_find_hint. intro d. unfold MORE_COMMANDS. unfold abbreviate. reform 1%nat. eapply semax_seq. forwardD.
+  start_function f_find_hint.
+  forwardD. forwardD.
+  { destruct (vgamma g x). repeat step!. }
+  forwardD. forwardD. forwardD.
+  { 1: entailer!; destruct pa; simpl; auto. }
+  forwardD.
+  
+  
   remember (vgamma g x) as rpa eqn:?H. destruct rpa as [r pa].
   (* p = x -> parent; *)
   localize [data_at sh node_type (vgamma2cdata (vgamma g x)) (pointer_val_val x)]. rewrite <- H0. simpl vgamma2cdata.
