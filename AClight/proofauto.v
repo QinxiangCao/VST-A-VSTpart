@@ -250,11 +250,11 @@ Ltac start_function hint :=
    change (semax_body V G F s); subst s
  end;
  let DependedTypeList := fresh "DependedTypeList" in
- unfold NDmk_funspec; 
+ unfold NDmk_funspec;
  match goal with |- semax_body _ _ _ (pair _ (mk_funspec _ _ _ ?Pre _ _ _)) =>
    split; [split3; [check_parameter_types' | check_return_type
           | try (apply compute_list_norepet_e; reflexivity);
-             fail "Duplicate formal parameter names in funspec signature"  ] 
+             fail "Duplicate formal parameter names in funspec signature"  ]
          |];
    simpl functors.MixVariantFunctor._functor in *;
    match Pre with
@@ -305,7 +305,7 @@ Ltac start_function hint :=
         | idtac];
 *)
  abbreviate_semax;
- lazymatch goal with 
+ lazymatch goal with
  | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
  | _ => idtac
  end;
