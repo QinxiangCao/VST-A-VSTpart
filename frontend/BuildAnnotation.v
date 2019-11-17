@@ -23,12 +23,16 @@ Open Scope list_scope.
 Parameter get_binder_list : assert -> list binder * assert.
 
 Definition add_binder_list (s: statement) (c: assert) : statement :=
-  let (binder_list, dummy_assert) := get_binder_list c in
-  match binder_list with
-  | nil => s
+  match s with
+  | Sskip => Sskip
   | _ =>
-    let s := Ssequence (Sdummyassert dummy_assert) s in
-    fold_right Sgiven s binder_list
+      let (binder_list, dummy_assert) := get_binder_list c in
+      match binder_list with
+      | nil => s
+      | _ =>
+        let s := Ssequence (Sdummyassert dummy_assert) s in
+        fold_right Sgiven s binder_list
+      end
   end.
 
 (***************** Control flow analysis ***********************)

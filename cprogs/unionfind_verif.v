@@ -40,9 +40,46 @@ Proof.
   forwardD. forwardD. forwardD.
   { 1: entailer!; destruct pa; simpl; auto. }
   forwardD.
-  
-  
+  admit. (* entailment with ModBox *)
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
+  { apply denote_tc_test_eq_split; apply graph_local_facts; auto. }
+  forwardD.
+  forwardD.
+  forwardD.
+  { do 2 EExists. entailer!. 2 : ecancel. auto. }
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
+  admit. (* entailment with ModBox *)
+  { unfold POSTCONDITION, abbreviate. rewrite normal_ret_assert_elim.
+    Intros g''.
+    Exists g''. Exists root.
+    entailer!.
+  }
+  forwardD.
+  { Exists g x. entailer!. apply false_Cne_eq in H2. subst pa. split; split; [|split| |]; auto.
+    + reflexivity.
+    + apply (uf_equiv_refl _  (liGraph g)).
+    + repeat intro; auto.
+    + apply uf_root_vgamma with (n := r); auto.
+  }
+  forwardD.
+  forwardD.
+  forwardD.
+  forwardD.
+  { entailer!. Exists g''. Exists rt.
+    entailer!.
+Admitted.
+(* 
+  intro.
   remember (vgamma g x) as rpa eqn:?H. destruct rpa as [r pa].
+  Import VST.floyd.freezer.
   (* p = x -> parent; *)
   localize [data_at sh node_type (vgamma2cdata (vgamma g x)) (pointer_val_val x)]. rewrite <- H0. simpl vgamma2cdata.
   forward. 1: entailer!; destruct pa; simpl; auto.
@@ -88,4 +125,4 @@ Proof.
     + repeat intro; auto.
     + apply uf_root_vgamma with (n := r); auto.
   - Intros g'' rt. forward. Exists g'' rt. entailer!.
-Qed. (* Original: 47.715 secs; VST 2.*: 2.335 secs *)
+Qed. (* Original: 47.715 secs; VST 2.*: 2.335 secs *) *)

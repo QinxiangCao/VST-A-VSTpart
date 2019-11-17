@@ -64,6 +64,5 @@ forward_call (*  s = sumarray(four+2,2); *)
 }
 { entailer!. }
 { split. auto. computable. }
-revert d.
-forwardD.
+forward.
 Qed.

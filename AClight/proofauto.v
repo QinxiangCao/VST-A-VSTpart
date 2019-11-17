@@ -339,7 +339,7 @@ Ltac assert_prop P :=
   | _ => old_assert_PROP P
   end.
 
-Local Ltac apply_seqComplex :=
+(*Local*) Ltac apply_seqComplex :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     intro d; repeat apply -> seq_assoc; revert d;
@@ -352,7 +352,7 @@ Local Ltac apply_seqComplex :=
     ]
   end.
 
-Local Ltac apply_seq_evar :=
+(*Local*) Ltac apply_seq_evar :=
   lazymatch goal with |- let d := @abbreviate _ _ in _ =>
     let d := fresh d in
     let Post_name := fresh "Post" in
@@ -472,7 +472,14 @@ Tactic Notation "forwardD" :=
       end
   (* localize *)
   | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') Sskip) in _ =>
-      apply_localize
+      let d := fresh d in
+      intro d;
+      apply (semax_post1 G');
+      revgoals;
+      only 1: (
+        revert d;
+        apply_localize
+      )
   | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') _) in _ =>
       let d := fresh d in
       intro d;
@@ -480,12 +487,27 @@ Tactic Notation "forwardD" :=
       revert d;
       refine (apply_seq G' _ _ _ _ _ _ _ _ _);
       only 1: apply_localize
+  (* sequence call *)
+  | |- let d := @abbreviate _ (Ssequence (Scall _ _ _) _) in
+       semax _ _ _ _ =>
+      let d := fresh d in
+      intro d;
+      forward_call;
+      (* forward may raise side condition. forward may solve the goal as well.
+       * This is an ugly solution to accomodate all the cases.
+       *)
+      try (idtac;
+        [.. | revert d; do 2 refine (annotation_apply_seqAssign _ _ _ _)]
+      )
   (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ _ _ =>
       let d := fresh d in
       intro d;
       forward;
+      (* forward may raise side condition. forward may solve the goal as well.
+       * This is an ugly solution to accomodate all the cases.
+       *)
       try (idtac;
         [.. | revert d; refine (annotation_apply_seqAssign _ _ _ _)]
       )
@@ -510,31 +532,6 @@ Tactic Notation "forwardD" :=
       end
   | |- _ =>
       fail "Annotation unsupported by VST-A"
-  (*
-  | |- let d := @abbreviate _ _ in _ |-- _ =>
-      intro d; clear d
-  (* entailment *)
-  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
-      intros _;
-      (* solve if Post is an evar; otherwise remain for user *)
-      tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
-        entail_evar_post
-      else
-        idtac
-  | |- let d := @abbreviate _ _ in
-       semax _ _ _ _ =>
-      intros _;
-      forward; abbreviate_semax;
-      (* solve if Post is an evar; otherwise leave to user *)
-      lazymatch goal with
-      | |- ENTAIL _, _ |-- ?Post =>
-        tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
-          entail_evar_post
-        else
-          idtac
-      | _ => idtac
-      end
-  *)
   end.
 
 Ltac verify :=
