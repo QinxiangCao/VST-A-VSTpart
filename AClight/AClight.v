@@ -129,6 +129,7 @@ Ltac move_let_inside v :=
     lazymatch goal with
     | v := let (a, b) := ?p in fun x:?T => ?content |- _ =>
       let temp := fresh "temp" in
+      let x := fresh x in
       refine (fun x => _);
       pose (temp := (fun x:T => let (a, b) := p in content) x);
       hnf in temp;
