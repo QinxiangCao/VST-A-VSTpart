@@ -177,9 +177,10 @@ Ltac listrep_cancel :=
   | construct_fold_right_sepcon
   | fold_abnormal_mpred
   | cbv iota beta delta [before_symbol_cancel];
-    aggresive_syntactic_cancel
+    (*aggresive_syntactic_cancel
       local_listrep_attempt
-      local_listrep_cancel;
+      local_listrep_cancel; *)
+    conservative_syntactic_cancel local_listrep_cancel;
     first [ simple apply syntactic_cancel_solve3
           | match goal with
             | |- fold_right_sepcon ?A |-- fold_right_sepcon ?B => rewrite <- (fold_left_sepconx_eq A), <- (fold_left_sepconx_eq B)
