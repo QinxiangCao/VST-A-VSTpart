@@ -174,7 +174,7 @@ Fixpoint fold_cs_aux (cs_list: list (comment + statement)) (acc: statement) (sta
           => fold_cs_aux cs_list (Ssequence s acc) stack
       | Sloop _ _ _, _
       | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
-          => do _ <- check_single_normal_exit s;
+          => (* do _ <- check_single_normal_exit s; *)
           fold_cs_aux cs_list (Ssequence s acc) stack
       | Sswitch _ _, _ =>
           Error (MSG "Missing postcondition for switch statement" :: nil)

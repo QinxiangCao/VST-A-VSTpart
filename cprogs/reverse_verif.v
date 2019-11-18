@@ -54,12 +54,13 @@ forwardD.
   forwardD.
   {
     forwardD.
+  }
+  {
     forwardD.
-    {
-      listrep_entailer.
-    }
-    forwardD.
-    forwardD.
+  }
+  forwardD.
+  {
+    Intros. listrep_entailer.
   }
   {
     forwardD.
@@ -74,10 +75,6 @@ forwardD.
     subst; simpl. rewrite app_ass. auto.
   }
 }
-forwardD.
-forwardD.
-forwardD.
-forwardD.
 forwardD.
 forwardD.
 listrep_entailer.

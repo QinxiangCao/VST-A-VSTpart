@@ -189,6 +189,18 @@ Ltac listrep_cancel :=
             [ simple apply derives_refl
             | global_listrep_cancel ] ]].
 
+Ltac unify_for_already_lower :=
+  idtac;
+  match goal with
+  | |- _ |--  andp (prop ?A) _ =>
+        repeat
+         match A with
+         | context [ (?x = ?y) /\ _ ] => has_evar y; progress unify x y
+         | (?x = ?y) => has_evar y; progress unify x y
+         end
+  | _ => idtac
+  end.
+
 Ltac pre_process :=
   let RHS := fresh "RHS" in 
   match goal with
@@ -212,12 +224,13 @@ Ltac pre_process :=
   subst RHS.
 
 Ltac listrep_entailer :=
+  Intros;
   pre_process;
   match goal with
   | |- ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |-- _ =>
          repeat EExists; go_lower
   | |- @derives mpred _ _ (exp _) =>
-         repeat EExists
+         repeat EExists; unify_for_already_lower
   end;
   saturate_local;
   first [ apply andp_right; [apply prop_right | try listrep_cancel];

@@ -103,9 +103,8 @@ forwardD.
     forwardD.
     forwardD.
     forwardD.
-    (* forward_if *)
     forwardD.
-    (* then branch *)
+    forwardD.
     forwardD.
     forwardD.
     {
@@ -114,10 +113,6 @@ forwardD.
       Exists b s1c z.
       entailer!.
     }
-    (* else branch *)
-    forwardD.
-    (* after if *)
-    forwardD.
     forwardD.
     forwardD.
     forwardD.
