@@ -39,9 +39,7 @@ Proof.
   { destruct (vgamma g x). repeat step!. }
   forwardD. forwardD. forwardD.
   { 1: entailer!; destruct pa; simpl; auto. }
-  forwardD.
   admit. (* entailment with ModBox *)
-  forwardD.
   forwardD.
   forwardD.
   forwardD.
@@ -55,9 +53,10 @@ Proof.
   forwardD.
   forwardD.
   forwardD.
-  forwardD.
   admit. (* entailment with ModBox *)
+  forwardD.
   { unfold POSTCONDITION, abbreviate. rewrite normal_ret_assert_elim.
+    entail
     Intros g''.
     Exists g''. Exists root.
     entailer!.
