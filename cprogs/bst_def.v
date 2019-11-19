@@ -1,6 +1,6 @@
 Require Import VST.floyd.proofauto.
-Require Import VFA.Maps.
-Require Import VFA.SearchTree.
+Require Export VFA.Maps.
+Require Export VFA.SearchTree.
 Require Import WandDemo.SearchTree_ext.
 Require Import WandDemo.wand_frame.
 Require Import WandDemo.wandQ_frame.
@@ -303,6 +303,7 @@ Proof. apply rep_partialT_rep. Qed.
 
 End PartialTreeboxRep_WandQFrame_Func_Hole.
 
+(*
 Module PartialTreeboxRep_WandFrame.
 
 Lemma partial_treebox_rep_singleton_left: forall (t1' t2: tree val) k (v p b: val),
@@ -364,7 +365,9 @@ Proof.
 Qed.
 
 End PartialTreeboxRep_WandFrame.
+*)
 
+(*
 Module PartialTreeboxRep_WandQFrame_Ind_Hole.
 
 Definition partial_treebox_rep (pt: partial_tree val) (p_root p_in: val): mpred :=
@@ -441,7 +444,9 @@ Proof.
 Qed.
 
 End PartialTreeboxRep_WandQFrame_Ind_Hole.
+*)
 
+(*
 Module PartialTreeboxRep_Ind_Pred_Ind_Hole.
 
 Fixpoint partial_treebox_rep (pt: partial_tree val) (p_root p_in: val): mpred :=
@@ -544,7 +549,9 @@ Proof.
 Qed.
 
 End PartialTreeboxRep_Ind_Pred_Ind_Hole.
+*)
 
+(*
 Module PartialTreeRep_WandQFrame_Func_Hole.
 
 Export PartialTree_WandQFrame_Func_Hole.
@@ -596,6 +603,7 @@ Lemma tree_rep_partial_tree_rep: forall t pt p q,
 Proof. apply rep_partialT_rep. Qed.
 
 End PartialTreeRep_WandQFrame_Func_Hole.
+*)
 
 Definition Map_rep (m: total_map val) (p: val): mpred :=
   EX t: tree val, !! (Abs val nullval t m /\ SearchTree val t) && tree_rep t p.
@@ -622,3 +630,5 @@ Qed.
 
 Opaque Map_rep.
 Arguments Map_rep: simpl never.
+
+Export PartialTreeboxRep_WandQFrame_Func_Hole.

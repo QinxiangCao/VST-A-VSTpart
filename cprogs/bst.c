@@ -7,9 +7,35 @@ struct tree {int key; void *value; struct tree *left, *right;};
 
 typedef struct tree **treebox;
 
-void insert (treebox p, int x, void *value) {
+void insert (treebox p, int x, void *value){
+  //@ With (p0: val) (x: nat) (v: val) (m0: total_map val),
+  /*@ Require
+        PROP( Int.min_signed <= Z.of_nat x <= Int.max_signed; is_pointer_or_null v)
+        LOCAL(temp _p p0; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
+        SEP (Mapbox_rep m0 p0)
+  */
+  /*@ Ensure
+        PROP()
+        LOCAL()
+        SEP (Mapbox_rep (t_update m0 x v) p0)
+  */
+  /*@ Assert EX t0 : tree val,
+        PROP ( )
+        LOCAL (temp _p p0; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
+        SEP (treebox_rep t0 p0)
+  */
   struct tree *q;
+  /*@ Inv EX p: val, EX t: tree val, EX P: tree val -> tree val,
+        PROP(P (insert x v t) = (insert x v t0))
+        LOCAL(temp _p p; temp _x (Vint (Int.repr (Z.of_nat x)));   temp _value v)
+        SEP(treebox_rep t p;  partial_treebox_rep P p0 p)
+  */
   for(;;) {
+    /*@ Assert EX q : val,
+          PROP ( )
+          LOCAL (temp _p p; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
+          SEP (data_at Tsh (tptr t_struct_tree) q p * tree_rep t q; partial_treebox_rep P p0 p)
+    */
     q = * p;
     if (q == NULL) {
       q = (struct tree *) mallocN (sizeof * q);

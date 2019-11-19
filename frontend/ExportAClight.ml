@@ -622,11 +622,11 @@ let print_Gprog p prog_defs =
 (* All together *)
 
 let print_program p prog sourcefile normalized =
-  List.iter (fprintf p "Require Import %s.@ ") !option_V;
   Hashtbl.clear temp_names;
   name_program prog;
   fprintf p "@[<v 0>";
   fprintf p "%s" prologue;
+  List.iter (fprintf p "Require Import %s.@ ") !option_V;
   print_clightgen_info p sourcefile normalized;
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
   print_Gprog p prog.Ctypes.prog_defs;
