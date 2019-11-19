@@ -4,6 +4,11 @@ The files in this directory:  Maps.v, Perm.v, SearchTree.v,
 are HERE licensed for free use, without modification, in connection
 with the "wand_demo" VST proofs in a neighboring directory.
 
+Expressly NOT licensed is redistributing .v files from the vfa directory in
+which the "FILL IN HERE" proofs have been filled in.  The reason for this
+restriction is that these files are taken from Software Foundations volume 3
+"Verified Functional Algorithms" in which these proofs are left as exercises
+for students.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
