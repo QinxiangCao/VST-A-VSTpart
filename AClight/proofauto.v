@@ -510,12 +510,10 @@ Ltac forwardD :=
   | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') Sskip) in _ =>
       let d := fresh d in
       intro d;
-      apply (semax_post1 G');
-      revgoals;
-      only 1: (
-        revert d;
-        apply_localize
-      )
+      apply <- semax_seq_skip;
+      revert d;
+      refine (apply_seq G' _ _ _ _ _ _ _ _ _);
+      only 1: apply_localize
   | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') _) in _ =>
       let d := fresh d in
       intro d;

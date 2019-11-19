@@ -55,14 +55,18 @@ Proof.
   forwardD.
   admit. (* entailment with ModBox *)
   forwardD.
-  { unfold POSTCONDITION, abbreviate. rewrite normal_ret_assert_elim.
-    entail
-    Intros g''.
+  forwardD.
+  forwardD.
+  forwardD.
+  { simpl findS. simpl uf_root. Intros vret g' root g''.
     Exists g''. Exists root.
     entailer!.
   }
-  forwardD.
-  { Exists g x. entailer!. apply false_Cne_eq in H2. subst pa. split; split; [|split| |]; auto.
+  { Exists g x. entailer!.
+    assert (typed_false tint (force_val (sem_cmp_pp Cne (pointer_val_val pa) (pointer_val_val x)))). {
+      rewrite H2. reflexivity.
+    }
+    apply false_Cne_eq in H5. subst pa. split; split; [|split| |]; auto.
     + reflexivity.
     + apply (uf_equiv_refl _  (liGraph g)).
     + repeat intro; auto.
@@ -72,8 +76,7 @@ Proof.
   forwardD.
   forwardD.
   forwardD.
-  { entailer!. Exists g''. Exists rt.
-    entailer!.
+  { Exists g''. Exists rt. entailer!. }
 Admitted.
 (* 
   intro.
