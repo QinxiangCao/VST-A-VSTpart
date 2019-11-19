@@ -400,7 +400,10 @@ Ltac forwardD :=
   (* if *)
   | |- let d := @abbreviate _ (Ssequence (Sifthenelse _ _ _) Sskip) in _ =>
       let d := fresh d in
-      intro d; forwardM_if;
+      intro d;
+      (* remove trailing Sskip introduced by loop_nocontinue *)
+      unfold_abbrev'; try apply -> semax_seq_skip;
+      forwardM_if;
       [ ..
       | revert d; refine (annotation_apply_if_then _ _ _ _ _ _)
       | revert d; refine (annotation_apply_if_else _ _ _ _ _ _)]
