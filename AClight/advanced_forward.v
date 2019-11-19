@@ -48,11 +48,18 @@ Ltac forwardE :=
     semax_seq_evar; [
       (* first statement *)
       repeat_Intros;
-      forward;
-      entail_evar_post
+      lazymatch goal with
+      | |- semax _ _ (Scall _ _ _) _ =>
+        forward_call
+      | _ =>
+        forward
+      end;
+      [ .. | entail_evar_post]
     | (* following statements *)
       abbreviate_semax
     ]
+  | |- semax _ _ (Scall _ _ _) _ =>
+    repeat_Intros; forward_call
   | |- semax _ _ _ _ =>
     repeat_Intros; forward
   end.

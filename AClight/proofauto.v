@@ -446,6 +446,19 @@ Ltac forwardD :=
       | _ =>
         fail "no matching pattern when processing Sassert"
       end
+  (* sequence call *)
+  | |- let d := @abbreviate _ (Ssequence (Scall _ _ _) _) in
+       semax _ _ _ _ =>
+      let d := fresh d in
+      intro d;
+      forwardM;
+      (* this is still not correct, but better *)
+      lazymatch goal with
+      | |- semax _ _ _ _ =>
+          revert d; refine (annotation_apply_seqAssign _ _ _ _)
+      | _ =>
+          idtac
+      end
   (* sequence *)
   | |- let d := @abbreviate _ (Ssequence _ _) in
        semax _ _ _ _ =>
@@ -475,31 +488,6 @@ Ltac forwardD :=
       end
   | |- _ =>
       fail "Annotation unsupported by VST-A"
-  (*
-  | |- let d := @abbreviate _ _ in _ |-- _ =>
-      intro d; clear d
-  (* entailment *)
-  | |- let d := @abbreviate _ _ in ENTAIL _, _ |-- ?Post =>
-      intros _;
-      (* solve if Post is an evar; otherwise remain for user *)
-      tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
-        entail_evar_post
-      else
-        idtac
-  | |- let d := @abbreviate _ _ in
-       semax _ _ _ _ =>
-      intros _;
-      forward; abbreviate_semax;
-      (* solve if Post is an evar; otherwise leave to user *)
-      lazymatch goal with
-      | |- ENTAIL _, _ |-- ?Post =>
-        tryif (assert_succeeds (subst Post; lazymatch goal with |- _ |-- ?Post => is_evar Post end)) then
-          entail_evar_post
-        else
-          idtac
-      | _ => idtac
-      end
-  *)
   end.
 
 Ltac verify :=
