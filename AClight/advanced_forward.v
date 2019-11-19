@@ -155,7 +155,7 @@ Ltac forwardM :=
         unify Post Post_name;
         fold Post_name;
         forwardE;
-        entail_evar_post
+        [ .. | entail_evar_post]
       end
     | abbreviate_semax
     ]
