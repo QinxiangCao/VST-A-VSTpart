@@ -13,11 +13,12 @@ VSTCOMPCERT=$(VSTDIR)/compcert
 ACLIGHTDIR=AClight
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
-DIRS=$(ACLIGHTDIR) $(CPROGSDIR)
-CPROGS=append sumarray2 reverse min sgn leap_year
+DIRS=$(ACLIGHTDIR) $(CPROGSDIR) vfa wand_demo
+CPROGS=append sumarray2 reverse min sgn leap_year bst
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
- -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)
+ -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)\
+ -Q vfa VFA -Q wand_demo WandDemo
 
 ifneq (, $(RAMIFYCOQDIR))
  COQFLAGS += -Q $(RAMIFYCOQDIR) RamifyCoq
@@ -51,7 +52,7 @@ ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHT
 
 .PHONY: depend
 depend .depend: cprogs
-	@$(COQDEP) $(ACLIGHTDIR)/*.v $(CPROGSDIR)/*.v > .depend
+	@$(COQDEP) $(patsubst %, %/*.v, $(DIRS)) > .depend
 
 $(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
 	@$(ACLIGHTGEN) -normalize -o $@ $<
