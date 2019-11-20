@@ -184,10 +184,10 @@ Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
           end
         in *)
         let s'' := add_binder_list s' inv in
-        do _ <- match s2 with
+        (* do _ <- match s2 with
         | ClightC.Sskip => OK tt
         | _ => check_no_continue s''
-        end;
+        end; *)
         OK (Sloop (LISingle inv) s'' Sskip)
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
