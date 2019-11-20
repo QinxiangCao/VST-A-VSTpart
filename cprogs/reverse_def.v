@@ -131,22 +131,55 @@ Proof.
   auto.
 Qed.
 
+Lemma ecancel_cell': forall sh p xq xq',
+  xq = xq' ->
+  data_at sh t_struct_list xq p * emp |-- data_at sh t_struct_list xq' p.
+Proof.
+  intros.
+  subst.
+  rewrite sepcon_emp; auto.
+Qed.
+
+Lemma ecancel_nil_list': forall sh p l,
+  l=nil/\p = nullval ->
+  emp |-- listrep sh l p.
+Proof.
+  intros. destruct H.
+  subst; unfold listrep.
+  entailer!.
+Qed.
+Lemma same_data_at: forall sh p q x,
+   data_at sh t_struct_list (x, q) p * emp |--
+       data_at sh t_struct_list (x, q) p .
+Proof.
+  intros. rewrite sepcon_emp. entailer!.
+Qed.
 Ltac local_listrep_cancel :=
   idtac;
   match goal with
   | |- data_at ?sh t_struct_list ?v ?p * _ |--
-       data_at ?sh t_struct_list _ ?p =>
+       data_at ?sh t_struct_list ?v ?p =>
          exact (ecancel_cell sh p v)
-  | |- emp |-- listrep ?sh nil ?p =>
-         refine (ecancel_nil_list sh p _); solve [auto]
+  | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
+       data_at ?sh t_struct_list (_, _) ?p =>
+         exact (same_data_at sh p q x )
+  | |- data_at ?sh t_struct_list ?v ?p * _ |--
+       data_at ?sh t_struct_list ?u ?p =>
+     first [is_evar u;(exact (ecancel_cell sh p v))
+     |refine (ecancel_cell' sh p v u _)]
+  | |- emp |-- listrep ?sh ?l ?p =>
+         first [is_evar l;refine (ecancel_nil_list sh p _); solve [auto]
+         |refine (ecancel_nil_list' sh p l _ ); split;solve [auto]]
   | |- listrep ?sh ?l ?p * _ |--
        listrep ?sh _ ?p =>
          exact (ecancel_list sh p l)
   | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
-       listrep ?sh (_ :: ?l) ?p =>
+       listrep ?sh _ ?p =>
+         refine (ecancel_head sh p q x _)
+  | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
+       listrep ?sh (?x :: ?l) _ =>
          exact (ecancel_head sh p q x l)
   end.
-
 Ltac local_listrep_attempt :=
   idtac;
   match goal with
@@ -171,14 +204,13 @@ Ltac global_listrep_cancel :=
          refine (listrep_unify sh p l1 l2 _)
   end.
 
-Ltac listrep_cancel :=
+Ltac listrep_cancel:=
   eapply symbolic_cancel_setup;
   [ construct_fold_right_sepcon
   | construct_fold_right_sepcon
   | fold_abnormal_mpred
   | cbv iota beta delta [before_symbol_cancel];
-    aggresive_syntactic_cancel
-      local_listrep_attempt
+     conservative_syntactic_cancel
       local_listrep_cancel;
     first [ simple apply syntactic_cancel_solve3
           | match goal with
@@ -188,7 +220,6 @@ Ltac listrep_cancel :=
             first
             [ simple apply derives_refl
             | global_listrep_cancel ] ]].
-
 Ltac unify_for_already_lower :=
   idtac;
   match goal with
@@ -236,7 +267,6 @@ Ltac listrep_entailer :=
   first [ apply andp_right; [apply prop_right | try listrep_cancel];
           [repeat split; auto | ..]
         | try listrep_cancel].
-
 Goal forall sh (p q x r: val) l,
   r = nullval ->
   exists z w: val,
@@ -245,10 +275,8 @@ Goal forall sh (p q x r: val) l,
 intros.
 eexists.
 eexists.
-
 listrep_cancel.
-
-Qed.
+Qed. 
 
 Goal forall sh (p q x r: val) l,
   r = nullval ->
@@ -259,3 +287,6 @@ intros.
 listrep_entailer.
 
 Qed.
+
+
+

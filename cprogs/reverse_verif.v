@@ -28,10 +28,10 @@ Lemma body_reverse: semax_body Vprog Gprog f_reverse reverse_spec.
 Proof.
 start_function f_reverse_hint.
 verify.
++ listrep_entailer.         
++  listrep_entailer.
 + listrep_entailer.
-+ listrep_entailer.
-+ listrep_entailer.
-  subst; simpl. rewrite app_ass. auto.
+  subst; simpl. rewrite app_ass. auto. 
 + listrep_entailer.
   subst l2; rewrite <- app_nil_end, rev_involutive. auto.
 Qed.
