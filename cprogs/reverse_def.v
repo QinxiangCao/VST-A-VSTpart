@@ -150,30 +150,14 @@ Proof.
   subst; unfold listrep.
   entailer!.
 Qed.
-Lemma same_data_at: forall sh p q x,
-   data_at sh t_struct_list (x, q) p * emp |--
-       data_at sh t_struct_list (x, q) p .
-Proof.
-  intros. rewrite sepcon_emp. entailer!.
-Qed.
-Lemma same_data_at_l: forall sh p q x x',x=x'->
-   data_at sh t_struct_list (x, q) p * emp |--
-       data_at sh t_struct_list (x', q) p .
-Proof.
-  intros. rewrite sepcon_emp. entailer!.
-Qed.
-Lemma same_data_at_r: forall sh p q x q',q=q'->
-   data_at sh t_struct_list (x, q) p * emp |--
-       data_at sh t_struct_list (x, q') p .
-Proof.
-  intros. rewrite sepcon_emp. entailer!.
-Qed.
+
 Lemma same_data_at_l_r: forall sh (p:val) (q:val) (x:val) (x':val) (q':val),x=x'->q=q'->
    data_at sh t_struct_list (x, q) p * emp |--
        data_at sh t_struct_list (x', q') p .
 Proof.
   intros. rewrite sepcon_emp. entailer!.
 Qed.
+
 Ltac solve_data_at:=
 idtac;
 match goal with
@@ -279,7 +263,7 @@ Ltac listrep_entailer :=
   match goal with
   | |- ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |-- _ =>
          repeat EExists; go_lower
-  | |- @derives mpred _ _ (exp _) =>
+  | |- @derives mpred _ _ _ =>
          repeat EExists; unify_for_already_lower
   end;
   saturate_local;
