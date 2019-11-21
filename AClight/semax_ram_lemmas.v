@@ -3,8 +3,7 @@ Require Import RamifyCoq.lib.Relation_ext.
 Require Import RamifyCoq.lib.List_ext.
 Require Import RamifyCoq.msl_ext.log_normalize.
 Require Import RamifyCoq.floyd_ext.closed_lemmas.
-(*Require Import AClight.environ_box_stable. *)
-Require Import AClight.ramification_lemmas. (* original msl_ext/ramification_lemmas.v, better to be environ_box_stable.v now*)
+Require Import AClight.environ_box_stable.
 Require Import AClight.ramification.
 Require Import VST.floyd.base.
 Require Import VST.floyd.canon.
@@ -768,13 +767,3 @@ Ltac simplify_ramif :=
     |]);
 
   try apply remove_allp_RamUnit.
-(*
-Lemma pointer_val_val_is_pointer_or_null: forall x,
-  is_pointer_or_null (pointer_val_val x).
-Proof.
-  intros.
-  destruct x; simpl; auto.
-Qed.
-
-Hint Resolve pointer_val_val_is_pointer_or_null.
-*)

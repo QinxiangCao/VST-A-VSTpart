@@ -50,3 +50,11 @@ Definition mallocN_spec :=
      SEP (data_at sh node_type (pointer_val_val null, (Vint (Int.repr 0)))
               (pointer_val_val v)).
 
+Lemma pointer_val_val_is_pointer_or_null: forall x,
+  is_pointer_or_null (pointer_val_val x).
+Proof.
+  intros.
+  destruct x; simpl; auto.
+Qed.
+
+Hint Resolve pointer_val_val_is_pointer_or_null.

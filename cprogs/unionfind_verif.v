@@ -94,18 +94,25 @@ Ltac generalize_EX_wand_rec_tac :=
 Ltac generalize_EX_wand_tac :=
   eapply generalize_EX_wand_spec;
   generalize_EX_wand_rec_tac.
-           
+
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
   start_function f_find_hint.
-  forwardD. forwardD.
-  { destruct (vgamma g x). repeat step!. }
-  forwardD. forwardD. forwardD.
-  { 1: entailer!; destruct pa; simpl; auto. }
-  { instantiate (1 := FF).
+  forwardD.
+  { destruct (vgamma g x) as [r p] eqn:?H.
+    Exists r p. entailer!.
+    eapply valid_parent; eauto.
+  }
+  forwardD.
+  forwardD.
+  forwardD.
+  {
+    forwardD.
+  }
+  {
+    instantiate (1 := FF).
     rewrite orp_FF.
 (*
-Require Import AClight.ramification_lemmas.
 Check sepcon_EnvironBox_weaken.
 
 eapply sepcon_EnvironBox_weaken.
@@ -213,8 +220,6 @@ Ltac simplify_ramif :=
   try apply remove_allp_RamUnit.
     *)
   admit. (* entailment with ModBox *) }
-  forwardD.
-  forwardD.
   forwardD.
   { apply denote_tc_test_eq_split; apply graph_local_facts; auto. }
   forwardD.
