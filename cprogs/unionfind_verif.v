@@ -22,7 +22,7 @@ Proof.
     + subst b0. pose proof (Ptrofs.eq_spec i i0). rewrite Heqb1 in H0. intro; apply H0. inversion H1. reflexivity.
   - intro. inversion H0. auto.
 Qed.
-
+     
 Lemma graph_local_facts: forall sh x (g: Graph), vvalid g x -> whole_graph sh g |-- valid_pointer (pointer_val_val x).
 Proof.
   intros. eapply derives_trans; [apply (@vertices_at_ramif_1_stable _ _ _ _ SGBA_VST _ _ (SGA_VST sh) g (vvalid g) x (vgamma g x)); auto |].
@@ -31,7 +31,70 @@ Qed.
 
 Import AClight.revert.
 Import AClight.localization.
+Print PROPx.
+Inductive generalize_EX_wand: (environ -> mpred) -> (environ -> mpred) -> (environ -> mpred) -> Prop :=
+| generalize_EX_wand_done: forall Pr LP LQ SP SQ,
+    generalize_EX_wand (PROPx Pr (LOCALx LP (SEPx SP)))
+                       (PROPx Pr (LOCALx LQ (SEPx SQ)))
+                       (!! (fold_right and True Pr) -->
+                           (PROPx nil (LOCALx LP (SEPx SP))) -*
+                           (PROPx nil (LOCALx LQ (SEPx SQ))))
+| generalize_EX_wand_step': forall A (P Q R: A -> environ -> mpred),
+    (forall a, generalize_EX_wand (P a) (Q a) (R a)) ->
+    generalize_EX_wand (exp P) (exp Q) (allp R).
 
+Lemma generalize_EX_wand_step: forall A (P Q R: A -> environ -> mpred),
+  (forall a, exists R', generalize_EX_wand (P a) (Q a) R' /\ R' = R a) ->
+  generalize_EX_wand (exp P) (exp Q) (allp R).
+Proof.
+  intros.
+  apply generalize_EX_wand_step'.
+  intros.
+  destruct (H a) as [? [? ?]].
+  subst.
+  auto.
+Qed.
+
+Lemma generalize_EX_wand_spec: forall P Q R,
+  generalize_EX_wand P Q R -> R |-- P -* Q.
+Proof.
+  intros.
+  induction H.
+  + unfold PROPx.
+    simpl fold_right.
+    apply wand_sepcon_adjoint.
+    normalize.
+    unfold TT.
+    rewrite prop_imp by auto.
+    apply wand_sepcon_adjoint.
+    auto.
+  + apply wand_sepcon_adjoint.
+    Intros y.
+    Exists y.
+    apply wand_sepcon_adjoint.
+    apply allp_left with y.
+    apply H0.
+Qed.
+
+Ltac generalize_EX_wand_rec_tac :=
+  first
+    [ simple apply generalize_EX_wand_step;
+      let a := fresh "a" in
+      intro a;
+      eexists;
+      split;
+      [ generalize_EX_wand_rec_tac
+      | match goal with
+        | |- ?t = _ => super_pattern t a; reflexivity
+        end
+      ]
+    | simple apply generalize_EX_wand_done
+    ].
+
+Ltac generalize_EX_wand_tac :=
+  eapply generalize_EX_wand_spec;
+  generalize_EX_wand_rec_tac.
+           
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
   start_function f_find_hint.
@@ -39,7 +102,117 @@ Proof.
   { destruct (vgamma g x). repeat step!. }
   forwardD. forwardD. forwardD.
   { 1: entailer!; destruct pa; simpl; auto. }
-  admit. (* entailment with ModBox *)
+  { instantiate (1 := FF).
+    rewrite orp_FF.
+(*
+Require Import AClight.ramification_lemmas.
+Check sepcon_EnvironBox_weaken.
+
+eapply sepcon_EnvironBox_weaken.
+
+generalize_EX_wand_tac.
+rewrite !allp_uncurry'.
+
+  match goal with
+  | |- _ |-- _ * EnvironBox _ (allp ?Frame) =>
+    let a := fresh "a" in
+    let F := fresh "F" in
+      eapply @sepcon_EnvironBox_weaken; 
+      [ apply @allp_derives; intro a;
+        match goal with
+        | |- _ |-- 
+             (PROPx _ (LOCALx ?QL' (SEPx ?RL')) -*
+              PROPx _ (LOCALx ?QG' (SEPx ?RG'))) =>
+            try super_pattern Pure a;
+            try super_pattern QL' a;
+            try super_pattern QG' a;
+            try super_pattern RL' a;
+            try super_pattern RG' a
+        end;
+        match goal with
+        | |- _ |-- ?Right => super_pattern Right a; apply derives_refl
+        end
+      |]
+  end.
+Locate canonical_ram_reduce1.
+  
+eapply canonical_ram_reduce1;
+    [ super_solve_split
+    | solve_LOCALx_entailer_tac
+    | intro; solve_LOCALx_entailer_tac
+    | intro; solve_LOCALx_entailer_tac
+    | ].
+
+
+
+Ltac simplify_ramif :=
+  eapply sepcon_EnvironBox_weaken; [canonical_ram_reduce0 | cbv beta];
+  
+  match goal with
+  | |- _ |-- _ * EnvironBox _ (allp ?Frame) =>
+    let a := fresh "a" in
+    let F := fresh "F" in
+      eapply @sepcon_EnvironBox_weaken; 
+      [ apply @allp_derives; intro a;
+        match goal with
+        | |- _ |-- !! ?Pure -->
+             (PROPx _ (LOCALx ?QL' (SEPx ?RL')) -*
+              PROPx _ (LOCALx ?QG' (SEPx ?RG'))) =>
+            try super_pattern Pure a;
+            try super_pattern QL' a;
+            try super_pattern QG' a;
+            try super_pattern RL' a;
+            try super_pattern RG' a
+        end;
+        match goal with
+        | |- _ |-- ?Right => super_pattern Right a; apply derives_refl
+        end
+      |]
+  end;
+
+  eapply canonical_ram_reduce1;
+    [ super_solve_split
+    | solve_LOCALx_entailer_tac
+    | intro; solve_LOCALx_entailer_tac
+    | intro; solve_LOCALx_entailer_tac
+    | ];
+
+  match goal with
+  | |- _ |-- _ * ModBox _ (allp ?Frame) =>
+    let a := fresh "a" in
+    let F := fresh "F" in
+      eapply @sepcon_EnvironBox_weaken; 
+      [ apply @allp_derives; intro a;
+        match goal with
+        | |- _ |-- !! ?Pure --> (SEPx ?RL' -* SEPx ?RG') =>
+            try super_pattern Pure a;
+            try super_pattern RL' a;
+            try super_pattern RG' a
+        end;
+        match goal with
+        | |- _ |-- ?Right => super_pattern Right a; apply derives_refl
+        end
+      |]
+  end;
+
+  eapply canonical_ram_reduce2;
+  unfold fold_right_sepcon_emp;
+
+  try
+   (let a := fresh "a" in
+    eapply @sepcon_weaken; 
+    [ apply @allp_derives; intro a;
+      match goal with
+      | |- ?Left |-- !! True --> ?F =>
+          let ll := fresh "l" in
+          set (ll := Left); rewrite (@prop_imp mpred _ True F I); subst ll;
+          super_pattern F a; apply derives_refl
+      end
+    |]);
+
+  try apply remove_allp_RamUnit.
+    *)
+  admit. (* entailment with ModBox *) }
   forwardD.
   forwardD.
   forwardD.

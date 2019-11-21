@@ -5,6 +5,7 @@ Require Export AClight.revert.
 Require Export AClight.advanced_forward.
 Require Export AClight.ramification.
 Require Export AClight.localization.
+Require Export AClight.semax_ram_lemmas.
 
 (******************** applying Clight-A proof rules ***************************)
 
