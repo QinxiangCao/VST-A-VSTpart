@@ -22,28 +22,13 @@ Proof.
     + subst b0. pose proof (Ptrofs.eq_spec i i0). rewrite Heqb1 in H0. intro; apply H0. inversion H1. reflexivity.
   - intro. inversion H0. auto.
 Qed.
-     
+
 Lemma graph_local_facts: forall sh x (g: Graph), vvalid g x -> whole_graph sh g |-- valid_pointer (pointer_val_val x).
 Proof.
   intros. eapply derives_trans; [apply (@vertices_at_ramif_1_stable _ _ _ _ SGBA_VST _ _ (SGA_VST sh) g (vvalid g) x (vgamma g x)); auto |].
   simpl vertex_at at 1. unfold binode. entailer!.
 Qed.
 
-Import AClight.revert.
-Import AClight.localization.
-(*
-Ltac apply_localize ::=
-  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
-    let d := fresh d in
-    let L'_name := fresh "L'" in
-    evar (L'_name : assert);
-    let L' := L'_name in
-    refine (apply_localize _ _ _ L' _ _ _ _ _ _ _ _ _);
-    [ intro d; abbreviate_semax; revert d
-    | subst L'; simplify_ramif
-    ]
-  end.
-*)
 Opaque pointer_val_val.
 
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
@@ -54,10 +39,6 @@ Proof.
     Exists r p. entailer!.
     eapply valid_parent; eauto.
   }
-(*
-  intros d.
-  unfold abbreviate in d.
-*)
   forwardD.
   forwardD.
   forwardD.
