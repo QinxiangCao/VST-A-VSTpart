@@ -403,16 +403,17 @@ Lemma canonical_ram_reduce1: forall {A} Delta QG RG QL RL s QL' RL' QG' RG' (Pur
     QG1' a = TempG1 /\
     QG2' a = TempG2) ->
   ENTAIL Delta, LOCALx QG TT |-- LOCALx QL TT ->
-  (forall a: A, LOCALx QG TT |-- LOCALx (QG1' a) TT) ->
-  (forall a: A, LOCALx (QL' a) TT |-- LOCALx (QG2' a) TT) ->
+  (forall a: A, ENTAIL Delta, LOCALx QG TT |-- LOCALx (QG1' a) TT) ->
+  (forall a: A, ENTAIL Delta, LOCALx (QL' a) TT |-- LOCALx (QG2' a) TT) ->
   SEPx RG |-- SEPx RL *
     ModBox s (ALL a: A, !! Pure a --> (SEPx (RL' a) -* SEPx (RG' a))) ->
   ENTAIL Delta,
   PROPx nil (LOCALx QG (SEPx RG)) |--
   PROPx nil (LOCALx QL (SEPx RL)) *
-    ModBox s (ALL a: A, !! Pure a -->
-               (PROPx nil (LOCALx (QL' a) (SEPx (RL' a))) -* 
-                  PROPx nil (LOCALx (QG' a) (SEPx (RG' a))))).
+    ModBox s (local (tc_environ Delta) -->
+               (ALL a: A, !! Pure a -->
+                 (PROPx nil (LOCALx (QL' a) (SEPx (RL' a))) -* 
+                    PROPx nil (LOCALx (QG' a) (SEPx (RG' a)))))).
 Proof.
   intros.
   assert (forall a,
@@ -435,10 +436,9 @@ Proof.
   apply andp_derives; auto.
   rewrite corable_andp_sepcon1 by apply corable_LOCAL.
   apply andp_right; [rewrite <- andp_assoc; apply andp_left1; auto |].
-  apply andp_left2.
 
-  eapply sepcon_EnvironBox_weaken with
-   (allp 
+  eapply sepcon_EnvironBox_weaken' with
+    (allp 
      ((fun a: A => LOCALx (QG1' a) TT) && 
       (fun a: A => LOCALx (QL' a) TT --> LOCALx (QG2' a) TT) && 
       (fun a: A => 
@@ -467,29 +467,51 @@ Proof.
   }
 
   rewrite !allp_andp.
+  match goal with
+  | |- _ |-- _ * EnvironBox _ (?TC --> (?A && ?B && ?C)) =>
+    eapply sepcon_EnvironBox_weaken with
+        (A && (TC --> B) && C)
+  end.
+  {
+    rewrite <- imp_andp_adjoint.
+    repeat apply andp_right.
+    + solve_andp.
+    + rewrite imp_andp_adjoint.
+      solve_andp.
+    + solve_andp.
+  }
   rewrite !@EnvironBox_andp.
   rewrite andp_assoc, corable_sepcon_andp1
     by (apply EnvironBox_corable, @corable_allp; intro; apply corable_LOCAL).
-  apply andp_derives.
+  apply andp_right.
   1: {
+    rewrite <- andp_assoc.
+    apply andp_left1.
     rewrite @EnvironStable_EnvironBox.
     + apply allp_right; intro a; auto.
     + apply vars_relation_Equivalence.
     + apply EnvironStable_allp; auto.
   }
 
-  rewrite corable_sepcon_andp1
-    by (apply EnvironBox_corable, @corable_allp; intro;
-        apply corable_imp; apply corable_LOCAL).
-  apply andp_right.
+  rewrite corable_sepcon_andp1.
+  2: {
+    apply EnvironBox_corable, corable_imp.
+    + apply corable_local.
+    + apply @corable_allp; intro.
+      apply corable_imp; apply corable_LOCAL.
+  }
+  rewrite <-andp_assoc.
+  apply andp_derives.
   1: {
     apply derives_trans with TT; [apply TT_right |].
     rewrite <- (@EnvironBox_TT _ _ _ (vars_relation (modifiedvars s))) at 1.
     apply EnvironBox_derives.
+    rewrite <- imp_andp_adjoint.
     apply allp_right; intro a.
-    apply imp_andp_adjoint.
+    rewrite <- imp_andp_adjoint.
+    rewrite andp_assoc.
     apply andp_left2; auto.
-   }      
+   }
    
    auto.
 Qed.
@@ -561,9 +583,9 @@ Ltac pose_PROPx P :=
   | nil => idtac
   end.
 
-Lemma solve_LOCALx_entailer: forall L1 L2,
-  PROPx nil (LOCALx L1 (SEPx (TT :: nil))) |-- PROPx nil (LOCALx L2 (SEPx (TT::nil))) ->
-  LOCALx L1 TT |-- LOCALx L2 TT.
+Lemma solve_LOCALx_entailer: forall Delta L1 L2,
+  ENTAIL Delta, PROPx nil (LOCALx L1 (SEPx (TT :: nil))) |-- PROPx nil (LOCALx L2 (SEPx (TT::nil))) ->
+  ENTAIL Delta, LOCALx L1 TT |-- LOCALx L2 TT.
 Proof.
   intros.
   unfold PROPx, SEPx, fold_right_sepcon in H.
@@ -571,7 +593,9 @@ Proof.
 Qed.
 
 Ltac solve_LOCALx_entailer_tac :=
-  apply solve_LOCALx_entailer; go_lower; auto.
+  apply solve_LOCALx_entailer; go_lower;
+  apply andp_right; [apply prop_right |]; auto.
+
 (****************
 Ltac localize L :=
   match goal with
@@ -683,14 +707,87 @@ Ltac canonical_ram_reduce0 :=
   | |- _ |-- _ => apply derives_refl
   end.
 
+Inductive generalize_EX_wand: (environ -> mpred) -> (environ -> mpred) -> (environ -> mpred) -> Prop :=
+| generalize_EX_wand_done: forall Pr LP LQ SP SQ,
+    generalize_EX_wand (PROPx Pr (LOCALx LP (SEPx SP)))
+                       (PROPx Pr (LOCALx LQ (SEPx SQ)))
+                       (!! (fold_right and True Pr) -->
+                          ((PROPx nil (LOCALx LP (SEPx SP))) -*
+                           (PROPx nil (LOCALx LQ (SEPx SQ)))))
+| generalize_EX_wand_step': forall A (P Q R: A -> environ -> mpred),
+    (forall a, generalize_EX_wand (P a) (Q a) (R a)) ->
+    generalize_EX_wand (exp P) (exp Q) (allp R).
+
+Lemma generalize_EX_wand_step: forall A (P Q R: A -> environ -> mpred),
+  (forall a, exists R', generalize_EX_wand (P a) (Q a) R' /\ R' = R a) ->
+  generalize_EX_wand (exp P) (exp Q) (allp R).
+Proof.
+  intros.
+  apply generalize_EX_wand_step'.
+  intros.
+  destruct (H a) as [? [? ?]].
+  subst.
+  auto.
+Qed.
+
+Lemma generalize_EX_wand_spec: forall P Q R,
+  generalize_EX_wand P Q R -> R |-- P -* Q.
+Proof.
+  intros.
+  induction H.
+  + unfold PROPx.
+    simpl fold_right.
+    apply wand_sepcon_adjoint.
+    normalize.
+    unfold TT.
+    rewrite prop_imp by auto.
+    apply wand_sepcon_adjoint.
+    auto.
+  + apply wand_sepcon_adjoint.
+    Intros y.
+    Exists y.
+    apply wand_sepcon_adjoint.
+    apply allp_left with y.
+    apply H0.
+Qed.
+
+Ltac generalize_EX_wand_rec_tac :=
+  first
+    [ simple apply generalize_EX_wand_step;
+      let a := fresh "a" in
+      intro a;
+      eexists;
+      split;
+      [ generalize_EX_wand_rec_tac
+      | match goal with
+        | |- ?t = _ => super_pattern t a; reflexivity
+        end
+      ]
+    | simple apply generalize_EX_wand_done
+    ].
+
+Ltac generalize_EX_wand_tac :=
+  eapply generalize_EX_wand_spec;
+  generalize_EX_wand_rec_tac.
+
 Ltac simplify_ramif :=
-  eapply sepcon_EnvironBox_weaken; [canonical_ram_reduce0 | cbv beta];
-  
   match goal with
-  | |- _ |-- _ * EnvironBox _ (allp ?Frame) =>
+  | |- context [_ || ?P -* _] => unify P (FF: environ -> mpred)
+  end;
+  rewrite orp_FF;
+  eapply sepcon_EnvironBox_weaken'; [generalize_EX_wand_tac |];
+  match goal with
+  | |- _ |-- _ * EnvironBox _ (_ --> (?P --> ?Q)) => 
+      apply sepcon_EnvironBox_weaken' with (allp (fun _: unit => P --> Q));
+        [rewrite allp_unit; apply derives_refl |]
+  | |- _ => rewrite !allp_uncurry' (* TODO: this line can be buggy *)
+  end;
+
+  match goal with
+  | |- _ |-- _ * EnvironBox _ (_ --> allp ?Frame) =>
     let a := fresh "a" in
     let F := fresh "F" in
-      eapply @sepcon_EnvironBox_weaken; 
+      eapply @sepcon_EnvironBox_weaken'; 
       [ apply @allp_derives; intro a;
         match goal with
         | |- _ |-- !! ?Pure -->
@@ -711,8 +808,8 @@ Ltac simplify_ramif :=
   eapply canonical_ram_reduce1;
     [ super_solve_split
     | solve_LOCALx_entailer_tac
-    | intro; solve_LOCALx_entailer_tac
-    | intro; solve_LOCALx_entailer_tac
+    | intro; cbv beta; solve_LOCALx_entailer_tac
+    | intro; cbv beta; solve_LOCALx_entailer_tac
     | ];
 
   match goal with
@@ -736,16 +833,17 @@ Ltac simplify_ramif :=
   eapply canonical_ram_reduce2;
   unfold fold_right_sepconx;
 
+
   try
    (let a := fresh "a" in
     eapply @sepcon_weaken; 
     [ apply @allp_derives; intro a;
       match goal with
-      | |- ?Left |-- !! True --> ?F =>
+      | |- ?Left |-- !! fold_right and True nil --> ?F =>
           let ll := fresh "l" in
           set (ll := Left); rewrite (@prop_imp mpred _ True F I); subst ll;
           super_pattern F a; apply derives_refl
       end
     |]);
 
-  try apply remove_allp_RamUnit.
+  try rewrite allp_unit. (** TODO: allp curry is necessary here *)

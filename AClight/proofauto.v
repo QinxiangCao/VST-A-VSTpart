@@ -177,7 +177,7 @@ Lemma apply_localize:
   forall {Espec: OracleKind} {cs: compspecs},
     forall Delta G L L' G' G'brk G'con G'ret snum s c,
       (let d := @abbreviate _ s in semax Delta L c (normal_ret_assert L')) ->
-      (ENTAIL Delta, G |-- L * ramification.ModBox c (L' -* G')) ->
+      (ENTAIL Delta, G |-- L * ramification.ModBox c (local (tc_environ Delta) --> (L' -* G'))) ->
       (let d := @abbreviate _ (Ssequence (Slocal L snum s G') Sskip) in semax Delta G c
       {| RA_normal := G';
          RA_break := G'brk;
@@ -190,7 +190,7 @@ Proof.
   { simpl RA_break; auto. }
   { simpl RA_continue; auto. }
   { simpl RA_return; auto. }
-  eapply ramification.semax_ramification_P; eauto.
+  eapply ramification.semax_ramification_P'; eauto.
 Qed.
 
 Ltac apply_dummyassert :=

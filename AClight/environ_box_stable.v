@@ -139,6 +139,16 @@ Proof.
   apply EnvironBox_derives; auto.
 Qed.
 
+Lemma sepcon_EnvironBox_weaken': forall TC P Q R R', R |-- R' ->
+  P |-- Q * EnvironBox (TC --> R) -> P |-- Q * EnvironBox (TC --> R').
+Proof.
+  intros.
+  eapply derives_trans; [apply H0 |].
+  apply sepcon_derives; auto.
+  apply EnvironBox_derives; auto.
+  apply imp_derives; auto.
+Qed.
+
 Lemma EnvironBox_corable: forall P, corable P -> corable (EnvironBox P).
 Proof.
   intros.

@@ -158,6 +158,28 @@ Proof.
       apply vars_relation_Equivalence.
 Qed.
 
+Lemma semax_ramification_P': forall Delta c (G L L' G': environ -> mpred),
+  ENTAIL Delta, G |-- L * ModBox c (local (tc_environ Delta) --> (L' -* G')) ->
+  semax Delta L c (normal_ret_assert L') ->
+  semax Delta G c (normal_ret_assert G').
+Proof.
+  intros.
+  apply semax_post' with (local (tc_environ Delta) && G'); [solve_andp |].
+  eapply semax_post' in H0; [| apply derives_refl].
+  eapply semax_ramification_P; [| exact H0 ].
+  eapply derives_trans; [exact H |].
+  apply sepcon_derives; auto.
+  apply EnvironBox_derives; auto.
+  clear.
+  rewrite <- wand_sepcon_adjoint.
+  rewrite corable_sepcon_andp1 by apply corable_local.
+  apply andp_right; [solve_andp |].
+  rewrite <- corable_andp_sepcon2 by apply corable_local.
+  apply wand_sepcon_adjoint.
+  apply imp_andp_adjoint.
+  apply derives_refl.
+Qed.  
+
 (* Lemma semax_ramification_Q: forall A Delta G L s (L' G': A -> _),
   (forall x, closed_wrt_modvars s (L' x -* G' x)) ->
   G |-- L * allp (L' -* G') ->
