@@ -15,13 +15,13 @@ Context (Espec: OracleKind).
 
 Lemma semax_ramification: forall Delta G L s L' G',
   closed_wrt_modvars s (L' -* G') ->
-  G |-- L * (L' -* G') ->
+  ENTAIL Delta, G |-- L * (L' -* G') ->
   semax Delta L s (normal_ret_assert L') ->
     semax Delta G s (normal_ret_assert G').
 Proof.
   intros.
   apply semax_pre_post with (P' := L * (L' -* G')) (R' := normal_ret_assert (L' * (L' -* G'))). 
-  + apply andp_left2; auto.
+  + auto.
   + apply andp_left2.
     simpl. intros.
     rewrite sepcon_comm, wand_sepcon_adjoint; auto.
@@ -112,7 +112,7 @@ Lemma go_lower_ModBox: forall c P rho, ModBox c P rho = ALL  rho' : environ , !!
 Proof. intros. reflexivity. Qed.
 
 Lemma semax_ramification_P: forall Delta c (G L L' G': environ -> mpred),
-  G |-- L * ModBox c (L' -* G') ->
+  ENTAIL Delta, G |-- L * ModBox c (L' -* G') ->
   semax Delta L c (normal_ret_assert L') ->
   semax Delta G c (normal_ret_assert G').
 Proof.
@@ -121,7 +121,6 @@ Proof.
     (P' := L * ModBox c (L' -* G'))
     (R' := normal_ret_assert (L' * ModBox c (L' -* G'))).
   + intros.
-    apply andp_left2.
     auto.
   + intros.
     apply andp_left2.

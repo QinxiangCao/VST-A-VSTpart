@@ -236,8 +236,9 @@ Ltac simplify_ramif :=
   forwardD.
   forwardD.
   forwardD.
-  admit. (* entailment with ModBox *)
-  forwardD.
+  { instantiate (1 := FF).
+    rewrite orp_FF.
+  admit. (* entailment with ModBox *) }
   forwardD.
   forwardD.
   forwardD.

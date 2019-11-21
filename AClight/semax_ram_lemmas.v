@@ -201,13 +201,6 @@ Fixpoint fold_right_and_True_RamAssu (l: list RamAssu) :=
   | P :: l0 => Prop_of_RamAssu P /\ fold_right_and_True_RamAssu l0
   end.
 
-Fixpoint fold_right_sepcon_emp (l: list mpred) :=
-  match l with
-  | nil => emp
-  | P :: nil => P
-  | P :: l0 => P * fold_right_sepcon_emp l0
-  end.
-
 Lemma fold_right_and_True_spec: forall l,
   @eq (environ -> mpred)
     (!! fold_right_and_True_RamAssu l)
@@ -225,20 +218,6 @@ Proof.
       with (Prop_of_RamAssu r /\ fold_right and True (map Prop_of_RamAssu (a :: l))).
     specialize (IHl a).
     tauto.
-Qed.
-
-Lemma fold_right_sepcon_emp_spec: forall l,
-  fold_right_sepcon_emp l = fold_right sepcon emp l.
-Proof.
-  intros.
-  destruct l; auto.
-  revert m; induction l; intros.
-  + simpl.
-    symmetry; apply sepcon_emp.
-  + change (fold_right_sepcon_emp (m :: a :: l)) with (m * fold_right_sepcon_emp (a::l)).
-    change (fold_right sepcon emp (m :: a :: l)) with (m * fold_right sepcon emp (a::l)).
-    specialize (IHl a).
-    rewrite IHl; auto.
 Qed.
 
 Definition compute_frame (assu: list RamAssu) (P: environ -> mpred) :=
@@ -418,16 +397,17 @@ Proof.
   apply derives_refl.
 Qed.
 
-Lemma canonical_ram_reduce1: forall {A} QG RG QL RL s QL' RL' QG' RG' (Pure: A -> Prop) QG1' QG2',
+Lemma canonical_ram_reduce1: forall {A} Delta QG RG QL RL s QL' RL' QG' RG' (Pure: A -> Prop) QG1' QG2',
   (forall a: A, exists TempG1 TempG2,
     split_by_closed s (QG' a) TempG1 TempG2 /\
     QG1' a = TempG1 /\
     QG2' a = TempG2) ->
-  LOCALx QG TT |-- LOCALx QL TT ->
+  ENTAIL Delta, LOCALx QG TT |-- LOCALx QL TT ->
   (forall a: A, LOCALx QG TT |-- LOCALx (QG1' a) TT) ->
   (forall a: A, LOCALx (QL' a) TT |-- LOCALx (QG2' a) TT) ->
   SEPx RG |-- SEPx RL *
     ModBox s (ALL a: A, !! Pure a --> (SEPx (RL' a) -* SEPx (RG' a))) ->
+  ENTAIL Delta,
   PROPx nil (LOCALx QG (SEPx RG)) |--
   PROPx nil (LOCALx QL (SEPx RL)) *
     ModBox s (ALL a: A, !! Pure a -->
@@ -451,9 +431,11 @@ Proof.
   rewrite !(LOCALx_andp _ (SEPx _)).
 
   rewrite corable_andp_sepcon1 by apply corable_PROP.
+  rewrite <- andp_assoc, (andp_comm (local _)), andp_assoc.
   apply andp_derives; auto.
   rewrite corable_andp_sepcon1 by apply corable_LOCAL.
-  apply andp_right; [apply andp_left1; auto |].
+  apply andp_right; [rewrite <- andp_assoc; apply andp_left1; auto |].
+  apply andp_left2.
 
   eapply sepcon_EnvironBox_weaken with
    (allp 
@@ -508,13 +490,13 @@ Proof.
     apply imp_andp_adjoint.
     apply andp_left2; auto.
    }      
-
+   
    auto.
 Qed.
 
 Lemma canonical_ram_reduce2: forall {A: Type} s G L L' G' (Pure: A -> Prop),
-  fold_right_sepcon_emp G |--
-    fold_right_sepcon_emp L *
+  fold_right_sepconx G |--
+    fold_right_sepconx L *
      (ALL a: A, !! Pure a -->
         (fold_right_sepconx (L' a) -* fold_right_sepconx (G' a))) ->
   SEPx G |-- SEPx L * ModBox s (ALL a: A, !! Pure a --> (SEPx (L' a) -* SEPx (G' a))).
@@ -531,7 +513,7 @@ Proof.
 
   fold (ModBox s); rewrite go_lower_ModBox.
 
-  rewrite !fold_right_sepcon_emp_spec in H.
+  rewrite !fold_right_sepconx_eq in H.
   eapply derives_trans; [exact H |].
   apply sepcon_derives; [apply derives_refl |].
   apply allp_right; intro rho'.
@@ -752,7 +734,7 @@ Ltac simplify_ramif :=
   end;
 
   eapply canonical_ram_reduce2;
-  unfold fold_right_sepcon_emp;
+  unfold fold_right_sepconx;
 
   try
    (let a := fresh "a" in
