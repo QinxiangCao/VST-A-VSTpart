@@ -38,30 +38,6 @@ Context {cs: compspecs}.
 
 
 (*
-Lemma semax_ram_unlocalize': forall Delta l g s F P0 P1 P c Q P'
-  (frame_sound: g |-- l * (P1 && (P -* P')))
-  (frame_closed: Forall (fun s => closed_wrt_modvars s (P1 && (P -* P'))) s),
-  corable P0 ->
-  corable P1 ->
-  semax_ram Delta F (P0 && P1 && P') c Q ->
-  semax_ram Delta
-   (RAM_FRAME.Build_SingleFrame l g s
-     (RAM_FRAME.Build_SingleFrame' (P1 && (P -* P')) frame_sound frame_closed) :: F) (P0 && P) c Q.
-Proof.
-  intros.
-Opaque LiftNatDed' LiftSepLog'.
-  simpl.
-Transparent LiftNatDed' LiftSepLog'.
-  eapply semax_ram_pre; [| eauto].
-  rewrite corable_andp_sepcon1 by auto.
-  rewrite andp_assoc.
-  apply andp_derives; [auto |].
-  rewrite corable_sepcon_andp1 by auto. 
-  apply andp_derives; [auto |].
-  rewrite sepcon_comm.
-  apply wand_sepcon_adjoint.
-  auto.
-Qed.
 
 Lemma corable_PROP_LOCAL: forall P Q R, corable R -> corable (PROPx P (LOCALx Q R)).
 Proof.
@@ -101,49 +77,6 @@ Proof.
   auto with closed.
 Qed.
 
-Lemma semax_ram_unlocalize_PROP_LOCAL_SEP: forall Delta l g s F P Q R c Ret P' Q' Q1' Q2' R'
-  (SPLIT: split_by_closed s Q' Q1' Q2')
-  (SEP_frame_sound: g |-- l * (SEPx R -* SEPx R'))
-  (SEP_frame_closed: Forall (fun s => closed_wrt_modvars s (SEPx R -* SEPx R')) s)
-  (PURE_frame_sound: g |-- PROPx P' (LOCALx Q1' TT)),
-  PROPx P (LOCALx Q (SEPx R)) |-- PROPx nil (LOCALx Q2' TT) ->
-  semax_ram Delta F (PROPx P' (LOCALx Q' (SEPx R'))) c Ret ->
-  semax_ram Delta
-   (RAM_FRAME.Build_SingleFrame l g s
-     (RAM_FRAME.Build_SingleFrame'
-       (PROPx P' (LOCALx Q1' TT) && (SEPx R -* SEPx R'))
-       (frame_sound_aux _ _ _ _ _ _ PURE_frame_sound SEP_frame_sound)
-       (frame_closed_aux _ _ _ _ _ _ _ SPLIT SEP_frame_closed)) :: F)
-   (PROPx P (LOCALx Q (SEPx R))) c Ret.
-Proof.
-  intros.
-  eapply semax_ram_pre with (PROPx nil (LOCALx Q2' (SEPx R))).
-  1: rewrite SEPx_sepcon with (Q := Q2'); apply andp_right;
-       [eauto | rewrite SEPx_sepcon; apply andp_left2; auto].
-  rewrite SEPx_sepcon in H |- *.
-  apply semax_ram_unlocalize';
-   [ apply corable_PROP_LOCAL; simpl; auto
-   | apply corable_PROP_LOCAL; simpl; auto
-   |].
-  apply split_by_closed_spec with (P := P') in SPLIT.
-  rewrite (andp_comm (PROP  ()  (LOCALx Q2' TT))), <- (proj2 SPLIT).
-  rewrite SEPx_sepcon in H0; auto.
-Qed.
-
-Lemma semax_ram_abduction: forall Delta l g s F P c Q F0
-  (frame_sound: g |-- l * F0)
-  (frame_closed: Forall (fun s => closed_wrt_modvars s F0) s),
-  semax_ram Delta F (P * F0) c Q ->
-  semax_ram Delta
-    (RAM_FRAME.Build_SingleFrame l g s
-      (RAM_FRAME.Build_SingleFrame' F0 frame_sound frame_closed) :: F) P c Q.
-Proof.
-  intros.
-Opaque LiftNatDed' LiftSepLog'.
-  simpl.
-Transparent LiftNatDed' LiftSepLog'.
-  eapply semax_ram_pre; [| eauto]; auto.
-Qed.
 *)
 
 Lemma revert_exists_left: forall {A} (x : A) P (Q: environ -> mpred),
@@ -168,96 +101,8 @@ Qed.
   
 End SEMAX.
 
-
 Local Open Scope logic.
 
-Inductive RamAssu :=
-  | RamAssu_intro: forall A: Prop, A -> RamAssu.
-
-Inductive RamBind :=
-  | RamBind_intro: forall A: Type, A -> RamBind.
-
-Delimit Scope RamBind with RamBind.
-Delimit Scope RamAssu with RamAssu.
-(*
-Notation " [ ] " := (@nil RamAssu) : RamAssu.
-Notation " [ x ] " := (cons (RamAssu_intro _ x) nil) : RamAssu.
-Notation " [ x ; .. ; y ] " := (cons (RamAssu_intro _ x) .. (cons (RamAssu_intro _ y) nil) ..) : RamAssu.
-Notation " [ ] " := (@nil RamBind) : RamBind.
-Notation " [ x ] " := (cons (RamBind_intro _ x) nil) : RamBind.
-Notation " [ x ; .. ; y ] " := (cons (RamBind_intro _ x) .. (cons (RamBind_intro _ y) nil) ..) : RamBind.
-*)
-Definition Prop_of_RamAssu (p: RamAssu) :=
-  match p with
-  | RamAssu_intro A _ => A
-  end.
-
-(* This is just two copy of fold_right and one copy of map.
-   They are defined for more convenient unfolding. *)
-Fixpoint fold_right_and_True_RamAssu (l: list RamAssu) :=
-  match l with
-  | nil => True
-  | P :: nil => Prop_of_RamAssu P
-  | P :: l0 => Prop_of_RamAssu P /\ fold_right_and_True_RamAssu l0
-  end.
-
-Lemma fold_right_and_True_spec: forall l,
-  @eq (environ -> mpred)
-    (!! fold_right_and_True_RamAssu l)
-    (!! fold_right and True (map Prop_of_RamAssu l)).
-Proof.
-  intros.
-  apply ND_prop_ext.
-  destruct l; [tauto |].
-  revert r; induction l; intros.
-  + simpl.
-    tauto.
-  + change (fold_right_and_True_RamAssu (r :: a :: l))
-      with (Prop_of_RamAssu r /\ fold_right_and_True_RamAssu (a :: l)).
-    change (fold_right and True (map Prop_of_RamAssu (r :: a :: l)))
-      with (Prop_of_RamAssu r /\ fold_right and True (map Prop_of_RamAssu (a :: l))).
-    specialize (IHl a).
-    tauto.
-Qed.
-
-Definition compute_frame (assu: list RamAssu) (P: environ -> mpred) :=
-  !! (fold_right_and_True_RamAssu assu) --> P.
-
-Lemma compute_frame_sound: forall assu (P Q: environ -> mpred), P |-- compute_frame assu Q -> P |-- Q.
-Proof.
-  intros.
-  eapply derives_trans; [exact H |].
-  unfold compute_frame.
-  rewrite fold_right_and_True_spec.
-  rewrite prop_imp; auto.
-  clear.
-  induction assu.
-  + simpl.
-    auto.
-  + simpl.
-    split; auto.
-    destruct a; simpl.
-    auto.
-Qed.
-
-(*
-Inductive NatDed_weaken : forall {A: Type} {NA: NatDed A} (P Q: A), Prop :=
-  | weaken_refl: forall {A: Type} {NA: NatDed A} (P: A), NatDed_weaken P P
-  | weaken_imp: forall {A: Type} {NA: NatDed A} (P Q: A) (R: Prop), R -> NatDed_weaken P Q -> NatDed_weaken (!! R --> P) Q
-  | weaken_allp: forall {A B: Type} {NA: NatDed A} (x: B) (P Q: B -> A), NatDed_weaken P Q -> NatDed_weaken (allp P) (Q x).
-
-Lemma NatDed_weaken_weaken: forall {A: Type} {NA: NatDed A} (P Q: A),
-  NatDed_weaken P Q -> P |-- Q.
-Proof.
-  intros.
-  induction H.
-  + auto.
-  + rewrite prop_imp by auto.
-    auto.
-  + apply allp_left'.
-    auto.
-Qed.
-*)
 Lemma PROPx_andp: forall P Q, PROPx P Q = PROPx P TT && Q.
 Proof.
   intros.
@@ -352,42 +197,6 @@ Transparent LiftNatDed' LiftSepLog' LiftCorableSepLog'.
   auto.
 Qed.
 
-Definition check_one_var_spec (Q: PTree.t (type * val)) (idv: ident * (type * val)) : Prop :=
-   (Q ! (fst idv)) = Some (snd idv).
-
-Lemma local2ptree_soundness'' : forall Q T1 T2 gv,
-  local2ptree Q = (T1, T2, nil, gv) ->
-  LOCALx Q TT = LOCALx (LocalD T1 T2 gv) TT.
-Proof.
-  intros.
-  eapply local2ptree_soundness in H.
-  match goal with |- LOCALx _ ?B = _ =>
-    replace B with (SEPx(TT::nil))
-  end.
-  instantiate (2:=@nil Prop) in H.
-  simpl app in H.
-  unfold PROPx in H.
-  simpl fold_right in H.
-  rewrite !prop_true_andp in H by auto. apply H.
-  extensionality rho; unfold SEPx; simpl. rewrite sepcon_emp. reflexivity.
-Qed.
-(*
-Lemma solve_LOCALx_entailer: forall {cs: compspecs} P Ptemp Pvar Q Qtemp Qvar GV,
-  local2ptree P = (Ptemp, Pvar, nil, GV) ->
-  local2ptree Q = (Qtemp, Qvar, nil, GV) ->
-  Forall (check_one_var_spec Pvar) (PTree.elements Qvar) ->
-  Forall (check_one_temp_spec Ptemp) (PTree.elements Qtemp) ->
-  LOCALx P TT |-- LOCALx Q TT.
-Proof.
-  intros.
-  erewrite (local2ptree_soundness'' P) by eauto.
-  erewrite (local2ptree_soundness'' Q) by eauto.
-  unfold LOCALx, local, lift1; simpl; normalize; intros.
-  Search map locald_denote LocalD .
-  auto.
-  eapply check_specs_lemma'; eauto.
-Qed.
-*)
 Lemma canonical_ram_reduce0: forall {A B C} {NA: NatDed A} (P: C -> B -> A),
   allp (fun x => P (fst x) (snd x)) |-- allp (allp P).
 Proof.
@@ -594,7 +403,8 @@ Qed.
 
 Ltac solve_LOCALx_entailer_tac :=
   apply solve_LOCALx_entailer; go_lower;
-  apply andp_right; [apply prop_right |]; auto.
+  first [ apply andp_right; [apply prop_right |]; auto
+        | apply prop_right; auto].
 
 (****************
 Ltac localize L :=
@@ -631,47 +441,6 @@ Ltac super_solve_split :=
   | |- _ = ?r => super_pattern r a; apply eq_refl
   end.
 
-Inductive RamUnit: Type :=
-  | RamTT: RamUnit.
-
-Lemma allp_unit': forall {A: Type} {NA: NatDed A} (P: A), allp (fun _: RamUnit => P) |-- P.
-Proof.
-  intros.
-  (* rewrite allp_unit. *)
-  apply (allp_left _ RamTT).
-  apply derives_refl.
-Qed.
-
-Lemma remove_allp_RamUnit: forall P Q R: mpred, P |-- Q * R -> P |-- Q * ALL _ : RamUnit, R.
-Proof.
-  intros.
-  eapply sepcon_weaken; [| eauto].
-  apply allp_right; auto.
-Qed.
-
-Ltac construct_frame_bind bind :=
-  match bind with
-  | RamBind_intro _ ?x :: ?bind0 => 
-      match goal with
-      | |- _ |-- ?r =>
-          super_pattern r x;
-          apply (allp_left' x);
-          construct_frame_bind bind0
-      end
-  | nil =>
-      apply allp_unit'
-  end.
-
-(*
-   Solve this goal:
-   ? |--
-     PROPx nil (LOCALx QL' (SEPx RL')) -*
-       PROPx nil (LOCALx QG' (SEPx RG'))
-*)
-Ltac construct_frame assu bind :=
-  apply (compute_frame_sound assu);
-  unfold compute_frame, fold_right_and_True_RamAssu, Prop_of_RamAssu;
-  construct_frame_bind bind.
 (****************
 Ltac unlocalize' G' assu bind :=
   clear_RamFrame_abbr;
