@@ -37,8 +37,8 @@ Inductive generalize_EX_wand: (environ -> mpred) -> (environ -> mpred) -> (envir
     generalize_EX_wand (PROPx Pr (LOCALx LP (SEPx SP)))
                        (PROPx Pr (LOCALx LQ (SEPx SQ)))
                        (!! (fold_right and True Pr) -->
-                           (PROPx nil (LOCALx LP (SEPx SP))) -*
-                           (PROPx nil (LOCALx LQ (SEPx SQ))))
+                          ((PROPx nil (LOCALx LP (SEPx SP))) -*
+                           (PROPx nil (LOCALx LQ (SEPx SQ)))))
 | generalize_EX_wand_step': forall A (P Q R: A -> environ -> mpred),
     (forall a, generalize_EX_wand (P a) (Q a) (R a)) ->
     generalize_EX_wand (exp P) (exp Q) (allp R).
@@ -95,6 +95,8 @@ Ltac generalize_EX_wand_tac :=
   eapply generalize_EX_wand_spec;
   generalize_EX_wand_rec_tac.
 
+Require Import AClight.environ_box_stable.
+
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
   start_function f_find_hint.
@@ -112,13 +114,14 @@ Proof.
   {
     instantiate (1 := FF).
     rewrite orp_FF.
-(*
-Check sepcon_EnvironBox_weaken.
-
-eapply sepcon_EnvironBox_weaken.
-
-generalize_EX_wand_tac.
-rewrite !allp_uncurry'.
+    eapply sepcon_EnvironBox_weaken; [generalize_EX_wand_tac |].
+    SearchAbout allp unit.
+    match goal with
+    | |- _ |-- _ * EnvironBox _ (?P --> ?Q) => 
+      apply sepcon_EnvironBox_weaken with (allp (fun _: unit => P --> Q));
+        [rewrite allp_unit; apply derives_refl |]
+    | |- _ => rewrite !allp_uncurry' (* TODO: this line can be buggy *)
+    end.
 
   match goal with
   | |- _ |-- _ * EnvironBox _ (allp ?Frame) =>
@@ -127,7 +130,7 @@ rewrite !allp_uncurry'.
       eapply @sepcon_EnvironBox_weaken; 
       [ apply @allp_derives; intro a;
         match goal with
-        | |- _ |-- 
+        | |- _ |-- !! ?Pure -->
              (PROPx _ (LOCALx ?QL' (SEPx ?RL')) -*
               PROPx _ (LOCALx ?QG' (SEPx ?RG'))) =>
             try super_pattern Pure a;
@@ -141,11 +144,13 @@ rewrite !allp_uncurry'.
         end
       |]
   end.
+  (*
 Locate canonical_ram_reduce1.
   
-eapply canonical_ram_reduce1;
-    [ super_solve_split
-    | solve_LOCALx_entailer_tac
+eapply canonical_ram_reduce1.
+super_solve_split.
+apply solve_LOCALx_entailer. go_lower.
+     Print Ltac solve_LOCALx_entailer_tac.
     | intro; solve_LOCALx_entailer_tac
     | intro; solve_LOCALx_entailer_tac
     | ].

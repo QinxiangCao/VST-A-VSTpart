@@ -63,10 +63,11 @@ struct Node* find(struct Node* x) {
               SEP (data_at sh node_type (Vint (Int.repr (Z.of_nat r)), pointer_val_val pa) (pointer_val_val x))
         */
         x -> parent = p;
-        /*@ Unlocal EX g'' : Graph,
-              PROP (findS g x g''; uf_root g'' x root)
+        /*@ Unlocal 
+              PROP ()
               LOCAL (temp _x (pointer_val_val x); temp _p (pointer_val_val root))
-              SEP (vertices_at sh (vvalid g'') g'')
+              SEP (EX g'' : Graph, !! (findS g x g'' /\ uf_root g'' x root) &&
+                                   vertices_at sh (vvalid g'') g'')
         */
     }
     /*@ Assert EX g'': Graph, EX rt : pointer_val,
