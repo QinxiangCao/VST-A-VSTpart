@@ -82,7 +82,9 @@ Lemma listrep_isptr: forall sh l p,
 Proof.
   intros.
   saturate_local.
-  destruct l; [pose proof proj2 H0 eq_refl; subst; tauto |].
+  destruct l.
+  + pose proof proj2 H0 eq_refl. subst; tauto .
+  +
   clear H0 PNp.
   Exists v l.
   unfold listrep at 1; fold listrep.
@@ -154,19 +156,36 @@ Lemma same_data_at: forall sh p q x,
 Proof.
   intros. rewrite sepcon_emp. entailer!.
 Qed.
+Lemma same_data_at_l: forall sh p q x x',x=x'->
+   data_at sh t_struct_list (x, q) p * emp |--
+       data_at sh t_struct_list (x', q) p .
+Proof.
+  intros. rewrite sepcon_emp. entailer!.
+Qed.
+Lemma same_data_at_r: forall sh p q x q',q=q'->
+   data_at sh t_struct_list (x, q) p * emp |--
+       data_at sh t_struct_list (x, q') p .
+Proof.
+  intros. rewrite sepcon_emp. entailer!.
+Qed.
+Lemma same_data_at_l_r: forall sh (p:val) (q:val) (x:val) (x':val) (q':val),x=x'->q=q'->
+   data_at sh t_struct_list (x, q) p * emp |--
+       data_at sh t_struct_list (x', q') p .
+Proof.
+  intros. rewrite sepcon_emp. entailer!.
+Qed.
+Ltac solve_data_at:=
+idtac;
+match goal with
+| |- ?x = ?x => apply eq_refl
+| |- ?x = ?u =>first [is_evar x;apply eq_refl|
+first [is_evar u;apply eq_refl|auto]] end.
 Ltac local_listrep_cancel :=
   idtac;
   match goal with
-  | |- data_at ?sh t_struct_list ?v ?p * _ |--
-       data_at ?sh t_struct_list ?v ?p =>
-         exact (ecancel_cell sh p v)
   | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
-       data_at ?sh t_struct_list (_, _) ?p =>
-         exact (same_data_at sh p q x )
-  | |- data_at ?sh t_struct_list ?v ?p * _ |--
-       data_at ?sh t_struct_list ?u ?p =>
-     first [is_evar u;(exact (ecancel_cell sh p v))
-     |refine (ecancel_cell' sh p v u _)]
+       data_at ?sh t_struct_list (?u, ?v) ?p =>
+       refine (same_data_at_l_r sh p q x u v _ _) ;[solve_data_at|solve_data_at]
   | |- emp |-- listrep ?sh ?l ?p =>
          first [is_evar l;refine (ecancel_nil_list sh p _); solve [auto]
          |refine (ecancel_nil_list' sh p l _ ); split;solve [auto]]
@@ -288,5 +307,10 @@ listrep_entailer.
 
 Qed.
 
-
+Goal forall sh (x q x' q' p:val) ,x=x'->q=q'->
+data_at sh t_struct_list (x, q) p*emp |--
+       data_at sh t_struct_list (x', q') p.
+intros.
+local_listrep_cancel.
+Qed.
 
