@@ -126,9 +126,9 @@ Qed.
 
 Lemma listrep_unify: forall sh p l1 l2,
   l1 = l2 ->
-  listrep sh l1 p |-- listrep sh l2 p.
+  listrep sh l1 p*emp  |-- listrep sh l2 p.
 Proof.
-  intros.
+  intros. rewrite sepcon_emp.
   subst.
   auto.
 Qed.
@@ -174,29 +174,18 @@ Ltac local_listrep_cancel :=
          first [is_evar l;refine (ecancel_nil_list sh p _); solve [auto]
          |refine (ecancel_nil_list' sh p l _ ); split;solve [auto]]
   | |- listrep ?sh ?l ?p * _ |--
-       listrep ?sh _ ?p =>
+       listrep ?sh ?l ?p =>
          exact (ecancel_list sh p l)
+  | |- listrep ?sh ?l ?p * _ |--
+       listrep ?sh ?u ?p =>
+         first [is_evar u;exact (ecancel_list sh p l)|sep_apply
+         (listrep_unify sh p l u );auto]
   | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
        listrep ?sh _ ?p =>
          refine (ecancel_head sh p q x _)
   | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
        listrep ?sh (?x :: ?l) _ =>
          exact (ecancel_head sh p q x l)
-  end.
-Ltac local_listrep_attempt :=
-  idtac;
-  match goal with
-  | |- data_at ?sh t_struct_list ?v ?p * _ |--
-       data_at ?sh t_struct_list _ _ =>
-         exact (ecancel_cell sh p v)
-  | |- emp |-- listrep ?sh _ ?p =>
-         refine (ecancel_nil_list sh p _); solve [auto]
-  | |- listrep ?sh ?l ?p * _ |--
-       listrep ?sh _ _ =>
-         exact (ecancel_list sh p l)
-  | |- data_at ?sh t_struct_list (?x, ?q) ?p * _ |--
-       listrep ?sh _ _ =>
-         refine (ecancel_head sh p q x _)
   end.
 
 Ltac global_listrep_cancel :=
@@ -214,15 +203,17 @@ Ltac listrep_cancel:=
   | fold_abnormal_mpred
   | cbv iota beta delta [before_symbol_cancel];
      conservative_syntactic_cancel
-      local_listrep_cancel;
-    first [ simple apply syntactic_cancel_solve3
+      local_listrep_cancel;match goal with
+       | |- _ |-- _ =>
+      first [ simple apply syntactic_cancel_solve3
           | match goal with
             | |- fold_right_sepcon ?A |-- fold_right_sepcon ?B => rewrite <- (fold_left_sepconx_eq A), <- (fold_left_sepconx_eq B)
             end;
             unfold fold_left_sepconx; cbv iota beta;
             first
             [ simple apply derives_refl
-            | global_listrep_cancel ] ]].
+            | global_listrep_cancel ] ]
+        | _ =>idtac end    ]. 
 Ltac unify_for_already_lower :=
   idtac;
   match goal with
@@ -269,8 +260,8 @@ Ltac listrep_entailer :=
   saturate_local;
   first [ apply andp_right; [apply prop_right | try listrep_cancel];
           [repeat split; auto | ..]
-        | try listrep_cancel].
-Goal forall sh (p q x r: val) l,
+        | try listrep_cancel].               
+Goal forall sh (p q x r: val) l, 
   r = nullval ->
   exists z w: val,
   data_at sh t_struct_list (x, q) p * listrep sh l q |--
@@ -297,4 +288,6 @@ data_at sh t_struct_list (x, q) p*emp |--
 intros.
 local_listrep_cancel.
 Qed.
+Goal forall sh l1 w l2,listrep sh l1 w |-- listrep sh (rev (rev l1 ++ l2)) w.
+Proof. intros. listrep_entailer.
 
