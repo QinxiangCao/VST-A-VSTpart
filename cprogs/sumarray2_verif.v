@@ -3,6 +3,24 @@ Require Import cprogs.sumarray2_prog.
 Require Import cprogs.sumarray2_def.
 Require Import cprogs.sumarray2_annot.
 
+Lemma body_sumarray': semax_body Vprog Gprog f_sumarray sumarray_spec.
+Proof.
+start_function f_sumarray_hint.
+verify.
+{ EExists. entailer!. list_solve2. }
+{ Exists (i+1). entailer!.
+  f_equal. f_equal.
+  rewrite (sublist_split 0 i (i+1)) by omega.
+  rewrite sum_Z_app. rewrite (sublist_one i) by omega.
+  auto.
+  simpl. autorewrite with sublist. normalize.
+}
+{ entailer!. assert (i = Zlength contents) by list_solve2. subst i.
+  autorewrite with sublist in *. reflexivity.
+}
+Qed.
+
+(*
 Lemma body_sumarray: semax_body Vprog Gprog f_sumarray sumarray_spec.
 Proof.
 start_function f_sumarray_hint.
@@ -10,11 +28,8 @@ forwardD.
 forwardD.
 forwardD.
 forwardD.
-{ EExists. entailer!. }
+{ EExists. entailer!. list_solve2. }
 * forwardD.
-  assert_prop (Zlength contents = size). {
-    entailer!. list_solve2.
-  }
   forwardD.
   forwardD.
   forwardD.
@@ -35,6 +50,7 @@ forwardD.
     autorewrite with sublist in *. reflexivity.
   }
 Qed.
+*)
 
 Definition four_contents := [1; 2; 3; 4].
 

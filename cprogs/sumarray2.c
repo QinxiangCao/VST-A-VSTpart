@@ -15,7 +15,7 @@ unsigned sumarray(unsigned a[], int n) {
   int i; unsigned s;
   s=0;
   /*@ Inv (EX i,
-    PROP  (0 <= i <= size)
+    PROP  (0 <= i <= size; Zlength contents = size)
     LOCAL (temp _a a;
           temp _i (Vint (Int.repr i));
           temp _n (Vint (Int.repr size));

@@ -34,6 +34,56 @@ Opaque pointer_val_val.
 Lemma body_find: semax_body Vprog Gprog f_find find_spec.
 Proof.
   start_function f_find_hint.
+  verify.
+  { destruct (vgamma g x) as [r p] eqn:?H.
+    Exists r p. entailer!.
+    eapply valid_parent; eauto.
+  }
+  { apply (@vertices_at_ramif_1_stable _ _ _ _ SGBA_VST _ _ (SGA_VST sh) g (vvalid g) x (r, pa)); auto. }
+  { apply denote_tc_test_eq_split; apply graph_local_facts; auto. }
+  { do 2 EExists. entailer!. 2 : ecancel. auto. }
+  {
+    clear H3 H4.
+    rename H1 into H_PARENT_Valid, H2 into H1, H5 into H2, H6 into H3.
+    + pose proof (true_Cne_neq _ _ H1). 
+      assert ((vgamma g' x) = (r, pa)) by (apply (findS_preserves_vgamma g); auto).
+      assert (weak_valid g' root) by (right; destruct H3; apply reachable_foot_valid in H3; auto).
+      assert (vvalid g' x) by (destruct H2 as [_ [[? _] _]]; rewrite <- H2; apply H).
+      assert (~ reachable g' root x) by (destruct H3; apply (vgamma_not_reachable' _ _ r pa); auto).
+      assert (root <> null). {
+        destruct H3. apply reachable_foot_valid in H3. intro. subst root. apply (valid_not_null g' null H3). simpl. auto. }
+      eapply derives_trans.
+      apply (@graph_gen_redirect_parent_ramify _ (sSGG_VST sh)); eauto.
+      apply sepcon_derives; [apply derives_refl|].
+      apply wand_derives; [apply derives_refl|].
+      Exists (Graph_gen_redirect_parent g' x root H6 H7 H8).
+      apply andp_right; [|apply derives_refl]. apply prop_right. split.
+      * apply (graph_gen_redirect_parent_findS g g' x r r pa root _ _ _); auto.
+      * simpl. apply (uf_root_gen_dst_same g' (liGraph g') x x root); auto.
+        -- apply (uf_root_edge _ (liGraph g') _ pa); auto. apply (vgamma_not_dst g' x r pa); auto.
+        -- apply reachable_refl; auto.
+  }
+  { simpl findS. simpl uf_root. Intros vret g' root g''.
+    Exists g''. Exists root.
+    entailer!.
+  }
+  { Exists g x. entailer!.
+    assert (typed_false tint (force_val (sem_cmp_pp Cne (pointer_val_val pa) (pointer_val_val x)))). {
+      rewrite H2. reflexivity.
+    }
+    apply false_Cne_eq in H5. subst pa. split; split; [|split| |]; auto.
+    + reflexivity.
+    + apply (uf_equiv_refl _  (liGraph g)).
+    + repeat intro; auto.
+    + apply uf_root_vgamma with (n := r); auto.
+  }
+  { Exists g''. Exists rt. entailer!. }
+Qed.
+
+(*
+Lemma body_find: semax_body Vprog Gprog f_find find_spec.
+Proof.
+  start_function f_find_hint.
   forwardD.
   { destruct (vgamma g x) as [r p] eqn:?H.
     Exists r p. entailer!.
@@ -106,3 +156,4 @@ Proof.
   forwardD.
   { Exists g''. Exists rt. entailer!. }
 Qed.
+*)

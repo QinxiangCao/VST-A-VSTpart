@@ -570,8 +570,9 @@ Ltac forwardD :=
   end.
 
 Ltac verify :=
-  repeat
-  match goal with
+  repeat lazymatch goal with
   | |- let d := @abbreviate statement _ in _ =>
       forwardD
+  | |- context [ModBox _ _] =>
+      simplify_ramif
   end.
