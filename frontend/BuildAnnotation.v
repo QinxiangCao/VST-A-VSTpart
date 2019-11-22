@@ -230,15 +230,15 @@ Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
         if append_flag then
           do cs_list1 <- annotate_stmt_list nil s1;
           do cs_list2 <- annotate_stmt_list cs_list1 s2;
-          do s' <- fold_cs cs_list2 Sskip;
+          do s' <- fold_cs cs_list2;
           let s'' := add_binder_list s' inv in
           OK (Sloop (LISingle inv) s'' Sskip)
         else
           do cs_list1 <- annotate_stmt_list nil s1;
           do cs_list2 <- annotate_stmt_list nil s2;
-          do s1' <- fold_cs cs_list1 Sskip;
+          do s1' <- fold_cs cs_list1;
           let s1'' := add_binder_list s1' inv in
-          do s2' <- fold_cs cs_list2 Sskip;
+          do s2' <- fold_cs cs_list2;
           OK (Sloop (LISingle inv) s1'' s2')
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
