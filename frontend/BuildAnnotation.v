@@ -43,6 +43,7 @@ Definition check_single_break (s: statement) : res unit :=
     then OK tt
     else Error (MSG "Missing postcondition for a loop with multiple exits" :: nil).
 
+(*
 Fixpoint count_continue (s: statement) : Z :=
   match s with
   | Sgiven _ s => count_continue s
@@ -67,12 +68,39 @@ with count_continue_labeled (ls: labeled_statements) : Z :=
       let cnt2 := count_continue_labeled ls in
       cnt1 + cnt2
   end.
+*)
 
+Fixpoint count_continue (s: ClightC.statement) : Z :=
+  match s with
+  | ClightC.Ssequence s1 s2 =>
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
+  | ClightC.Sifthenelse _ s1 s2 =>
+      let cnt1 := count_continue s1 in
+      let cnt2 := count_continue s2 in
+      cnt1 + cnt2
+  | ClightC.Slabel _ s => count_continue s
+  | ClightC.Sswitch _ ls => count_continue_labeled ls
+  | ClightC.Scontinue => 1
+  | _ => 0
+  end
+with count_continue_labeled (ls: ClightC.labeled_statements) : Z :=
+  match ls with
+  | ClightC.LSnil => 0
+  | ClightC.LScons _ s ls =>
+      let cnt1 := count_continue s in
+      let cnt2 := count_continue_labeled ls in
+      cnt1 + cnt2
+  end.
+
+(*
 Definition check_no_continue (s: statement) : res unit :=
   let cnt :=  count_continue s in
   if cnt <=? 0
     then OK tt
     else Error (MSG "Double invariants needed for for loops with continue" :: nil).
+*)
 
 Fixpoint count_normal_exit (s: statement) : Z :=
   match s with
@@ -161,32 +189,29 @@ Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
     let annotate_loop (inv: loop_invariant) (s1 s2: ClightC.statement) : res statement :=
       match inv with
       | LISingle inv =>
-        do cs_list1 <- annotate_stmt_list nil s1;
-        do cs_list2 <- annotate_stmt_list cs_list1 s2;
-        do s' <- fold_cs cs_list2 Sskip;
-        (* let s' :=
-          match s' with
-          | Ssequence (Sifthenelse e Sskip Sbreak) s1'
-            => Ssequence (Sifthenelse e s1' Sbreak) Sskip
-          | _ => s'
+        let append_flag :=
+          match s2 with
+          | ClightC.Sskip => true
+          | _ =>
+            count_continue s1 <=? 0
           end
-        in *)
-        let s'' := add_binder_list s' inv in
-        (* do _ <- match s2 with
-        | ClightC.Sskip => OK tt
-        | _ => check_no_continue s''
-        end; *)
-        OK (Sloop (LISingle inv) s'' Sskip)
+        in
+        if append_flag then
+          do cs_list1 <- annotate_stmt_list nil s1;
+          do cs_list2 <- annotate_stmt_list cs_list1 s2;
+          do s' <- fold_cs cs_list2 Sskip;
+          let s'' := add_binder_list s' inv in
+          OK (Sloop (LISingle inv) s'' Sskip)
+        else
+          do cs_list1 <- annotate_stmt_list nil s1;
+          do cs_list2 <- annotate_stmt_list nil s2;
+          do s1' <- fold_cs cs_list1 Sskip;
+          let s1'' := add_binder_list s1' inv in
+          do s2' <- fold_cs cs_list2 Sskip;
+          OK (Sloop (LISingle inv) s1'' s2')
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
         do s2' <- annotate_stmt s2;
-        (* let s1' :=
-          match s1' with
-          | Ssequence (Sifthenelse e Sskip Sbreak) s1'
-            => Ssequence (Sifthenelse e s1' Sbreak) Sskip
-          | _ => s1'
-          end
-        in *)
         let s1'' := add_binder_list s1' inv1 in
         let s2'' := add_binder_list s2' inv2 in
         OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
