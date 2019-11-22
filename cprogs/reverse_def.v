@@ -288,6 +288,5 @@ data_at sh t_struct_list (x, q) p*emp |--
 intros.
 local_listrep_cancel.
 Qed.
-Goal forall sh l1 w l2,listrep sh l1 w |-- listrep sh (rev (rev l1 ++ l2)) w.
-Proof. intros. listrep_entailer.
+
 
