@@ -11,6 +11,11 @@ int minimum(int a[ ], int n) {
     SEP   (data_at Ews (tarray tint n) (map Vint (map Int.repr al)) a)
   */
   int i, min;
+  /*@ Assert
+        PROP (Zlength al = n)
+        LOCAL (temp _a a; temp _n (Vint (Int.repr n)))
+        SEP (data_at Ews (tarray tint n) (map Vint (map Int.repr al)) a)
+  */
   min=a[0];
   /*@ Inv EX i:Z,
     PROP(0 <= i <= n)

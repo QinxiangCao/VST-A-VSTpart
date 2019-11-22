@@ -11,12 +11,16 @@ Open Scope list_scope.
 Parameter get_binder_list : assert -> list binder * assert.
 
 Definition add_binder_list (s: statement) (c: assert) : statement :=
-  let (binder_list, dummy_assert) := get_binder_list c in
-  match binder_list with
-  | nil => s
+  match s with
+  | Sskip => Sskip
   | _ =>
-    let s := Ssequence (Sdummyassert dummy_assert) s in
-    fold_right Sgiven s binder_list
+      let (binder_list, dummy_assert) := get_binder_list c in
+      match binder_list with
+      | nil => s
+      | _ =>
+        let s := Ssequence (Sdummyassert dummy_assert) s in
+        fold_right Sgiven s binder_list
+      end
   end.
 
 (***************** Control flow analysis ***********************)
@@ -133,9 +137,24 @@ Definition check_single_normal_exit (s: statement) : res unit :=
     then OK tt
     else Error (MSG "Missing postcondition for if or/and loop statement" :: nil).
 
-Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res statement :=
+Fixpoint count_statement (s: statement) : nat :=
+  match s with
+  | Sskip => 0
+  | Sassert _ => 0
+  | Sdummyassert _ => 0
+  | Sgiven _ s => count_statement s
+  | Ssequence s1 s2 => count_statement s1 + count_statement s2
+  | Slocal _ n _ _ => n
+  | _ => 1
+  end.
+
+Fixpoint fold_cs_aux (cs_list: list (comment + statement)) (acc: statement) (stack: list (assert * statement)(*stack for localization*)) : res statement :=
   match cs_list with
-  | nil => OK acc
+  | nil =>
+    match stack with
+    | nil => OK acc
+    | _ => Error (MSG "Unmatched Unlocal" :: nil)
+    end
   | cs :: cs_list =>
     match cs with
     | inl (Inv, c) => Error (MSG "Dangling loop invariant" :: nil)
@@ -143,13 +162,22 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       (* match acc with
       | Sskip => fold_cs cs_list (Sassert c)
       | _ => *)
-        fold_cs cs_list (Ssequence (Sassert c) (add_binder_list acc c))
+        fold_cs_aux cs_list (Ssequence (Sassert c) (add_binder_list acc c)) stack
       (* end *)
     | inl (Given, c) => Error (MSG "Manual Given comment is not allowed in this version" :: nil)
+    | inl (Unlocal, c) => fold_cs_aux cs_list Sskip (cons (c, (add_binder_list acc c)) stack)
+    | inl (Local, c) =>
+      match stack with
+      | nil => Error (MSG "Unmatched Local" :: nil)
+      | cons (g, s1) stack =>
+        fold_cs_aux cs_list (Ssequence
+            (Slocal c (count_statement acc) (add_binder_list acc c) g) s1
+        ) stack
+      end
     | inl _ => Error (MSG "Funcsepc cannot appear in middle of a function" :: nil)
     | inr s =>
       match s, acc with
-      | Sskip, _ => fold_cs cs_list acc
+      | Sskip, _ => fold_cs_aux cs_list acc stack
       (* no longer use these special cases that annotation not ending with Sskip
          These special cases are for printing with Swhile, but we are no longer using Swhile
       | Sbreak, Sskip
@@ -159,18 +187,21 @@ Fixpoint fold_cs (cs_list: list (comment + statement)) (acc: statement) : res st
       *)
       | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
       | _, Sskip (* or followed by skip *)
-          => fold_cs cs_list (Ssequence s acc)
+          => fold_cs_aux cs_list (Ssequence s acc) stack
       | Sloop _ _ _, _
       | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
           => (* do _ <- check_single_normal_exit s; *)
-          fold_cs cs_list (Ssequence s acc)
+          fold_cs_aux cs_list (Ssequence s acc) stack
       | Sswitch _ _, _ =>
           Error (MSG "Missing postcondition for switch statement" :: nil)
-      | _, _ => fold_cs cs_list (Ssequence s acc)
+      | _, _ => fold_cs_aux cs_list (Ssequence s acc) stack
       end
     (* | _ => Error (MSG "Unimplemented" :: nil) *)
     end
   end.
+
+Fixpoint fold_cs (cs_list: list (comment + statement)) : res statement :=
+  fold_cs_aux cs_list Sskip nil.
 
 Fixpoint find_inv (cs_list: list (comment + statement)) : res (loop_invariant * list (comment + statement)) :=
   match cs_list with
@@ -259,7 +290,7 @@ Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
     end
   in
   do cs_list <- annotate_stmt_list nil s;
-  do s' <- fold_cs cs_list Sskip;
+  do s' <- fold_cs cs_list;
   OK s'
 
 with annotate_lblstmt (ls: ClightC.labeled_statements) : res labeled_statements :=

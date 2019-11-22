@@ -3,6 +3,9 @@ Require Export AClight.AClight.
 Require Export AClight.advanced_cancel.
 Require Export AClight.revert.
 Require Export AClight.advanced_forward.
+Require Export AClight.ramification.
+Require Export AClight.localization.
+Require Export AClight.semax_ram_lemmas.
 
 (******************** applying Clight-A proof rules ***************************)
 
@@ -157,6 +160,37 @@ Lemma annotation_apply_given':
 Proof.
   intros.
   apply H.
+Qed.
+
+Local Opaque FF.
+
+Lemma FF_ENTAIL:
+  forall Delta Q,
+    ENTAIL Delta, FF |-- Q.
+Proof.
+  intros. rewrite andp_FF. apply FF_left.
+Qed.
+
+Hint Resolve FF_ENTAIL : core.
+
+Lemma apply_localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta G L L' G' G'brk G'con G'ret snum s c,
+      (let d := @abbreviate _ s in semax Delta L c (normal_ret_assert L')) ->
+      (ENTAIL Delta, G |-- L * ramification.ModBox c (local (tc_environ Delta) --> (L' -* G'))) ->
+      (let d := @abbreviate _ (Ssequence (Slocal L snum s G') Sskip) in semax Delta G c
+      {| RA_normal := G';
+         RA_break := G'brk;
+         RA_continue := G'con;
+         RA_return := G'ret |}).
+Proof.
+  intros.
+  apply semax_post with (normal_ret_assert G').
+  { simpl RA_normal; auto. }
+  { simpl RA_break; auto. }
+  { simpl RA_continue; auto. }
+  { simpl RA_return; auto. }
+  eapply ramification.semax_ramification_P'; eauto.
 Qed.
 
 Ltac apply_dummyassert :=
@@ -356,6 +390,33 @@ Ltac assert_prop P :=
     ]
   end.
 
+Ltac apply_localize :=
+  lazymatch goal with |- let d := @abbreviate _ _ in _ =>
+    let d := fresh d in
+    let L'_name := fresh "L'" in
+    evar (L'_name : assert);
+    let L' := L'_name in
+    refine (apply_localize _ _ _ L' _ _ _ _ _ _ _ _ _);
+    [ intro d; abbreviate_semax; revert d
+    | subst L'
+    ]
+  end.
+
+(* Lemma localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall Delta G L c L' G',
+      semax Delta L c L' ->
+      G |-- L * (L' -* G') ->
+      semax Delta G c G'.
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post).
+ *)
+(* Lemma apply_localize:
+  forall {Espec: OracleKind} {cs: compspecs},
+    forall {A: Type} d1 Delta P c Post,
+      (forall a, let d := @abbreviate _ (d1 a) in semax Delta (P a) c Post) ->
+      (let d := @abbreviate _ (Sgiven A d1) in semax Delta (exp P) c Post). *)
+
 Ltac forwardD :=
   repeat apply_dummyassert;
   (* Intro Props *)
@@ -449,6 +510,21 @@ Ltac forwardD :=
       | _ =>
         fail "no matching pattern when processing Sassert"
       end
+  (* localize *)
+  | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') Sskip) in _ =>
+      let d := fresh d in
+      intro d;
+      apply <- semax_seq_skip;
+      revert d;
+      refine (apply_seq G' _ _ _ _ _ _ _ _ _);
+      only 1: apply_localize
+  | |- let d := @abbreviate _ (Ssequence (Slocal ?L ?snum ?c ?G') _) in _ =>
+      let d := fresh d in
+      intro d;
+      split_semax_statement snum;
+      revert d;
+      refine (apply_seq G' _ _ _ _ _ _ _ _ _);
+      only 1: apply_localize
   (* sequence call *)
   | |- let d := @abbreviate _ (Ssequence (Scall _ _ _) _) in
        semax _ _ _ _ =>
@@ -468,8 +544,12 @@ Ltac forwardD :=
       let d := fresh d in
       intro d;
       forwardM;
-      revert d;
-      refine (annotation_apply_seqAssign _ _ _ _)
+      (* forward may raise side condition. forward may solve the goal as well.
+       * This is an ugly solution to accomodate all the cases.
+       *)
+      try (idtac;
+        [.. | revert d; refine (annotation_apply_seqAssign _ _ _ _)]
+      )
   (* skip *)
   | |- let d := @abbreviate _ Sskip in _ =>
       intros _;
@@ -494,8 +574,9 @@ Ltac forwardD :=
   end.
 
 Ltac verify :=
-  repeat
-  match goal with
+  repeat lazymatch goal with
   | |- let d := @abbreviate statement _ in _ =>
       forwardD
+  | |- context [ModBox _ _] =>
+      simplify_ramif
   end.

@@ -74,5 +74,7 @@ let parse_comment s =
     ("With", With);
     ("Require", Require);
     ("Ensure", Ensure);
+    ("Local", Local);
+    ("Unlocal", Unlocal);
   ] in
   List.fold_left step None comment_types
