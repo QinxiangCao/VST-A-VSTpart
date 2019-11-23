@@ -79,41 +79,20 @@ Proof.
   ++ subst. auto.
   ++ apply H1.
   ++ apply H1.
+  ++ apply H. rewrite H0. rewrite H2. apply in_or_app.
+  right;left;auto.
+  ++ apply H. rewrite H0. rewrite H2. apply in_or_app.
+  right;left;auto.
   + list_entailer. 
   ++ rewrite H2. rewrite<-app_assoc. simpl. auto.
-  ++ rewrite max_min2. assert(0<=z). {  apply H. rewrite H2. apply in_or_app.
-  right;left;auto. } apply Z.le_trans with z. auto. apply Z.le_max_r.
-  ++ rewrite max_min2. assert(0<=z<=Int.max_unsigned). { apply H. rewrite H2.
-  apply in_app;right;left;auto. } apply Z.max_lub. apply H1. apply H7.
-  ++ assert(s1=nil\/~s1=nil).
-  { destruct s1. left. auto. right. unfold not. intros. inversion H7. }
-  f_equal. f_equal.
-  destruct H7. 
-  +++  assert(Z.zero<=z).
-  { apply H. rewrite H2. apply in_app. right;left;auto. } rewrite H7. apply Z.max_l. auto.
-  +++
-   rewrite Int.unsigned_repr in H3.
-  { rewrite max_min2. apply Z.max_r. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto.
+  ++ apply Z.le_trans with z. apply H3. rewrite max_min2. apply Z.le_max_r.
+  ++ rewrite max_min2. apply Z.max_lub. apply H1. apply H3.
+  ++ f_equal. f_equal.  rewrite max_min2. apply Z.max_r. omega.
   + list_entailer.
   ++ rewrite H2. rewrite<-app_assoc. simpl. auto.
-  ++ rewrite max_min2. assert(0<=z). {  apply H. rewrite H2. apply in_or_app.
-  right;left;auto. } apply Z.le_trans with z. auto. apply Z.le_max_r.
-  ++ rewrite max_min2. assert(0<=z<=Int.max_unsigned). { apply H. rewrite H2.
-  apply in_app;right;left;auto. } apply Z.max_lub. apply H1. apply H7.
-  ++ assert(s1=nil\/~s1=nil).
-  { destruct s1. left. auto. right. unfold not. intros. inversion H7. }
-  f_equal. f_equal.
-  destruct H7. 
-  +++ rewrite Int.unsigned_repr in H3.
-  { rewrite max_min2. apply Z.max_l. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto. 
-  +++ rewrite Int.unsigned_repr in H3.
-  { rewrite max_min2. apply Z.max_l. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto.  
+  ++ apply Z.le_trans with z. apply H3. rewrite max_min2. apply Z.le_max_r.
+  ++ rewrite max_min2. apply Z.max_lub. apply H1. apply H3.
+  ++ f_equal. f_equal.  rewrite max_min2. apply Z.max_l. omega.
   + list_entailer. 
   ++ subst. rewrite app_nil_r. auto.
   ++ subst. rewrite app_nil_r. auto.
@@ -129,44 +108,20 @@ Proof.
   ++ subst. auto.
   ++ apply H1.
   ++ apply H1.
+  ++ apply H. rewrite H0. rewrite H2. apply in_or_app.
+  right;left;auto.
+  ++ apply H. rewrite H0. rewrite H2. apply in_or_app.
+  right;left;auto.
   + list_entailer. 
   ++ rewrite H2. rewrite<-app_assoc. simpl. auto.
-  ++ rewrite max_min3. assert(0<=z). {  apply H. rewrite H2. apply in_or_app.
-  right;left;auto. } apply Z.le_trans with z. auto. apply Z.min_glb. 
-  rewrite Int.unsigned_repr in H3. omega. apply H;rewrite H2;apply in_or_app;right;left;auto.
-  auto. omega. 
-  ++ rewrite max_min3. assert(0<=z<=Int.max_unsigned). { apply H. rewrite H2.
-  apply in_app;right;left;auto. } apply Z.le_trans with z. apply Z.le_min_r. apply H7.
-  ++ assert(s1=nil\/~s1=nil).
-  { destruct s1. left. auto. right. unfold not. intros. inversion H7. }
-  f_equal. f_equal.
-  destruct H7. 
-  +++  assert(Z.zero<=z).
-  { apply H. rewrite H2. apply in_app. right;left;auto. } rewrite H7. apply Z.min_l. 
-  apply H. rewrite H2. apply in_app;right;left;auto.
-  +++
-   rewrite Int.unsigned_repr in H3.
-  { rewrite max_min3. apply Z.min_r. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto.
+  ++ rewrite max_min3. apply Z.le_trans with z. apply H3. apply Z.min_glb. omega. omega. 
+  ++ rewrite max_min3. apply Z.le_trans with z. apply Z.le_min_r. apply H3.
+  ++ f_equal. f_equal.  rewrite max_min3. apply Z.min_r. omega.
   + list_entailer.
   ++ rewrite H2. rewrite<-app_assoc. simpl. auto.
-  ++ rewrite max_min3. assert(0<=z). {  apply H. rewrite H2. apply in_or_app.
-  right;left;auto. } apply Z.min_glb. apply H1. auto.
-  ++ rewrite max_min3. assert(0<=z<=Int.max_unsigned). { apply H. rewrite H2.
-  apply in_app;right;left;auto. } apply Z.le_trans with z. apply Z.le_min_r. apply H7.
-  ++ assert(s1=nil\/~s1=nil).
-  { destruct s1. left. auto. right. unfold not. intros. inversion H7. }
-  f_equal. f_equal.
-  destruct H7. 
-  +++ rewrite Int.unsigned_repr in H3.
-  { rewrite max_min3. apply Z.min_l. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto. 
-  +++ rewrite Int.unsigned_repr in H3.
-  { rewrite max_min3. apply Z.min_l. omega.
-   } 
-  apply H. rewrite H2. apply in_app. right;left;auto.  
+  ++ rewrite max_min3. apply Z.le_trans with (min_Z s1). apply H1. apply Z.min_glb. omega. omega. 
+  ++ rewrite max_min3. apply Z.le_trans with z. apply Z.le_min_r. apply H3.
+  ++ f_equal. f_equal.  rewrite max_min3. apply Z.min_l. omega. 
   + list_entailer. 
   ++ subst. rewrite app_nil_r. auto.
   ++ subst. rewrite app_nil_r. auto.

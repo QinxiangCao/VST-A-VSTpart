@@ -243,7 +243,7 @@ unsigned minlist(struct list *p) {
      SEP (lseg s1 p t;listrep s2 t))%assert */
   while (t) {
 	  /*@ Assert (EX s2': list Z, EX z:Z, EX y:val,
-     PROP (sigma=s1++z::s2';0<=min_Z s1<=Int.max_unsigned)
+     PROP (sigma=s1++z::s2';0<=min_Z s1<=Int.max_unsigned;0<=z<=Int.max_unsigned)
      LOCAL (temp _t t; temp _s (Vint(Int.repr(min_Z s1)));temp _p p)
      SEP (data_at Tsh t_struct_list (Vint (Int.repr z), y) t;lseg s1 p t;listrep s2' y))%assert */
      h = t->head;
@@ -276,7 +276,7 @@ unsigned maxlist(struct list *p) {
      SEP (lseg s1 p t;listrep s2 t))%assert */
   while (t) {
 	  /*@ Assert (EX s2': list Z, EX z:Z, EX y:val,
-     PROP (sigma=s1++z::s2';0<=max_Z s1<=Int.max_unsigned)
+     PROP (sigma=s1++z::s2';0<=max_Z s1<=Int.max_unsigned;0<=z<=Int.max_unsigned)
      LOCAL (temp _t t; temp _s (Vint(Int.repr(max_Z s1)));temp _p p)
      SEP (data_at Tsh t_struct_list (Vint (Int.repr z), y) t;lseg s1 p t;listrep s2' y))%assert */
      h = t->head;
