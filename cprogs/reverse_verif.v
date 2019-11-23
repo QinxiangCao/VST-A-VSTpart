@@ -23,6 +23,13 @@ Require Import cprogs.reverse_annot.
 (**                                                        **)
 (************************************************************)
 (************************************************************)
+Ltac local_listrep_cancel' :=
+  idtac;
+  match goal with
+  | |- listrep ?sh ?l ?p * _ |--
+       listrep ?sh ?u ?p =>simpl
+         
+  end.
 
 Lemma body_reverse: semax_body Vprog Gprog f_reverse reverse_spec.
 Proof.
@@ -32,8 +39,8 @@ verify.
 +  listrep_entailer.
 + listrep_entailer.
   subst; simpl. rewrite app_ass. auto. 
-+ listrep_entailer.
-  subst l2; rewrite <- app_nil_end, rev_involutive. auto.
++  listrep_entailer.  
+  subst l2; rewrite <- app_nil_end, rev_involutive. auto. 
 Qed.
 
 Lemma body_reverse_long: semax_body Vprog Gprog f_reverse reverse_spec.
