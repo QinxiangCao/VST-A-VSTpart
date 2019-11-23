@@ -355,6 +355,8 @@ let rec stmt p = function
     fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
   | Sgiven (b, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
+  | Slocal (l, cnt, s, g) ->
+    fprintf p "@[<hov 2>(Slocal %a@ (%d)%%nat %a@ %a)@]" assertion l cnt stmt s assertion g
   | Sskip ->
       fprintf p "Sskip"
   | Sassign(e1, e2) ->
@@ -537,6 +539,7 @@ let rec name_stmt = function
   | Sassert _ -> ()
   | Sdummyassert _ -> ()
   | Sgiven (_, s) -> name_stmt s
+  | Slocal (_, _, s, _) -> name_stmt s
   | Sskip -> ()
   | Sassign(e1, e2) -> name_expr e1; name_expr e2
   | Sset(id, e2) -> name_temporary id; name_expr e2

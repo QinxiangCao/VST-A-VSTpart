@@ -14,7 +14,9 @@ ACLIGHTDIR=AClight
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
 DIRS=$(ACLIGHTDIR) $(CPROGSDIR) vfa wand_demo
-CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist
+
+CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind
+
 
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
  -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)\

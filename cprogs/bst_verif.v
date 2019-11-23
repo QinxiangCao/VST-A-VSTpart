@@ -63,91 +63,48 @@ Qed.
 Lemma body_insert: semax_body Vprog Gprog f_insert insert_spec.
 Proof.
   start_function f_insert_hint.
-  forwardD.
+  verify.
   { (* abstract assertion to concrete *)
     rewrite !Mapbox_rep_unfold.
     Intros t0. Exists t0.
     entailer!.
   }
-  forwardD.
-  forwardD.
   { (* initial loop invariant *)
     Exists p0 t0 (fun t: tree val => t). entailer!.
     apply emp_partial_treebox_rep_H.
   }
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  {
-    rewrite treebox_rep_tree_rep at 1. Intros q. Exists q.
-    entailer!.
-  }
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
+  { rewrite treebox_rep_tree_rep at 1. Intros q. Exists q. entailer!. }
   { rep_omega. }
-  forwardD.
-  forwardD.
-  forwardD.
   { Exists vret. subst q. entailer!. }
-  forwardD.
-  forwardD.
   { rewrite memory_block_data_at_ by auto. entailer!. }
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
   { (* return in null branch *)
     eapply derives_trans. 2 : { apply concrete_post_to_abstart; eauto. }
     rewrite tree_rep_treebox_rep. normalize.
     sep_apply (treebox_rep_leaf x q p v); auto.
     rewrite <- H3. apply treebox_rep_partial_treebox_rep.
   }
-  forwardD.
   { (* unfold treerep when q is not null *)
     destruct t; rewrite tree_rep_treebox_rep.
     { Intros. congruence. }
     Exists t1 k v0 t2. entailer!.
   }
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
-  forwardD.
   { (* preserved loop invariant case 1 *)
     Exists (field_address t_struct_tree [StructField _left] q) t1 (fun t1 => P (T t1 k v0 t2)).
     entailer!.
-    - rewrite <- H3.
-      simpl; simpl_compb; auto.
+    - rewrite <- H3. simpl; simpl_compb; auto.
     - sep_apply (partial_treebox_rep_singleton_left t2 k v0 q p); auto.
       apply partial_treebox_rep_partial_treebox_rep.
   }
-  forwardD.
-  forwardD.
-  forwardD.
   { (* preserved loop invariant case 1 *)
     Exists (field_address t_struct_tree [StructField _right] q) t2 (fun t2 => P (T t1 k v0 t2)).
     entailer!.
-    - rewrite <- H3.
-      simpl; simpl_compb; simpl_compb; auto.
+    - rewrite <- H3. simpl; simpl_compb; simpl_compb; auto.
     - sep_apply (partial_treebox_rep_singleton_right t1 k v0 q p); auto.
       cancel; apply partial_treebox_rep_partial_treebox_rep.
   }
-  forwardD.
-  forwardD.
-  forwardD.
   { (* return in x=k branch *)
     eapply derives_trans. 2 : { apply concrete_post_to_abstart; eauto. }
-    rewrite <- H3.
-    simpl insert. simpl_compb; simpl_compb.
+    rewrite <- H3. simpl insert. simpl_compb; simpl_compb.
     sep_apply (treebox_rep_internal t1 k v t2 p q); auto.
     assert (x=k) by omega. subst x.
     apply treebox_rep_partial_treebox_rep.

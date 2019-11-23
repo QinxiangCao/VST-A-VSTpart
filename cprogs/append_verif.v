@@ -25,7 +25,7 @@ Require Import cprogs.append_annot.
 (************************************************************)
 
 Lemma body_append: semax_body Vprog Gprog f_append append_spec.
-Proof.
+Proof. 
   start_function f_append_hint.
   verify.
   + rewrite listrep_null. normalize.
@@ -62,7 +62,6 @@ Proof.
     apply modus_ponens_wand'.
     unfold listrep at 2; fold listrep. Exists y; auto.
 Qed.
-
 Lemma body_append_long: semax_body Vprog Gprog f_append append_spec.
 Proof.
 start_function f_append_hint.
