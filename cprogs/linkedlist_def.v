@@ -198,7 +198,7 @@ Proof.
    + Exists y. unfold lbseg;unfold lseg. entailer!.
    + unfold lbseg;fold lbseg. Intros u. Exists u. entailer!.
    unfold lseg;fold lseg. sep_apply IHs3. Intros u0.
-   Exists u0. entailer!. Search data_at field_address.
+   Exists u0. entailer!.
    unfold_data_at (data_at Tsh t_struct_list _ u). entailer!.
 Qed.
 Lemma tmp2:forall s3 u x t i, data_at Tsh (tptr t_struct_list) u x * lseg s3 u t *
@@ -454,7 +454,7 @@ Lemma ecancel_listrep_data_at: forall z t p s1 s2,z::s1=s2->
 data_at Tsh t_struct_list (Vint (Int.repr z), t) p* listrep s1 t
 |--listrep s2 p.
 Proof.
-  intros. sep_apply singleton_lseg. Search listrep lseg.
+  intros. sep_apply singleton_lseg.
    sep_apply (lseg_list  [z] s1 p t ).
   subst. simpl. auto.
 Qed.
@@ -706,7 +706,7 @@ Proof.
   Intros t; Exists t.
   entailer!.
 Qed.
-Check listrep_isptr.
+
 Lemma listrep_not_nullval:
 forall (l : list Z) (p : val),
        p<>nullval ->
