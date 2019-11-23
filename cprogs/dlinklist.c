@@ -114,11 +114,10 @@ struct list *append (struct list *x, struct list *y) {
      LOCAL(temp ret_temp r)
      SEP (listrep (s1++s2) r)
 	*/ 
-  x=y;
   struct list *t, *u;
   /*@ Assert
      PROP()
-     LOCAL (temp _x y; temp _y y)
+     LOCAL (temp _x x; temp _y y)
      SEP (listrep_pre s1 x nullval; listrep s2 y)
 	*/
   if (x==NULL)
@@ -126,24 +125,24 @@ struct list *append (struct list *x, struct list *y) {
   else {
     t = x;
 	/*@ Assert
-	(EX (z:Z)(s1:list Z)(w:val),
-	PROP ( )  
+	(EX (z:Z)(s1':list Z)(w:val),
+	PROP (s1=z::s1' )  
 	LOCAL (temp _t x; temp _x x; temp _y y)  
-	SEP (listrep_pre s1 w x;data_at Tsh t_struct_list (Vint (Int.repr z), (w,nullval)) x; listrep_pre s2 y nullval))%assert
+	SEP (listrep_pre s1' w x;data_at Tsh t_struct_list (Vint (Int.repr z), (w,nullval)) x; listrep_pre s2 y nullval))%assert
 	*/
     u = t->next;
 	/*@ Inv
 	(EX p:val,EX q:val,EX s3: list Z,EX s4:list Z,EX j:Z,EX t:val,
-     PROP (s3++[j]++s4=z::s1)
+     PROP (s3++[j]++s4=z::s1';s1=z::s1')
      LOCAL (temp _u p; temp _t q;temp _x x;temp _y y)
      SEP (lseg_pre s3 x q nullval t;listrep_pre s4 p q;data_at Tsh t_struct_list (Vint (Int.repr j), (p,t)) q; listrep_pre s2 y nullval))%assert */
     while (u!=NULL) {
       t = u;
 	  /*@ Assert
-	(EX (z0:Z)(s4':list Z)(y:val)(k:val),
-     PROP (s3++[j]++z0::s4'=z::s1)
-     LOCAL (temp _u p; temp _t q;temp _x x;temp _y y)
-     SEP (lseg_pre s3 x q nullval k;listrep_pre s4' y p; data_at Tsh t_struct_list (Vint (Int.repr z0), (y,q)) p  ;
+	(EX (z0:Z)(s4':list Z)(y':val)(k:val),
+     PROP (s3++[j]++z0::s4'=z::s1')
+     LOCAL (temp _u p; temp _t p;temp _x x;temp _y y)
+     SEP (lseg_pre s3 x q nullval k;listrep_pre s4' y' p; data_at Tsh t_struct_list (Vint (Int.repr z0), (y',q)) p  ;
 	 data_at Tsh t_struct_list (Vint (Int.repr j), (p,k)) q; listrep_pre s2 y nullval))%assert
 	*/
       u = t->next;
@@ -151,11 +150,11 @@ struct list *append (struct list *x, struct list *y) {
     t->next = y;
 	if(y!= NULL){
 		/*@ Assert
-	(EX p:val,EX q:val,EX s3: list Z,EX s4:list Z,EX j:Z,EX t:val,EX r:Z,EX s2:list Z,EX i:val,
-     PROP (s3++[j]++s4=z::s1)
-     LOCAL (temp _u p; temp _t q;temp _x x;temp _y y)
-     SEP (lseg_pre s3 x q nullval t;listrep_pre s4 p q;data_at Tsh t_struct_list (Vint (Int.repr j), (p,t)) q; 
-	 data_at Tsh t_struct_list (Vint (Int.repr r), (i,nullval)) y ;listrep_pre s2 i nullval))%assert */
+	(EX p:val,EX q:val,EX s3: list Z,EX s4:list Z,EX j:Z,EX t:val,EX r:Z,EX s2':list Z,EX i:val,
+     PROP (s3++[j]++s4=z::s1';s1=z::s1';s2=r::s2')
+     LOCAL (temp _u nullval; temp _t q;temp _x x;temp _y y)
+     SEP (lseg_pre s3 x q nullval t;listrep_pre s4 nullval q;data_at Tsh t_struct_list (Vint (Int.repr j), (y,t)) q; 
+	 data_at Tsh t_struct_list (Vint (Int.repr r), (i,nullval)) y ;listrep_pre s2' i y))%assert */
 	y->prev = t;
 	}
     return x;
@@ -186,10 +185,10 @@ struct list *reverse (struct list *p) {
      SEP (listrep_pre s1 w v; listrep_pre s2 v w))*/
   while (v) {
 	 /*@ Assert
-  (EX (k:val)(z:Z)(s2:list Z),
-     PROP (sigma = rev s1 ++ s2)
+  (EX (k:val)(z:Z)(s2':list Z),
+     PROP (sigma = rev s1 ++ z::s2')
      LOCAL (temp _w w; temp _v v)
-     SEP (listrep_pre s1 w v;data_at Tsh t_struct_list (Vint (Int.repr z), (k,w)) v  ; listrep_pre s2 k v))%assert*/ 
+     SEP (listrep_pre s1 w v;data_at Tsh t_struct_list (Vint (Int.repr z), (k,w)) v  ; listrep_pre s2' k v))%assert*/ 
     t = v->next;
     v->next = w;
 	v->prev = t;
@@ -227,10 +226,10 @@ struct list *find(struct list* p,unsigned n){
 	while(t){
 		/*@ Assert
 	(
-     EX (i:Z)(k:val)(s4:list Z),
-     PROP (s1++[w]=s3 ++ i::s4;forall a:Z,In a s1->Int.repr a<>Int.repr t;i::s4<>nil)
+     EX (i:Z)(k:val)(s4':list Z),
+     PROP (s1++[w]=s3 ++ i::s4';forall a:Z,In a s1->Int.repr a<>Int.repr t;i::s4<>nil)
      LOCAL (temp _t a; temp _p p; temp _n (Vint (Int.repr t)))
-     SEP (lseg_pre s3 p a nullval b;data_at Tsh t_struct_list (Vint (Int.repr i), (k,b)) a  ;lseg_pre s4 k r a u;
+     SEP (lseg_pre s3 p a nullval b;data_at Tsh t_struct_list (Vint (Int.repr i), (k,b)) a  ;lseg_pre s4' k r a u;
    listrep_pre s2 r u))%assert */
 		if(t->data==n)
 			return t;
@@ -284,7 +283,7 @@ struct list* findnext(struct list* q,struct list* p){
      SEP (lseg_pre s1 q p nullval t;lseg_pre [z] p r t p;listrep_pre s2 r p)*/
   /*@ Ensure
      PROP () 
-     LOCAL (temp ret_temp t)
+     LOCAL (temp ret_temp r)
      SEP (lseg_pre s1 q p nullval t;lseg_pre [z] p r t p;listrep_pre s2 r p)
 	*/
 	/*@ Assert
