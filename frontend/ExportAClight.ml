@@ -355,8 +355,6 @@ let rec stmt p = function
     fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
   | Sgiven (b, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
-  | Slocal (l, cnt, s, g) ->
-    fprintf p "@[<hov 2>(Slocal %a@ (%d)%%nat %a@ %a)@]" assertion l cnt stmt s assertion g
   | Sskip ->
       fprintf p "Sskip"
   | Sassign(e1, e2) ->
@@ -539,7 +537,6 @@ let rec name_stmt = function
   | Sassert _ -> ()
   | Sdummyassert _ -> ()
   | Sgiven (_, s) -> name_stmt s
-  | Slocal (_, _, s, _) -> name_stmt s
   | Sskip -> ()
   | Sassign(e1, e2) -> name_expr e1; name_expr e2
   | Sset(id, e2) -> name_temporary id; name_expr e2
@@ -622,14 +619,27 @@ let print_Gprog p prog_defs =
   ) prog_defs;
   fprintf p "@]]).@ @ "
 
+
+(* let rec print_cmts chan cmts=
+  match cmts with 
+  |[] -> print_string "";
+  |a::b -> fprintf chan a;
+          print_cmts chan b *)
+
+
+
 (* All together *)
 
-let print_program p prog sourcefile normalized =
+let print_program p prog sourcefile normalized sth=
   Hashtbl.clear temp_names;
   name_program prog;
   fprintf p "@[<v 0>";
   fprintf p "%s" prologue;
+  fprintf p "Require Import VST.floyd.proofauto.\n";
   List.iter (fprintf p "Require Import %s.@ ") !option_V;
+  (* output_cmts sourcefile; *)
+  List.iter (print_endline ) sth;
+  List.iter (fprintf p  "%s") sth;
   print_clightgen_info p sourcefile normalized;
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
   print_Gprog p prog.Ctypes.prog_defs;

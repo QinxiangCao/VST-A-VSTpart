@@ -48,8 +48,7 @@ Inductive loop_invariant :=
 Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
-  | Sgiven : binder -> statement -> statement         (* abstract given clause *)
-  | Slocal : assert -> nat -> statement -> assert -> statement
+  | Sgiven: binder -> statement -> statement         (* abstract given clause *)
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
