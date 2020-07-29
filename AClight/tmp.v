@@ -199,10 +199,10 @@ Inductive path_split: statement ->
   Split_loop : forall pre paths post atom inv e state,
   path_split state (pre,paths,post,atom) ->
   path_split (Swhile inv e state) 
-      (nil,
-      (partial_conv_pp [([(inl e);(inr Sskip)],inv)] pre) ++ paths,
-       post ++ (partial_conv_pl [([(inl e);(inr Sskip)],inv)] atom) ++  [([(inl (VST.veric.semax_lemmas.Cnot e));(inr Sbreak)],inv)]  ,
-       nil
+      ( [(nil,inv)],
+      ( partial_conv_pp [([(inl e);(inr Sskip)],inv)]  pre ) ++ paths,
+        post ++ (partial_conv_pl [([(inl e);(inr Sskip)],inv)] atom) ++  [([(inl (VST.veric.semax_lemmas.Cnot e));(inr Sbreak)],inv)]  ,
+        nil
       )
 | (* atom action sequence*)
   Split_atom : forall c1 path1,
@@ -213,7 +213,7 @@ Inductive path_split: statement ->
   Split_assert_l:forall s pre paths post atom a,
     path_split s (pre,paths,post,atom) -> 
     path_split ( (Sassert a);; s) 
-      ( (partial_addpre_b atom a),
+      ( pre ++ (partial_addpre_b atom a),
        (partial_addpre_a pre a) ++ paths,
        post,
        nil
@@ -223,7 +223,7 @@ Inductive path_split: statement ->
     path_split ( s ;; (Sassert a)) 
       ( pre,
        (partial_addpre_c pre a) ++ paths,
-       (partial_addpre_b atom a),
+       post ++ (partial_addpre_b atom a),
        nil
       )
 .
