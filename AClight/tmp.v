@@ -74,8 +74,10 @@ concat (map (fun x1 => (map (fun y1 => partial_conn_lp x1 y1) y)) x ).
 
 (**
 -----------------------------------------------------------------------------
-  Add the expr as a singleton 'path' to paths. Used in if branch. 
-  Two situations : adding to a (path * assert) , or to a (path) 
+  Add the expr as a singleton 'path' to paths. Used in if branch.
+    updated : also used in do-while loop.
+  Two main situations : adding to a (path * assert) , or to a (path) 
+    
 -----------------------------------------------------------------------------
 **)
 
@@ -93,6 +95,11 @@ match l with
 |_ => nil
 end.
 
+Fixpoint partial_addpre_m (l:atom_seq)(e:expr):atom_seq:=
+match l with
+|hd::tl => (hd++[(inl e)])::(partial_addpre_l tl e)
+|_ => nil
+end.
 (**
 -----------------------------------------------------------------------------
   End
@@ -107,6 +114,8 @@ Print VST.veric.semax_lemmas.Cnot.
   Define a relationship : a statement is consisted of only atomic actions, 
   such as assignments, which means it has no assertions and is consisted of 
   only a 'path' .
+  
+  This will be later moved into path_split. Here is just a temporary state.
 -----------------------------------------------------------------------------
 **)
 Inductive path_sequence :statement -> path -> Prop:=
@@ -122,11 +131,6 @@ Inductive path_sequence :statement -> path -> Prop:=
 |Split_set : forall c1 l1 ident exp,
   path_sequence c1 l1 ->
   path_sequence ((Sset ident exp);;c1) (inr (Sset ident exp) :: l1)
- 
-|Split_sequence : forall c1 l1 c2 l2,
-  path_sequence c1 l1 ->
-  path_sequence c2 l2 ->
-  path_sequence (Ssequence c1 c2) (l1++l2)
 (*
 |Split_goto : forall c1 l1 label,
   path_sequence c1 l1 ->
@@ -163,8 +167,23 @@ match pres with
 |_ => nil
 end.
 
+(* The C loops are derived forms. Here are the three forms in Clight from CompCert:
+i.
+Definition Swhile (e: expr) (s: statement) :=
+  Sloop (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
 
+ii.
+Definition Sdowhile (s: statement) (e: expr) :=
+  Sloop s (Sifthenelse e Sskip Sbreak).
 
+iii.
+Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
+  Ssequence s1 (Sloop (Ssequence (Sifthenelse e2 Sskip Sbreak) s3) s4).
+
+I think it is accord with our intuition to destruct Sloop with these three conditions instead of 
+just do with its original form. Because we do not have (or i haven't found) a universal form of Sloop
+semantic definition.
+*)
 
 Inductive path_split: statement -> 
   partial_path_statements * path_statements * partial_path_statements * list path
@@ -191,19 +210,7 @@ Inductive path_split: statement ->
     post1++post2,
    (partial_addpre_l atom1 a) ++ (partial_addpre_l atom2 (VST.veric.semax_lemmas.Cnot a))
     )
-|
- (* Definition Swhile (Inv: assert) (e: expr) (s: statement):=
-  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.*)
-  
-  (** (assert + e) + s) / assert + (~e + skip)**)
-  Split_loop : forall pre paths post atom inv e state,
-  path_split state (pre,paths,post,atom) ->
-  path_split (Swhile inv e state) 
-      ( [(nil,inv)],
-      ( partial_conv_pp [([(inl e);(inr Sskip)],inv)]  pre ) ++ paths,
-        post ++ (partial_conv_pl [([(inl e);(inr Sskip)],inv)] atom) ++  [([(inl (VST.veric.semax_lemmas.Cnot e));(inr Sbreak)],inv)]  ,
-        nil
-      )
+
 | (* atom action sequence*)
   Split_atom : forall c1 path1,
     path_sequence c1 path1 ->
@@ -226,7 +233,57 @@ Inductive path_split: statement ->
        post ++ (partial_addpre_b atom a),
        nil
       )
+      
+|
+ (* Definition Swhile (Inv: assert) (e: expr) (s: statement):=
+  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.*)
+  
+  (** (assert + e) + s) / assert + (~e + skip)**)
+  Split_Swhile_single : forall pre paths post atom inv e state,
+  path_split state (pre,paths,post,atom) ->
+  path_split (Sloop (LISingle inv) (Ssequence (Sifthenelse e Sskip Sbreak) state) Sskip) 
+      ( [(nil,inv)],(*here is just for not empty*)
+      ( partial_conv_pp [([(inl e)],inv)]  pre ) ++ paths ++ (partial_conv_pp post (partial_addpre_p pre e)),
+          (partial_addpre_p post (VST.veric.semax_lemmas.Cnot e)) ++ 
+          (partial_conv_pl [([(inl e)],inv)] (partial_addpre_m atom (VST.veric.semax_lemmas.Cnot e))) ++
+          [([(inl (VST.veric.semax_lemmas.Cnot e));(inr Sbreak)],inv)]  ,
+        nil
+      )
+| (* if there is certainly assertion in the while-loop, we can leave the loop invariant out *)
+
+
+  Split_Swhile_null : forall pre paths post atom e state,
+  path_split state (pre,paths,post,atom) ->
+  atom = nil ->   (*means asserrtion exists*)
+  path_split (Sloop LINull (Ssequence (Sifthenelse e Sskip Sbreak) state) Sskip) 
+      ( partial_conv_lp [[(inl e)]] pre,
+        paths ++ (partial_conv_pp post (partial_addpre_p pre e)),
+        (partial_addpre_p post (VST.veric.semax_lemmas.Cnot e)),
+        [[(inl (VST.veric.semax_lemmas.Cnot e));(inr Sbreak)]]
+      )
+
+ (**)
+| Split_Sdowhile_single : forall pre paths post atom inv e state,
+  path_split state (pre,paths,post,atom) ->
+  path_split (Sloop (LISingle inv) state (Sifthenelse e Sskip Sbreak))
+  ( [(nil,inv)],
+    paths ++ (partial_addpre_a pre inv) ++ (partial_addpre_a (partial_conv_lp atom [([inl e],inv)]) inv) ++ (partial_conv_pp post [([(inl e)],inv)]),
+    (partial_addpre_p post (VST.veric.semax_lemmas.Cnot e)) ++ (partial_addpre_b (partial_addpre_m atom (VST.veric.semax_lemmas.Cnot e)) inv), 
+    nil 
+  )
+
+| Split_Sdowhile_null : forall pre paths post atom e state,
+  path_split state (pre,paths,post,atom) ->
+  atom = nil ->
+  path_split (Sloop LINull state (Sifthenelse e Sskip Sbreak))
+  ( pre,
+    paths ++ (partial_conv_pp post (partial_addpre_p pre e)),
+    (partial_addpre_p post (VST.veric.semax_lemmas.Cnot e)),
+    atom
+  )
+(* for loop remains to be done here*)
 .
+
 
 
 Fixpoint combine (l : list partial_path_statements) (l' : list partial_path_statements) : list (partial_path_statements*partial_path_statements) :=
