@@ -365,57 +365,51 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
     nil nil nil
     nil nil nil nil
   )
-.
 
-
-(*
 | Split_loop_null : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
     path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
     path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  (?_atom1 = nil \/?_atom2 = nil) ->
+  (n_atom1 = nil /\ c_atom1 = nil /\ b_atom1 = nil /\ r_atom1 = nil) \/(n_atom2 = nil /\ c_atom2 = nil /\ b_atom2 = nil /\ r_atom2 = nil) ->
   path_split (Sloop LINull c1 c2) 
   (Pack 
+    (* pre = pre1 ++ (n_atom1 + c_atom1 + b_atom1) * pre2 *)
+     (pre1 ++ (partial_conv_lp c_atom1 pre2) ++ (partial_conv_lp n_atom1 pre2) ++ (partial_conv_lp b_atom1 pre2))
+    (* path = paths1 ++ 
+              nc_post1 * pre2 ++ 
+              paths2 ++
+              n_post2 * pre1
+    *)
+    ( paths1 ++ 
+      partial_conv_pp n_post1 pre2 ++ partial_conv_pp c_post1 pre2 ++
+      paths2 ++ 
+      partial_conv_pp n_post2 pre1 ++ partial_conv_pp c_post2 pre2
+    )
+    (* n_post =  (nc_post1) * n_atom2 ++ n_post2  *)
+    (partial_conv_pl n_post1 n_atom2 ++ partial_conv_pl c_post1 n_atom2 ++ n_post2)
+    
+    (* c_post = c_post2 ++ (nc_post1 * c_atom2) *)
+     (c_post2 ++ partial_conv_pl n_post1 c_atom2 ++ partial_conv_pl c_post1 c_atom2 )
+    
+    (* r_post = r_post1 ++ r_post2 ++ (nc_post1,r_atom2) *)
+    (r_post1 ++ r_post2 ++ (partial_conv_pl n_post1 r_atom2) ++ (partial_conv_pl c_post1 r_atom2) )
+
+    
+    (*
+      b_post = b_post2 ++ (nc_post1,b_atom2) 
+    *)
+    ( b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) )
+
+      nil nil nil nil
+    (*
     (pre1 ++ (partial_conv_lp atom1 pre2) (* ++ (partial_conv_lp atom2 pre1) *) ) 
     (paths1++ (partial_conv_pp post1 pre2) ++ paths2 ++ (partial_conv_pp post2 pre1)) ++
     (post2 ++ (partial_conv_pl post1 atom2) (* ++ (partial_conv_pl post2 atom1) *) )
      nil
-  )
-.
-(* c_post : end up with c_post2 or c_atom2 
-       c_post = c_post2 ++
-                (nc_post1,c_atom2) ++ 
-                (inv,nc_atom1,c_atom2) 
-    *)
-    (c_post2 ++ 
-      (partial_conv_pl n_post1 c_atom2) ++ (partial_conv_pl c_post1 c_atom2) ++ 
-      (partial_addpre_b (partial_conv_ll n_atom1 n_atom2) inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 n_atom2) inv)
-    )
+     *)
+  ).
     
-    (* 
-    r_post = r_post1 ++ r_post2 ++ 
-            (inv,r_atom1) ++ 
-            (nc_post1,r_atom2)++
-            (inv,nc_atom1,r_atom2)
-    *)
-    (r_post1 ++ r_post2 ++ 
-     (partial_addpre_b (r_atom1) inv) ++
-     (partial_conv_pl n_post1 r_atom2) ++ (partial_conv_pl c_post1 r_atom2) ++
-     (partial_addpre_b (partial_conv_ll n_atom1 r_atom2) inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 n_atom2) inv)
-    )
     
-    (*
-    b_post = b_post1 ++ b_post2 ++
-             (inv,b_atom1) ++
-             (nc_post1,b_atom2) ++ 
-             (inv,nc_atom1,b_atom2) 
-    *)
-    (b_post1 ++ b_post2 ++ 
-     (partial_addpre_b (b_atom1) inv) ++
-     (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) ++
-     (partial_addpre_b (partial_conv_ll n_atom1 b_atom2) inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 b_atom2) inv)
-    )
-
   .
 *)
 Fixpoint combine (l : list partial_path_statements) (l' : list partial_path_statements) : list (partial_path_statements*partial_path_statements) :=
