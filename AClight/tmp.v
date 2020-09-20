@@ -1,7 +1,6 @@
 Require Import AClight.AClight.
 Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 Print VST.veric.semax_lemmas.Cnot.
-
 Check nil.
 Check [nil].
 Definition path:= list (expr + statement) .
@@ -12,7 +11,7 @@ Definition partial_path_statements := list partial_path_statement.
 Definition atom_seq := (list path)%type.
 
 
-Record split_result:Type := Pack{
+Record basic_split_result:Type := Pack{
   pre   : partial_path_statements;
   paths : path_statements;
   normal_post  : partial_path_statements;
@@ -24,7 +23,8 @@ Record split_result:Type := Pack{
   break_atom   : list path;
   return_atom  : list path;
 }.
-Check pre.
+
+
 (*
 Parameter sr: split_result.
 Check (sr.(pre)).
@@ -153,15 +153,20 @@ Inductive path_sequence :statement -> path -> Prop:=
 *)
 **)
 
-Parameter FALSE : assert.
-Inductive path_split: statement -> 
-split_result->Prop := 
+
+Inductive split_result : Type :=
+| Basic_Result:  basic_split_result -> split_result
+| Binded_Result: forall A:Type, (A -> split_result) -> split_result.
+
+Definition FALSE := (PROP (False) LOCAL () SEP ()).
+
+Inductive basic_split : statement -> basic_split_result->Prop :=
 |  (* c1 ;; c2*)
   Split_seq : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-    path_split (c1;;c2)
+    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
+    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
+    basic_split (c1;;c2)
       (Pack
         (* pre = pre1 ++  n_a1 * pre2 ++ c_a1 * pre2 *)
         (pre1 ++ (partial_conv_lp n_atom1 pre2) ++ (partial_conv_lp c_atom1 pre2))
@@ -195,9 +200,9 @@ split_result->Prop :=
 | (* if a then c1 else c2 endif *)
   Split_if : forall a c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-    path_split (Sifthenelse a c1 c2) 
+    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
+    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
+    basic_split (Sifthenelse a c1 c2) 
    (Pack
       (* pre = a * pre1 ++ (~a) * pre2 *)
       ((partial_addpre_p pre1 a) ++ (partial_addpre_p pre2 (VST.veric.semax_lemmas.Cnot a)))
@@ -223,33 +228,33 @@ split_result->Prop :=
 
 | (* It is equivalent to a singleton of path : [[inr (Sset ident exp) ]] *)
   Split_set : forall ident exp,
-  path_split ((Sset ident exp)) 
+  basic_split ((Sset ident exp)) 
     (Pack nil nil nil nil nil nil [[inr (Sset ident exp) ]] nil nil nil )
         
 | (* it is just a singleton too. Therefore only the normal_atom will be not empty *) 
   Split_assign : forall exp1 exp2,
-  path_split (Sassign exp1 exp2)
+  basic_split (Sassign exp1 exp2)
     (Pack nil nil nil nil nil nil [[inr (Sassign exp1 exp2)]] nil nil nil )
 
 | (* pre and normal_post not empty*) 
   Split_assert : forall a,
-  path_split (Sassert a) 
+  basic_split (Sassert a) 
   (Pack [(nil,a)] nil [(nil,a)] nil nil nil nil nil nil nil)
 
 | Split_continue : 
-  path_split Scontinue (Pack nil nil nil nil nil nil nil [nil] nil nil)
+  basic_split Scontinue (Pack nil nil nil nil nil nil nil [nil] nil nil)
 
 | Split_break : 
-  path_split Sbreak (Pack nil nil nil nil nil nil nil nil [nil] nil)
+  basic_split Sbreak (Pack nil nil nil nil nil nil nil nil [nil] nil)
 (*Print option.*)
 | Split_return_Some : forall e,
-  path_split (Sreturn (Some e)) (Pack nil nil nil nil nil nil nil nil nil [[inl e]])
+  basic_split (Sreturn (Some e)) (Pack nil nil nil nil nil nil nil nil nil [[inl e]])    (* return value should not be here*)
 
 | Split_return_None : 
-  path_split (Sreturn (None)) (Pack nil nil nil nil nil nil nil nil nil [nil])
+  basic_split (Sreturn (None)) (Pack nil nil nil nil nil nil nil nil nil [nil])
 
 | Split_Sskip : 
-  path_split Sskip (Pack nil nil nil nil nil nil [nil] nil nil nil)
+  basic_split Sskip (Pack nil nil nil nil nil nil [nil] nil nil nil)
 (* The C loops are derived forms. Here are the three forms in Clight from CompCert:
 i.
 Definition Swhile (e: expr) (s: statement) :=
@@ -270,9 +275,9 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
 (*and about return , void return is different from other returns. we need to both modify normal and return *)
 | Split_loop_single : forall inv c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  path_split (Sloop (LISingle inv) c1 c2)
+    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
+    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
+  basic_split (Sloop (LISingle inv) c1 c2)
   (Pack 
     (* pre = inv*)
       [(nil,inv)]
@@ -337,9 +342,9 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
 
 | Split_loop_double : forall inv1 inv2 c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  path_split (Sloop (LIDouble inv1 inv2) c1 c2)
+    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
+    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
+  basic_split (Sloop (LIDouble inv1 inv2) c1 c2)
   (Pack 
     (*pre*)
     [(nil,inv1)]
@@ -388,10 +393,10 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
 
 | Split_loop_null : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    path_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    path_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
+    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
+    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
   (n_atom1 = nil /\ c_atom1 = nil /\ b_atom1 = nil /\ r_atom1 = nil) \/(n_atom2 = nil /\ c_atom2 = nil /\ b_atom2 = nil /\ r_atom2 = nil) ->
-  path_split (Sloop LINull c1 c2) 
+  basic_split (Sloop LINull c1 c2) 
   (Pack 
     (* pre = pre1 ++ (n_atom1 + c_atom1 ) * pre2 *)
      (pre1 ++ (partial_conv_lp c_atom1 pre2) ++ (partial_conv_lp n_atom1 pre2))
@@ -435,15 +440,72 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
   
   | (*function call regarded as atomic action , the same as assign and set.*)
   Split_func : forall ident e el,
-  path_split (Scall (ident) e el)
+  basic_split (Scall (ident) e el)
   (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
   .
-    
 
+Definition merge_parallel (x y :basic_split_result) : basic_split_result:=
+match x with
+|(Pack pre1 paths1 np1 cp1 bp1 rp1 na1 ca1 ba1 ra1) 
+  => match y with 
+ (Pack pre2 paths2 np2 cp2 bp2 rp2 na2 ca2 ba2 ra2) 
+    =>(Pack (pre1++pre2) (paths1++paths2) (np1++np2) (cp1++cp2) (bp1++bp2) (rp1++rp2)
+       (na1++na2) (ca1++ca2) (ba1++ba2) (ra1++ra2))
+       end
+end.
+
+Definition merge_serial (x y :basic_split_result) : basic_split_result:=
+match x,y with
+|(Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1),
+ (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2) =>
+(Pack
+        (pre1 ++ (partial_conv_lp n_atom1 pre2) ++ (partial_conv_lp c_atom1 pre2))
+        (paths1 ++ paths2 ++ (partial_conv_pp n_post1 pre2) ++ (partial_conv_pp c_post1 pre2) )
+        (n_post2 ++ (partial_conv_pl n_post1 n_atom2) ++ (partial_conv_pl c_post1 n_atom2) ++ (partial_conv_pl b_post1 n_atom2))
+        (c_post2 ++ (partial_conv_pl n_post1 c_atom2) ++ (partial_conv_pl c_post1 c_atom2) ++ (partial_conv_pl b_post1 c_atom2))
+        (r_post2)
+        (b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) ++ (partial_conv_pl b_post1 b_atom2))
+        ((partial_conv_ll n_atom1 n_atom2) ++ (partial_conv_ll c_atom1 n_atom2) ++ (partial_conv_ll b_atom1 n_atom2))
+        ((partial_conv_ll n_atom1 c_atom2) ++ (partial_conv_ll c_atom1 c_atom2) ++ (partial_conv_ll b_atom1 c_atom2))
+        ((partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2) ++ (partial_conv_ll b_atom1 b_atom2))
+        (r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2) ++ (partial_conv_ll b_atom1 r_atom2))
+      )
+end
+.
+
+Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basic_split_result)  :
+               split_result -> split_result -> split_result -> Prop :=
+  | Bind_Basic: forall s1 s2,
+      Bind merge_method (Basic_Result s1) (Basic_Result s2) (Basic_Result (merge_method s1 s2))
+  | Bind_Left: forall (A:Type) res1 res2 res_sum,
+      (forall a, Bind merge_method (res1 a) res2 (res_sum a)) ->
+      Bind merge_method (Binded_Result A res1) res2 (Binded_Result A res_sum)
+  | Bind_Right: forall (A:Type) res1 res2 res_sum,
+      (forall a, Bind merge_method res1 (res2 a) (res_sum a)) ->
+      Bind merge_method res1 (Binded_Result A res2) (Binded_Result A res_sum)
+.
+
+Inductive path_split: statement -> split_result->Prop := 
+| Given: forall (A: Type) (substm: A -> statement) (subres: A -> split_result),
+    (forall a:A, path_split (substm a) (subres a)) ->
+    path_split (Sgiven A substm) (Binded_Result A subres)
+    
+| Parallel: forall c1 c2 res1 res2 res,
+    path_split c1 res1 ->
+    path_split c2 res2 ->
+    Bind merge_parallel res1 res2 res ->
+    path_split (c1;;c2) res
+| Serial: forall c1 c2 res1 res2 res,
+    path_split c1 res1 ->
+    path_split c2 res2 ->
+    Bind merge_serial res1 res2 res ->
+    path_split (c1;;c2) res
+
+.
 Print sigT.
     
   
-*)
+
 Fixpoint combine (l : list partial_path_statements) (l' : list partial_path_statements) : list (partial_path_statements*partial_path_statements) :=
       match l,l' with
         | x::tl, y::tl' => (x,y)::(combine tl tl')
@@ -457,14 +519,14 @@ Print list_prod.
 
 (*given 
   how to define Hoare Triple (two different ones
-      semax_func : 函数的hoare triple.
-      semax_body : 语句的Hoare triple.
+      semax_func : 鍑芥暟鐨刪oare triple.
+      semax_body : 璇彞鐨凥oare triple.
       
-        现在的Hoare triple 不是a triple is valid. 
-          逻辑本身的可靠性是 a triple is proovable -> a triple is valid.
-            VST Floyd里有一个 seperation logic ..aslogic..soundness.
-              开头大写 有一些推导技巧。
-              VeryC的文件夹下面有一些
+        鐜板湪鐨凥oare triple 涓嶆槸a triple is valid. 
+          閫昏緫鏈韩鐨勫彲闈犳€ф槸 a triple is proovable -> a triple is valid.
+            VST Floyd閲屾湁涓€涓� seperation logic ..aslogic..soundness.
+              寮€澶村ぇ鍐� 鏈変竴浜涙帹瀵兼妧宸с€�
+              VeryC鐨勬枃浠跺す涓嬮潰鏈変竴浜�
                
   function call
   ).
@@ -474,4 +536,7 @@ Inductive split_split:
 |BASIC RESULT : basic_result -> result
 |Binded_R :forall A: Type (A-> splitresult)->split_result.
 
-Define split_refule = sigma Type (fun T:Type=> T-> basic_result)
+Define split_refule = sigma Type (fun T:Type=> T-> basic_result).
+
+
+*)
