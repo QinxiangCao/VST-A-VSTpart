@@ -504,7 +504,110 @@ Inductive path_split: statement -> split_result->Prop :=
 .
 Print sigT.
     
-  
+
+Print funspec.
+Print semax.
+Print Clight.statement.
+
+Fixpoint to_Clight (stm: statement): Clight.statement.
+Admitted. 
+
+Section Soundness.
+
+Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
+
+Print path.
+Fixpoint path_to_statement (path: path) : Clight.statement :=
+match path with
+| [] => Clight.Sskip
+| hd::tl => 
+  match hd with
+  |inl expr => Clight.Ssequence (Clight.Sifthenelse expr Clight.Sskip Clight.Sbreak) (path_to_statement tl)
+  |inr statement =>  Clight.Ssequence (to_Clight statement) (path_to_statement tl)
+  end
+end.
+
+
+Print ret_assert.
+
+Definition path_to_semax (path: path_statement) : Prop :=
+  match path with (pre, path, post) =>
+  @semax CS Espec Delta pre (path_to_statement path)
+    {| RA_normal := post;
+       RA_break := FALSE;
+       RA_continue := FALSE;
+       RA_return := fun _ => FALSE|} end.
+
+Definition partial_pre_to_semax (pre: assert) (path: partial_path_statement) : Prop :=
+  match path with (path, post) =>
+  @semax CS Espec Delta pre (path_to_statement path)
+    {| RA_normal := post;
+    RA_break := FALSE;
+    RA_continue := FALSE;
+    RA_return := fun _ => FALSE|} end.
+
+Definition partial_post_to_semax (post: assert) (path: partial_path_statement) : Prop :=
+  match path with (path, pre) =>
+  @semax CS Espec Delta pre (path_to_statement path)
+  {| RA_normal := post;
+  RA_break := FALSE;
+  RA_continue := FALSE;
+  RA_return := fun _ => FALSE|} end.
+
+Definition partial_return_to_semax (post: option val -> assert) (path: partial_path_statement): Prop :=
+  match path with (path, pre) =>
+  @semax CS Espec Delta pre (path_to_statement path)
+  {| RA_normal := FALSE;
+  RA_break := FALSE;
+  RA_continue := FALSE;
+  RA_return := post|} end.
+
+Definition atom_to_semax  (pre: assert) (post: assert) (path: path): Prop :=
+  @semax CS Espec Delta pre (path_to_statement path)
+  {| RA_normal := post;
+    RA_break := FALSE;
+    RA_continue := FALSE;
+    RA_return := fun _ => FALSE|}.
+
+Definition atom_return_to_semax (pre: assert) (post: option val -> assert) (path: path)  : Prop :=
+  @semax CS Espec Delta pre (path_to_statement path)
+  {| RA_normal := FALSE;
+    RA_break := FALSE;
+    RA_continue := FALSE;
+    RA_return := post|}.
+
+
+Definition fold_prop {A:Type} (test: A -> Prop) (list: list A) : Prop :=
+  fold_left (fun H a => H /\ test a) list True.
+
+Fixpoint to_Semax_Group (res: split_result) (P:assert) 
+        (Q:ret_assert): Prop :=
+  match res with
+  | Binded_Result A subres =>
+      forall a:A, to_Semax_Group (subres a) P Q
+  | Basic_Result (Pack pre paths n_post c_post r_post b_post n_atom c_atom r_atom b_atom) =>
+      fold_prop (partial_pre_to_semax P) pre
+      /\ fold_prop path_to_semax paths
+      /\ fold_prop (partial_post_to_semax (RA_normal Q)) n_post
+      /\ fold_prop (partial_post_to_semax (RA_break Q)) b_post
+      /\ fold_prop (partial_post_to_semax (RA_continue Q)) c_post
+      /\ fold_prop (partial_return_to_semax (RA_return Q)) r_post
+      /\ fold_prop (atom_to_semax P (RA_normal Q)) n_atom
+      /\ fold_prop (atom_to_semax P (RA_break Q)) b_atom
+      /\ fold_prop (atom_to_semax P (RA_continue Q)) c_atom
+      /\ fold_prop (atom_return_to_semax P (RA_return Q)) r_atom
+  end.
+
+Theorem soundness: forall 
+  (P:assert) (Q:ret_assert) (stm: statement) 
+  (s: split_result),
+  path_split stm s ->
+  to_Semax_Group s P Q ->
+  @semax CS Espec Delta P (to_Clight stm) Q.
+Admitted.
+
+End Soundness.
+
 
 Fixpoint combine (l : list partial_path_statements) (l' : list partial_path_statements) : list (partial_path_statements*partial_path_statements) :=
       match l,l' with
@@ -531,7 +634,7 @@ Print list_prod.
   function call
   ).
 *)
-(*To avoid curry & uncurry*)
+(*To avoid curry & uncurry
 Inductive split_split:
 |BASIC RESULT : basic_result -> result
 |Binded_R :forall A: Type (A-> splitresult)->split_result.
