@@ -280,7 +280,7 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
   basic_split (Sloop (LISingle inv) c1 c2)
   (Pack 
     (* pre = inv*)
-      [(nil,inv)]
+      [(nil,inv)]     
     (
       (* paths = (inv,pre1) ++ 
                (inv,nc_atom1,pre2) ++ 
@@ -313,8 +313,13 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
         Return is surely not followed by an assert, thus it will not be in the path part.
  *)
    )
-    (* n_post : just a inv *)
-    [(nil,inv)]
+    (* n_post : b_post1 ++ b_post2 ++ (inv,b_atom1) 
+             ++ (nc_post1,b_atom2) ++ (inv,nc_atom1,b_atom2) *)
+    (
+     b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv) ++ 
+    (partial_conv_pl n_post1 b_atom2) ++ ( partial_conv_pl c_post1 b_atom2) ++
+    (partial_addpre_b (partial_conv_ll n_atom1 b_atom2)inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 b_atom2)inv) 
+    )
     (* c_post : nil*)
     nil 
     (* r_post : r_post1 ++ r_ post2 ++ (inv,r_atom1)
@@ -325,21 +330,17 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
     (partial_conv_pl n_post1 r_atom2) ++ ( partial_conv_pl c_post1 r_atom2) ++
     (partial_addpre_b (partial_conv_ll n_atom1 r_atom2)inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 r_atom2)inv) 
     )
-    (* b_post : b_post1 ++ b_post2 ++ (inv,b_atom1) 
-             ++ (nc_post1,b_atom2) ++ (inv,nc_atom1,b_atom2)
-     *)
-    (
-     b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv) ++ 
-    (partial_conv_pl n_post1 b_atom2) ++ ( partial_conv_pl c_post1 b_atom2) ++
-    (partial_addpre_b (partial_conv_ll n_atom1 b_atom2)inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 b_atom2)inv) 
-    )
-    nil nil
+    (* b_post : *)
+    nil
+    (*n_atom : b_atom1 ++ (nc_atom1,b_atom2)*)
+    ( b_atom1 ++ (partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2))
+    (*c_atom : nil*)    
+    nil
     (*r_atom : r_atom1 ++ (nc_atom1,r_atom2)*)
-     ( r_atom1 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2))
-    (*b_atom : b_atom1 ++ (nc_atom1,b_atom2)*)
-     ( b_atom1 ++ (partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2))
-   )
-
+     ( r_atom1 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2)) 
+    (*b_atom : nil*)    
+    nil)
+    
 | Split_loop_double : forall inv1 inv2 c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
     basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
@@ -369,28 +370,26 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
       paths2 ++
       (partial_addpre_c n_post2 inv2) ++(partial_addpre_c c_post2 inv2) 
     )
-    (*normal post*)
-    [(nil,inv1)]
+    (* n_post : b_post1 ++ b_post2 ++ (inv1,b_atom1) ++ (inv2,b_atom2)   *)
+     (b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv1) ++ (partial_addpre_b b_atom2 inv2)) 
+    (*c_post : nil*)
     nil 
-    (* r_post : r_post1 ++ r_ post2 ++ (inv1,r_atom1)
-             ++ (inv2,r_atom2) 
-    *)
-    (
-     r_post1 ++ r_post2 ++ (partial_addpre_b r_atom1 inv1) ++ (partial_addpre_b r_atom2 inv2) 
-    )
-    (* b_post : b_post1 ++ b_post2 ++ (inv1,b_atom1) ++ (inv2,b_atom2)
-     *)
-    (
-     b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv1) ++ (partial_addpre_b b_atom2 inv2)
-    ) 
-    nil nil 
+    (* r_post : r_post1 ++ r_ post2 ++ (inv1,r_atom1) ++ (inv2,r_atom2) *)
+    (r_post1 ++ r_post2 ++ (partial_addpre_b r_atom1 inv1) ++ (partial_addpre_b r_atom2 inv2) )
+    (* b_post : nil*)
+    nil
+    (*n_atom : b_atom1  *)
+    ( b_atom1 )
+    (*c_atom : nil *)
+    nil 
     (*r_atom : r_atom1 *)
-     ( r_atom1 )
-    (*b_atom : b_atom1 *)
-     ( b_atom1 )
-   (*WHAT IF CONTINUE JUMPS THE ASSERT AND MAKES IT ATOM?*)
+    ( r_atom1 )
+    (*b_atom : nil *)
+    nil
+   (*WHAT IF CONTINUE JUMPS THE ASSERT AND MAKES IT ATOM?
+     Oh! That's an error.
+   *)
   )
-
 | Split_loop_null : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
     basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
@@ -414,9 +413,10 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
       partial_addpre_c c_post2 FALSE ++
       (partial_addpre_c (partial_conv_pl n_post1 c_atom2) FALSE) ++ (partial_addpre_c (partial_conv_pl c_post1 c_atom2) FALSE) 
     )
-    (* n_post = (nc_post1) * n_atom2 ++ n_post2  *)
-    (partial_conv_pl n_post1 n_atom2 ++ partial_conv_pl c_post1 n_atom2 ++ n_post2)
-    
+    (* n_post = (nc_post1) * n_atom2 ++ n_post2  
+      ++ b_post1 ++b_post2 ++ (nc_post1,b_atom2) *)
+    ((partial_conv_pl n_post1 n_atom2 ++ partial_conv_pl c_post1 n_atom2 ++ n_post2) ++
+     ( b_post1 ++ b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2)))
     (* c_post = nil *)
     nil
     
@@ -425,11 +425,11 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
 
     
     (*
-      b_post = b_post1 ++b_post2 ++ (nc_post1,b_atom2) 
+      b_post :nil
     *)
-    ( b_post1 ++ b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) )
+    
+      nil nil nil nil nil
 
-      nil nil nil nil
     (*
     (pre1 ++ (partial_conv_lp atom1 pre2) (* ++ (partial_conv_lp atom2 pre1) *) ) 
     (paths1++ (partial_conv_pp post1 pre2) ++ paths2 ++ (partial_conv_pp post2 pre1)) ++
@@ -443,6 +443,11 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
   basic_split (Scall (ident) e el)
   (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
   .
+
+
+(*
+
+
 
 Definition merge_parallel (x y :basic_split_result) : basic_split_result:=
 match x with
@@ -470,9 +475,10 @@ match x,y with
         ((partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2) ++ (partial_conv_ll b_atom1 b_atom2))
         (r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2) ++ (partial_conv_ll b_atom1 r_atom2))
       )
-end
-.
+end.
+*)
 
+(** Here needs further polishment, to avoid errors about given in the second PRE part. **)
 Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basic_split_result)  :
                split_result -> split_result -> split_result -> Prop :=
   | Bind_Basic: forall s1 s2,
@@ -485,11 +491,17 @@ Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basi
       Bind merge_method res1 (Binded_Result A res2) (Binded_Result A res_sum)
 .
 
+Parameter assert_parser : statement ->  
 Inductive path_split: statement -> split_result->Prop := 
 | Given: forall (A: Type) (substm: A -> statement) (subres: A -> split_result),
     (forall a:A, path_split (substm a) (subres a)) ->
     path_split (Sgiven A substm) (Binded_Result A subres)
+
+
+
     
+
+(*
 | Parallel: forall c1 c2 res1 res2 res,
     path_split c1 res1 ->
     path_split c2 res2 ->
@@ -500,7 +512,7 @@ Inductive path_split: statement -> split_result->Prop :=
     path_split c2 res2 ->
     Bind merge_serial res1 res2 res ->
     path_split (c1;;c2) res
-
+*)
 .
 Print sigT.
     
