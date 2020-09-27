@@ -168,33 +168,26 @@ Inductive basic_split : statement -> basic_split_result->Prop :=
     basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
     basic_split (c1;;c2)
       (Pack
-        (* pre = pre1 ++  n_a1 * pre2 ++ c_a1 * pre2 *)
-        (pre1 ++ (partial_conv_lp n_atom1 pre2) ++ (partial_conv_lp c_atom1 pre2))
-        (* paths  = path1 ++ path2 ++ (n_post1+ c_post1) * pre2*)
-        (paths1 ++ paths2 ++ (partial_conv_pp n_post1 pre2) ++ (partial_conv_pp c_post1 pre2) )
-        (* n_post = n_post2 ++ (n_post1 + c_post1 + b_post1) * n_atom2 
-                  = n_post2 ++ n_post1 * n_atom2 ++ c_post1 * n_atom2 ++ b_post1 * n_atom2 *)
-        (n_post2 ++ (partial_conv_pl n_post1 n_atom2) ++ (partial_conv_pl c_post1 n_atom2) ++ (partial_conv_pl b_post1 n_atom2))
-        (* c_post = c_post2 ++ (n_post1 + c_post1 + b_post1) * c_atom2 
-                  = c_post2 ++ n_post1 * c_atom2 ++ c_post1 * c_atom2 ++ b_post1 * c_atom2 *)
-        (c_post2 ++ (partial_conv_pl n_post1 c_atom2) ++ (partial_conv_pl c_post1 c_atom2) ++ (partial_conv_pl b_post1 c_atom2))
-        (* r_post = r_post2 *)
-        (r_post2)
-        (* b_post = b_post2 ++ (n_post1 + c_post1 + b_post1) * b_atom2 
-                  = b_post2 ++ n_post1 * b_atom2 ++ c_post1 * b_atom2 ++ b_post1 * b_atom2 *)
-        (b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) ++ (partial_conv_pl b_post1 b_atom2))
-        (* n_atom = (n_atom1 + c_atom1 + b_atom1) * n_atom2
-                  = n_atom1 * n_atom2 ++ c_atom1 * n_atom2 ++ b_atom1 * n_atom2 *)
-        ((partial_conv_ll n_atom1 n_atom2) ++ (partial_conv_ll c_atom1 n_atom2) ++ (partial_conv_ll b_atom1 n_atom2))
-        (* c_atom = (n_atom1 + c_atom1 + b_atom1) * c_atom2
-                  = n_atom1 * c_atom2 ++ c_atom1 * c_atom2 ++ b_atom1 * c_atom2 *)
-        ((partial_conv_ll n_atom1 c_atom2) ++ (partial_conv_ll c_atom1 c_atom2) ++ (partial_conv_ll b_atom1 c_atom2))
-        (* b_atom = (n_atom1 + c_atom1 + b_atom1) * b_atom2
-                  = n_atom1 * b_atom2 ++ c_atom1 * b_atom2 ++ b_atom1 * b_atom2 *)
-        ((partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2) ++ (partial_conv_ll b_atom1 b_atom2))
-        (* r_atom = r_atom2 ++ (n_atom1 + c_atom1 + b_atom1) * r_atom2
-                  = r_atom2 ++ n_atom1 * r_atom2 ++ c_atom1 * r_atom2 ++ b_atom1 * r_atom2 *)
-        ( r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2) ++ (partial_conv_ll b_atom1 r_atom2))
+        (* pre = pre1 ++  n_a1 * pre2 *)
+        (pre1 ++ (partial_conv_lp n_atom1 pre2) )
+        (* paths  = path1 ++ path2 ++ (n_post1) * pre2*)
+        (paths1 ++ paths2 ++ (partial_conv_pp n_post1 pre2)  )
+        (* n_post = n_post2 ++ n_post1 * n_atom2 *)
+        (n_post2 ++ (partial_conv_pl n_post1 n_atom2))
+        (* c_post = c_post2 ++ (n_post1) * c_atom2 ++ c_post1*)
+        (c_post1 ++ c_post2 ++ (partial_conv_pl n_post1 c_atom2) )
+        (* r_post = r_post1 ++ r_post2 ++ n_post1 * r_atom2*)
+        (r_post1 ++ r_post2 ++ (partial_conv_pl n_post1 r_atom2))
+        (* b_post = b_post1 ++ b_post2 ++n_post1 * b_atom2 *)
+        (b_post1 ++ b_post2 ++ (partial_conv_pl n_post1 b_atom2) )
+        (* n_atom = n_atom1 * n_atom2*)
+        ((partial_conv_ll n_atom1 n_atom2) )
+        (* c_atom = n_atom1 * c_atom2 ++c_atom1 *)
+        ((partial_conv_ll n_atom1 c_atom2)++c_atom1 )
+        (* b_atom = n_atom1 * b_atom2 ++ b_atom1*)
+        ((partial_conv_ll n_atom1 b_atom2) ++ b_atom1)
+        (* r_atom = r_atom2 ++ n_atom1 * r_atom2*)
+        ( r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) )
       )
 
 | (* if a then c1 else c2 endif *)
