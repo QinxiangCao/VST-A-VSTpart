@@ -156,9 +156,294 @@ Inductive path_sequence :statement -> path -> Prop:=
 
 Inductive split_result : Type :=
 | Basic_Result:  basic_split_result -> split_result
-| Binded_Result: forall A:Type, (A -> split_result) -> split_result.
+| Forall_Result: forall A:Type, (A -> split_result) -> split_result
+| To_Bind_Result: forall A:Type, (A -> split_result) -> split_result.
+
 
 Definition FALSE := (PROP (False) LOCAL () SEP ()).
+
+Inductive post_path_empty: split_result -> Prop :=
+| To_Bind_empty_path: 
+    forall (A:Type) (a: A) (stm: A -> split_result), post_path_empty (stm a)
+    -> post_path_empty (To_Bind_Result A stm)
+| Forall_empty_path:
+    forall (A:Type) (a: A) (stm: A -> split_result), post_path_empty (stm a)
+    -> post_path_empty (Forall_Result A stm)
+| Basic_empty_path res:
+   let test_empty path := (fst path = nil) in 
+    Forall test_empty (normal_post res)
+    -> Forall test_empty (continue_post res)
+    -> Forall test_empty (break_post res)
+    -> Forall test_empty (return_post res)
+    -> post_path_empty (Basic_Result res)
+.
+
+Check @exp.
+Check (LOCAL () PROP () SEP()).
+Locate LOCALx.
+Print LOCALx.
+Locate assert.
+Search environ mpred.assert.
+Locate environ.
+
+
+Inductive remove_post_paths_ex (A:Type) : partial_path_statements ->
+  (A -> partial_path_statements) -> Prop :=
+  | remove_post_paths_ex_nil:
+      remove_post_paths_ex A nil (fun _ => nil)
+  | remove_post_paths_ex_cons: forall post post_removed p asrt,
+      remove_post_paths_ex A post post_removed ->
+      remove_post_paths_ex A ((p, fun _ => (exp asrt))::post)
+                             (fun a:A => (p, (fun _:environ => asrt a))::(post_removed a)).
+
+Inductive remove_basic_post_ex (A:Type): basic_split_result 
+    -> (A -> basic_split_result) -> Prop :=
+  | remove_basic_post_ex_intro:
+      forall res n_removed r_removed c_removed b_removed,
+        remove_post_paths_ex A (normal_post res) n_removed ->
+        remove_post_paths_ex A (return_post res) r_removed ->
+        remove_post_paths_ex A (continue_post res) c_removed ->
+        remove_post_paths_ex A (break_post res) b_removed ->
+        remove_basic_post_ex A res ( fun a:A =>
+          {|
+            pre := pre res; 
+            paths := paths res; 
+            normal_post := n_removed a;
+            continue_post := c_removed a;
+            break_post := b_removed a;
+            return_post := r_removed a;
+            normal_atom := normal_atom res;
+            break_atom := break_atom res;
+            continue_atom := continue_atom res;
+            return_atom := return_atom res;          
+          |}
+        ).
+
+Inductive remove_post_ex (A:Type) : split_result -> (A -> split_result) -> Prop :=
+  | remove_post_ex_cons: forall binded_res,
+      forall (a:A), remove_post_ex A (binded_res a) binded_res ->
+      remove_post_ex A (Forall_Result A binded_res) binded_res
+  | remove_post_ex_basic: forall basic_res res_removed,
+      remove_basic_post_ex A basic_res res_removed ->
+      remove_post_ex A (Basic_Result basic_res) (fun a => Basic_Result (res_removed a)).
+
+
+
+Inductive merge_seq : split_result -> split_result -> split_result -> Prop :=
+| ex_given_merge: forall (A:Type) res1 res1_removed res2 inner_sum,
+    post_path_empty res1 -> (*premise: assert must follow given *)
+    remove_post_ex A res1 res1_removed ->  (* extract all the EX a, .. from res1 post *)
+    forall a:A, merge_seq (res1_removed a) (res2 a) (inner_sum a) -> 
+    (* next_level: unify the (a:A) in res1's post and res2's bind *)
+    merge_seq res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
+| merge_forall_right: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_seq (Basic_Result res1) (res2 a) (res_sum a)) -> (* curry res2 until res2 becomes basic_result *)
+    merge_seq (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
+| merge_forall_left: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_seq (res1 a) res2 (res_sum a)) ->
+    merge_seq (Forall_Result A res1) res2 (Forall_Result A res_sum)
+| merge_basic: forall s1 s2,
+    merge_seq (Basic_Result s1) (Basic_Result s2)
+      (Basic_Result {|
+        pre := pre s1 ++ partial_conv_lp (normal_atom s1) (pre s2);
+        paths := paths s1 ++ paths s2 ++ partial_conv_pp (normal_post s1) (pre s2);
+        normal_post := normal_post s2 ++ partial_conv_pl (normal_post s1) (normal_atom s2);
+        continue_post := continue_post s1 ++ continue_post s2
+                          ++ partial_conv_pl (normal_post s1) (continue_atom s2);
+        break_post := break_post s1 ++ break_post s2
+                          ++ partial_conv_pl (normal_post s1) (break_atom s2);
+        return_post := return_post s1 ++ return_post s2
+                          ++ partial_conv_pl (normal_post s1) (return_atom s2);
+        normal_atom := normal_atom s1 ++ normal_atom s2;
+        return_atom := return_atom s1 ++ partial_conv_ll (normal_atom s1) (return_atom s2);
+        break_atom := break_atom s1 ++ partial_conv_ll (normal_atom s1) (break_atom s2);
+        continue_atom := continue_atom s1 ++ partial_conv_ll (normal_atom s1) (continue_atom s2);
+      |}).
+
+Inductive merge_loop_two : split_result -> split_result -> split_result-> Prop :=
+(*
+//INV1 
+s1;
+//INV2
+s2;
+*)
+
+(*idea : because INV2 is an assert , NO ASSERT IS ALLOWED BEWTEEN EX and its GIVEN ,
+         thus we only need to consider given in s1 following EX in INV1 and similar ones in 2's .
+*)
+| merge_l2_inv1 :forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_two (res1) (res2 a) (res_sum a)) -> 
+    merge_loop_two (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
+| merge_l2_inv2 :forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_two (res1 a) (res2) (res_sum a)) -> 
+    merge_loop_two (Forall_Result A res1) (res2) (Forall_Result A res_sum) 
+| merge_l2_basic :forall s1 s2 inv1 inv2,
+  merge_loop_two (Basic_Result s1) (Basic_Result s2) 
+  (Basic_Result {|
+   pre :=[(nil,inv1)];
+   paths := (
+      (partial_addpre_a (pre s1) inv1) ++ (partial_addpre_a (partial_addpre_b (partial_conv_ll (normal_atom s1) (normal_atom s2)) inv2)inv1) ++ (partial_addpre_a (partial_addpre_b (partial_conv_ll (normal_atom s1) (continue_atom s2)) inv2)inv1) ++
+        (partial_addpre_a (partial_addpre_b (partial_conv_ll (continue_atom s1) (normal_atom s2)) inv2)inv1) ++(partial_addpre_a (partial_addpre_b (partial_conv_ll (continue_atom s1) (continue_atom s2)) inv2)inv1) ++
+      paths s1 ++ (partial_addpre_c (normal_post s1) inv2) ++ (partial_addpre_c (continue_post s1) inv2) ++ 
+      (partial_addpre_a (pre s2) inv2) ++ (partial_addpre_a (partial_addpre_b (normal_atom s1) inv1)inv2) ++ (partial_addpre_a (partial_addpre_b (continue_atom s1) inv1)inv2) ++
+        (partial_addpre_a (partial_addpre_b (normal_atom s1) inv1)inv2) ++(partial_addpre_a (partial_addpre_b (continue_atom s1) inv1)inv2) ++
+      paths s2 ++ (partial_addpre_c (normal_post s2) inv2) ++(partial_addpre_c (continue_post s2) inv2)  );
+   normal_post :=((break_post s1) ++ (break_post s2) ++ (partial_addpre_b (break_atom s1) inv1) ++ (partial_addpre_b (break_atom s2) inv2)) ;
+   continue_post := nil ;
+   return_post := ((return_post s1) ++ (return_post s2) ++ (partial_addpre_b (return_atom s1) inv1) ++ (partial_addpre_b (return_atom s2) inv2) );
+   break_post := nil;
+   normal_atom := ( break_atom s1 );
+   continue_atom:= nil; 
+   return_atom := ( return_atom s1 );
+   break_atom := nil;
+    |})
+.    
+
+
+Inductive merge_loop_one : split_result -> split_result -> split_result-> Prop :=
+(*idea : s1 and s2 is a seq ,we also need to think about the (EX,GIVEN) pair in (INV1,s1). *)
+| merge_l1_inv1 :forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_one (res1) (res2 a) (res_sum a)) -> 
+    merge_loop_one (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
+(* following 3 : the same as that in seq 
+   How to just reuse them?
+*)
+| merge_l1_seq :
+  forall (A:Type) res1 res1_removed res2 inner_sum,
+    post_path_empty res1 -> 
+    remove_post_ex A res1 res1_removed ->  
+    forall a:A, merge_loop_one (res1_removed a) (res2 a) (inner_sum a) -> 
+    merge_loop_one res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
+| merge_l1_right: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_one (Basic_Result res1) (res2 a) (res_sum a)) -> 
+    merge_loop_one (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
+| merge_l1_left: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_one (res1 a) res2 (res_sum a)) ->
+    merge_loop_one (Forall_Result A res1) res2 (Forall_Result A res_sum)
+| merge_l1_basic : forall s1 s2 inv,
+    merge_loop_one (Basic_Result s1) (Basic_Result s2) 
+    (Basic_Result {|
+      pre:= [(nil,inv)] ;
+      paths :=  ((partial_addpre_a (pre s1) inv) ++ 
+      (partial_addpre_a (partial_conv_lp (normal_atom s1) (pre s2)) inv) ++ (partial_addpre_a (partial_conv_lp (continue_atom s1) (pre s2)) inv) ++
+      (partial_addpre_a (partial_addpre_b (partial_conv_ll (normal_atom s1) (normal_atom s2)) inv)inv) ++ (partial_addpre_a (partial_addpre_b (partial_conv_ll (normal_atom s1) (continue_atom s2)) inv)inv) 
+        ++(partial_addpre_a (partial_addpre_b (partial_conv_ll (continue_atom s1) (normal_atom s2)) inv)inv) ++(partial_addpre_a (partial_addpre_b (partial_conv_ll (continue_atom s1) (continue_atom s2)) inv)inv) ++
+      (paths s1) ++
+      (partial_conv_pp (normal_post s1) (pre s2)) ++ (partial_conv_pp (continue_post s1) (pre s2)) ++
+      (partial_addpre_c (partial_conv_pl (normal_post s1) (normal_atom s2)) inv) ++(partial_addpre_c (partial_conv_pl (normal_post s1) (continue_atom s2)) inv) ++
+        (partial_addpre_c (partial_conv_pl (continue_post s1) (normal_atom s2)) inv) ++(partial_addpre_c (partial_conv_pl (continue_post s1) (continue_atom s2)) inv) ++
+      (paths s2) ++
+      (partial_addpre_c (normal_post s2) inv) ++(partial_addpre_c (continue_post s2) inv) );
+      normal_post :=
+    (
+     (break_post s1) ++ (break_post s2) ++ (partial_addpre_b (break_atom s1) inv) ++ 
+    (partial_conv_pl (normal_post s1) (break_atom s2)) ++ ( partial_conv_pl (continue_post s1) (break_atom s2)) ++
+    (partial_addpre_b (partial_conv_ll (normal_atom s1) (break_atom s2))inv) ++ (partial_addpre_b (partial_conv_ll (continue_atom s1) (break_atom s2))inv) 
+    );
+      continue_post := nil;
+      return_post :=
+    (
+     (return_post s1) ++ (return_post s2) ++ (partial_addpre_b (return_atom s1) inv) ++ 
+    (partial_conv_pl (normal_post s1) (return_atom s2)) ++ ( partial_conv_pl (continue_post s1) (return_atom s2)) ++
+    (partial_addpre_b (partial_conv_ll (normal_atom s1) (return_atom s2))inv) ++ (partial_addpre_b (partial_conv_ll (continue_atom s1) (return_atom s2))inv) 
+    );
+      break_post := nil;
+      normal_atom := ( (break_atom s1) ++ (partial_conv_ll (normal_atom s1) (break_atom s2)) ++ (partial_conv_ll (continue_atom s1) (break_atom s2)));
+      continue_atom :=nil;
+      return_atom := ( (return_atom s1) ++ (partial_conv_ll (normal_atom s1) (return_atom s2) ++ (partial_conv_ll (continue_atom s1) (return_atom s2)))) ;
+      break_atom := nil; |}).
+
+Search split_result.
+Inductive merge_loop_null : split_result -> split_result -> split_result-> Prop :=
+(*idea : s1 and s2 is a seq , and s2 s1 is a seq.*)
+| merge_l0_inv0_l :forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_null (res1) (res2 a) (res_sum a)) -> 
+    merge_loop_null (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
+
+| merge_l0_inv0_r :forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_null (res2) (res1 a) (res_sum a)) -> 
+    merge_loop_null (res2) (Forall_Result A res1) (Forall_Result A res_sum) 
+
+| merge_l0_seq_l :
+  forall (A:Type) res1 res1_removed res2 inner_sum,
+    post_path_empty res1 -> 
+    remove_post_ex A res1 res1_removed ->  
+    forall a:A, merge_loop_one (res1_removed a) (res2 a) (inner_sum a) -> 
+    merge_loop_null res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
+| merge_l0_seq_r :
+  forall (A:Type) res1 res2_removed res2 inner_sum,
+    post_path_empty res2 -> 
+    remove_post_ex A res2 res2_removed ->  
+    forall a:A, merge_loop_one (res2_removed a) (res1 a) (inner_sum a) -> 
+    merge_loop_null res2 (To_Bind_Result A res1) (Forall_Result A inner_sum)
+
+| merge_l0_right: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_one (Basic_Result res1) (res2 a) (res_sum a)) -> 
+    merge_loop_null (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
+| merge_l0_left: forall (A:Type) res1 res2 res_sum,
+    (forall a, merge_loop_one (res1 a) res2 (res_sum a)) ->
+    merge_loop_null (Forall_Result A res1) res2 (Forall_Result A res_sum)
+
+| merge_l0_basic : forall s1 s2,
+    merge_loop_null (Basic_Result s1) (Basic_Result s2)
+    (Basic_Result {|
+    pre :=((pre s1) ++ (partial_conv_lp (continue_atom s1) (pre s2)) ++ (partial_conv_lp (normal_atom s1) (pre s2)));
+    paths :=( (paths s1) ++ 
+      partial_conv_pp (normal_post s1) (pre s2) ++ partial_conv_pp (continue_post s1) (pre s2) ++
+      (paths s2) ++ 
+      partial_conv_pp (normal_post s2) (pre s1) ++ partial_conv_pp (continue_post s2) (pre s2) ++
+      partial_addpre_c (continue_post s2) FALSE ++
+      (partial_addpre_c (partial_conv_pl (normal_post s1) (continue_atom s2)) FALSE) ++ (partial_addpre_c (partial_conv_pl (continue_post s1) (continue_atom s2)) FALSE)
+    );
+    normal_post :=(partial_conv_pl (normal_post s1) (normal_atom s2) ++ partial_conv_pl (continue_post s1) (normal_atom s2) ++ (normal_post s2) ++
+      (break_post s1) ++ (break_post s2) ++ (partial_conv_pl (normal_post s1) (break_atom s2)) ++ (partial_conv_pl (continue_post s1) (break_atom s2)));
+    continue_post :=nil;
+    return_post :=((return_post s1) ++ (return_post s2) ++ (partial_conv_pl (normal_post s1) (return_atom s2)) ++ (partial_conv_pl (continue_post s1) (return_atom s2) ));
+    break_post:=nil;
+    normal_atom:=nil;
+    continue_atom:=nil;
+    return_atom:=nil;
+    break_atom:=nil;
+    
+    |})
+.
+
+
+Inductive path_split: statement -> split_result -> Prop :=
+| (* Given A, c(A) *)
+  split_given: forall (A: Type) 
+    (substm: A -> statement) (subres: A -> split_result),
+    (forall a:A, path_split (substm a) (subres a)) ->
+    path_split (Sgiven A substm) (To_Bind_Result A subres)
+| (* c1 ;; c2 *)
+  split_seq_given: forall (A:Type) stm1 stm2 res1 res2 res,
+    path_split stm1 res1 ->
+    path_split stm2 res2 ->
+    merge_seq res1 res2 res ->
+    path_split (stm1;;stm2) res
+(*
+| split_if_given: 
+   given followed if-branch is included in seq
+   given in if-branch following prior ex is not allowed.
+*)
+| (* two invariants *)
+  split_loop_two_given :forall (A:Type) inv1 inv2 s1 s2 res1 res2 res,
+  path_split s1 res1->
+  path_split s2 res2->
+  merge_loop_two res1 res2 res ->
+  path_split (Sloop (LIDouble inv1 inv2) s1 s2) res
+| split_loop_one_given :forall (A:Type) inv1 s1 s2 res1 res2 res,
+  path_split s1 res1->
+  path_split s2 res2->
+  merge_loop_one res1 res2 res->
+  path_split (Sloop (LISingle inv1) s1 s2) res
+| split_loop_null_given :forall (A:Type) s1 s2 res1 res2 res,
+  path_split s1 res1->
+  path_split s2 res2->
+  merge_loop_null res1 res2 res->
+  path_split (Sloop (LINull) s1 s2) res
+.
+
 
 Inductive basic_split : statement -> basic_split_result->Prop :=
 |  (* c1 ;; c2*)
@@ -471,7 +756,7 @@ match x,y with
 end.
 *)
 
-(** Here needs further polishment, to avoid errors about given in the second PRE part. **)
+(** Here needs further polishment, to avoid errors about given in the second PRE part.
 Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basic_split_result)  :
                split_result -> split_result -> split_result -> Prop :=
   | Bind_Basic: forall s1 s2,
@@ -486,10 +771,8 @@ Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basi
 
 Parameter assert_parser : statement ->  
 Inductive path_split: statement -> split_result->Prop := 
-| Given: forall (A: Type) (substm: A -> statement) (subres: A -> split_result),
-    (forall a:A, path_split (substm a) (subres a)) ->
-    path_split (Sgiven A substm) (Binded_Result A subres)
 
+ **)
 
 
     
@@ -506,7 +789,7 @@ Inductive path_split: statement -> split_result->Prop :=
     Bind merge_serial res1 res2 res ->
     path_split (c1;;c2) res
 *)
-.
+
 Print sigT.
     
 
@@ -588,7 +871,9 @@ Definition fold_prop {A:Type} (test: A -> Prop) (list: list A) : Prop :=
 Fixpoint to_Semax_Group (res: split_result) (P:assert) 
         (Q:ret_assert): Prop :=
   match res with
-  | Binded_Result A subres =>
+  | To_Bind_Result A subres =>
+      forall a:A, to_Semax_Group (subres a) P Q
+  | Forall_Result A subres =>
       forall a:A, to_Semax_Group (subres a) P Q
   | Basic_Result (Pack pre paths n_post c_post r_post b_post n_atom c_atom r_atom b_atom) =>
       fold_prop (partial_pre_to_semax P) pre
@@ -627,14 +912,14 @@ Print list_prod.
 
 (*given 
   how to define Hoare Triple (two different ones
-      semax_func : 鍑芥暟鐨刪oare triple.
-      semax_body : 璇彞鐨凥oare triple.
+      semax_func : 閸戣姤鏆熼惃鍒猳are triple.
+      semax_body : 鐠囶厼褰為惃鍑are triple.
       
-        鐜板湪鐨凥oare triple 涓嶆槸a triple is valid. 
-          閫昏緫鏈韩鐨勫彲闈犳€ф槸 a triple is proovable -> a triple is valid.
-            VST Floyd閲屾湁涓€涓� seperation logic ..aslogic..soundness.
-              寮€澶村ぇ鍐� 鏈変竴浜涙帹瀵兼妧宸с€�
-              VeryC鐨勬枃浠跺す涓嬮潰鏈変竴浜�
+        閻滄澘婀惃鍑are triple 娑撳秵妲竌 triple is valid. 
+          闁槒绶張顒冮煩閻ㄥ嫬褰查棃鐘斥偓褎妲� a triple is proovable -> a triple is valid.
+            VST Floyd闁插本婀佹稉鈧稉锟� seperation logic ..aslogic..soundness.
+              瀵偓婢舵潙銇囬崘锟� 閺堝绔存禍娑欏腹鐎靛吋濡у褋鈧拷
+              VeryC閻ㄥ嫭鏋冩禒璺恒仚娑撳娼伴張澶夌娴滐拷
                
   function call
   ).
