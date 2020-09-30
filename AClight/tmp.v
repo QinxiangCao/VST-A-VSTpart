@@ -260,7 +260,14 @@ Inductive merge_seq : split_result -> split_result -> split_result -> Prop :=
         continue_atom := continue_atom s1 ++ partial_conv_ll (normal_atom s1) (continue_atom s2);
       |}).
 
-Inductive merge_loop_two : split_result -> split_result -> split_result-> Prop :=
+Inductive remove_assert_ex (A:Type) : assert ->
+(* get exists out of assert *)
+  (A -> assert) -> Prop :=
+  | remove_assert_ex_O: forall asrt,
+      remove_assert_ex A (fun _ => (exp asrt))
+                             (fun a:A => (fun _:environ => asrt a)).
+
+Inductive merge_loop_two : assert->split_result-> assert->split_result ->split_result-> Prop :=
 (*
 //INV1 
 s1;
@@ -271,14 +278,25 @@ s2;
 (*idea : because INV2 is an assert , NO ASSERT IS ALLOWED BEWTEEN EX and its GIVEN ,
          thus we only need to consider given in s1 following EX in INV1 and similar ones in 2's .
 *)
-| merge_l2_inv1 :forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_two (res1) (res2 a) (res_sum a)) -> 
-    merge_loop_two (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
-| merge_l2_inv2 :forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_two (res1 a) (res2) (res_sum a)) -> 
-    merge_loop_two (Forall_Result A res1) (res2) (Forall_Result A res_sum) 
+| merge_l2_inv1 :forall (A:Type) res1 res2 inv1 inv2 inv1_removed res,
+  remove_assert_ex A inv1 inv1_removed ->
+  forall a:A, merge_loop_two (inv1_removed a) (res1 a) inv2 res2 (res a)->
+  merge_loop_two inv1 (To_Bind_Result A res1) inv2 res2 (Forall_Result A res)
+  
+| merge_l2_inv2 :forall (A:Type) res1 res2 inv1 inv2 inv2_removed res,
+  remove_assert_ex A inv2 inv2_removed ->
+  forall a:A, merge_loop_two (inv1) (res1) (inv2_removed a) (res2 a) (res a)->
+  merge_loop_two inv1 res1 inv2 (To_Bind_Result A res2) (Forall_Result A res)
+
+| merge_forall_r2: forall (A:Type) inv1 inv2 res1 res2 res_sum,
+    (forall a, merge_loop_two inv1 (Basic_Result res1) inv2 (res2 a) (res_sum a)) -> 
+    merge_loop_two inv1 (Basic_Result res1) inv2 (Forall_Result A res2) (Forall_Result A res_sum)
+| merge_forall_l2: forall (A:Type) inv1 inv2 res1 res2 res_sum,
+    (forall a, merge_loop_two inv1 (res1 a) inv2  res2 (res_sum a)) ->
+    merge_loop_two inv1 (Forall_Result A res1) inv2 res2 (Forall_Result A res_sum)
+
 | merge_l2_basic :forall s1 s2 inv1 inv2,
-  merge_loop_two (Basic_Result s1) (Basic_Result s2) 
+  merge_loop_two inv1 (Basic_Result s1) inv2 (Basic_Result s2) 
   (Basic_Result {|
    pre :=[(nil,inv1)];
    paths := (
@@ -300,28 +318,29 @@ s2;
 .    
 
 
-Inductive merge_loop_one : split_result -> split_result -> split_result-> Prop :=
+Inductive merge_loop_one : assert -> split_result -> split_result -> split_result-> Prop :=
 (*idea : s1 and s2 is a seq ,we also need to think about the (EX,GIVEN) pair in (INV1,s1). *)
-| merge_l1_inv1 :forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_one (res1) (res2 a) (res_sum a)) -> 
-    merge_loop_one (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
-(* following 3 : the same as that in seq 
-   How to just reuse them?
-*)
-| merge_l1_seq :
-  forall (A:Type) res1 res1_removed res2 inner_sum,
-    post_path_empty res1 -> 
-    remove_post_ex A res1 res1_removed ->  
-    forall a:A, merge_loop_one (res1_removed a) (res2 a) (inner_sum a) -> 
-    merge_loop_one res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
-| merge_l1_right: forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_one (Basic_Result res1) (res2 a) (res_sum a)) -> 
-    merge_loop_one (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
-| merge_l1_left: forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_one (res1 a) res2 (res_sum a)) ->
-    merge_loop_one (Forall_Result A res1) res2 (Forall_Result A res_sum)
+| ex_given_merge_1: forall (A:Type) inv1 res1 res1_removed res2 inner_sum,
+    post_path_empty res1 -> (*premise: assert must follow given *)
+    remove_post_ex A res1 res1_removed ->  (* extract all the EX a, .. from res1 post *)
+    forall a:A, merge_loop_one inv1 (res1_removed a) (res2 a) (inner_sum a) -> 
+    (* next_level: unify the (a:A) in res1's post and res2's bind *)
+    merge_loop_one inv1 res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
+
+| merge_l1_inv1 :forall (A:Type) res1 res2 inv1 inv1_removed res,
+  remove_assert_ex A inv1 inv1_removed ->
+  forall a:A, merge_loop_one (inv1_removed a) (res1 a) res2 (res a)->
+  merge_loop_one inv1 (To_Bind_Result A res1) res2 (Forall_Result A res)
+  
+
+| merge_forall_r1: forall (A:Type) inv1 res1 res2 res_sum,
+    (forall a, merge_loop_one inv1 (Basic_Result res1) (res2 a) (res_sum a)) -> 
+    merge_loop_one inv1 (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
+| merge_forall_l1: forall (A:Type) inv1 inv2 res1 res2 res_sum,
+    (forall a, merge_loop_one inv1 (res1 a) inv2 (res_sum a)) ->
+    merge_loop_one inv1 (Forall_Result A res1) res2 (Forall_Result A res_sum)
 | merge_l1_basic : forall s1 s2 inv,
-    merge_loop_one (Basic_Result s1) (Basic_Result s2) 
+    merge_loop_one inv (Basic_Result s1) (Basic_Result s2) 
     (Basic_Result {|
       pre:= [(nil,inv)] ;
       paths :=  ((partial_addpre_a (pre s1) inv) ++ 
@@ -355,36 +374,16 @@ Inductive merge_loop_one : split_result -> split_result -> split_result-> Prop :
 
 Search split_result.
 Inductive merge_loop_null : split_result -> split_result -> split_result-> Prop :=
-(*idea : s1 and s2 is a seq , and s2 s1 is a seq.*)
-| merge_l0_inv0_l :forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_null (res1) (res2 a) (res_sum a)) -> 
-    merge_loop_null (res1) (Forall_Result A res2) (Forall_Result A res_sum) 
-
-| merge_l0_inv0_r :forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_null (res2) (res1 a) (res_sum a)) -> 
-    merge_loop_null (res2) (Forall_Result A res1) (Forall_Result A res_sum) 
-
-| merge_l0_seq_l :
-  forall (A:Type) res1 res1_removed res2 inner_sum,
-    post_path_empty res1 -> 
-    remove_post_ex A res1 res1_removed ->  
-    forall a:A, merge_loop_one (res1_removed a) (res2 a) (inner_sum a) -> 
+| ex_given_merge_0: forall (A:Type) res1 res1_removed res2 inner_sum,
+    post_path_empty res1 -> (*premise: assert must follow given *)
+    remove_post_ex A res1 res1_removed ->  (* extract all the EX a, .. from res1 post *)
+    forall a:A, merge_loop_null (res1_removed a) (res2 a) (inner_sum a) -> 
+    (* next_level: unify the (a:A) in res1's post and res2's bind *)
     merge_loop_null res1 (To_Bind_Result A res2) (Forall_Result A inner_sum)
-| merge_l0_seq_r :
-  forall (A:Type) res1 res2_removed res2 inner_sum,
-    post_path_empty res2 -> 
-    remove_post_ex A res2 res2_removed ->  
-    forall a:A, merge_loop_one (res2_removed a) (res1 a) (inner_sum a) -> 
-    merge_loop_null res2 (To_Bind_Result A res1) (Forall_Result A inner_sum)
-
-| merge_l0_right: forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_one (Basic_Result res1) (res2 a) (res_sum a)) -> 
-    merge_loop_null (Basic_Result res1) (Forall_Result A res2) (Forall_Result A res_sum)
-| merge_l0_left: forall (A:Type) res1 res2 res_sum,
-    (forall a, merge_loop_one (res1 a) res2 (res_sum a)) ->
-    merge_loop_null (Forall_Result A res1) res2 (Forall_Result A res_sum)
 
 | merge_l0_basic : forall s1 s2,
+ ( (normal_atom s1 = nil) /\ (continue_atom s1 = nil )/\ (break_atom s1 = nil) /\ (return_atom s1 = nil) )\/
+ ((normal_atom s2 = nil )/\ (continue_atom s2 = nil) /\ (break_atom s2 = nil )/\ (return_atom s2 = nil)) ->
     merge_loop_null (Basic_Result s1) (Basic_Result s2)
     (Basic_Result {|
     pre :=((pre s1) ++ (partial_conv_lp (continue_atom s1) (pre s2)) ++ (partial_conv_lp (normal_atom s1) (pre s2)));
@@ -430,12 +429,12 @@ Inductive path_split: statement -> split_result -> Prop :=
   split_loop_two_given :forall (A:Type) inv1 inv2 s1 s2 res1 res2 res,
   path_split s1 res1->
   path_split s2 res2->
-  merge_loop_two res1 res2 res ->
+  merge_loop_two inv1 res1 inv2 res2 res ->
   path_split (Sloop (LIDouble inv1 inv2) s1 s2) res
 | split_loop_one_given :forall (A:Type) inv1 s1 s2 res1 res2 res,
   path_split s1 res1->
   path_split s2 res2->
-  merge_loop_one res1 res2 res->
+  merge_loop_one inv1 res1 res2 res->
   path_split (Sloop (LISingle inv1) s1 s2) res
 | split_loop_null_given :forall (A:Type) s1 s2 res1 res2 res,
   path_split s1 res1->
@@ -446,35 +445,6 @@ Inductive path_split: statement -> split_result -> Prop :=
 
 
 Inductive basic_split : statement -> basic_split_result->Prop :=
-|  (* c1 ;; c2*)
-  Split_seq : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
-                     c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-    basic_split (c1;;c2)
-      (Pack
-        (* pre = pre1 ++  n_a1 * pre2 *)
-        (pre1 ++ (partial_conv_lp n_atom1 pre2) )
-        (* paths  = path1 ++ path2 ++ (n_post1) * pre2*)
-        (paths1 ++ paths2 ++ (partial_conv_pp n_post1 pre2)  )
-        (* n_post = n_post2 ++ n_post1 * n_atom2 *)
-        (n_post2 ++ (partial_conv_pl n_post1 n_atom2))
-        (* c_post = c_post2 ++ (n_post1) * c_atom2 ++ c_post1*)
-        (c_post1 ++ c_post2 ++ (partial_conv_pl n_post1 c_atom2) )
-        (* r_post = r_post1 ++ r_post2 ++ n_post1 * r_atom2*)
-        (r_post1 ++ r_post2 ++ (partial_conv_pl n_post1 r_atom2))
-        (* b_post = b_post1 ++ b_post2 ++n_post1 * b_atom2 *)
-        (b_post1 ++ b_post2 ++ (partial_conv_pl n_post1 b_atom2) )
-        (* n_atom = n_atom1 * n_atom2*)
-        ((partial_conv_ll n_atom1 n_atom2) )
-        (* c_atom = n_atom1 * c_atom2 ++c_atom1 *)
-        ((partial_conv_ll n_atom1 c_atom2)++c_atom1 )
-        (* b_atom = n_atom1 * b_atom2 ++ b_atom1*)
-        ((partial_conv_ll n_atom1 b_atom2) ++ b_atom1)
-        (* r_atom = r_atom2 ++ n_atom1 * r_atom2*)
-        ( r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) )
-      )
-
 | (* if a then c1 else c2 endif *)
   Split_if : forall a c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
                      c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
@@ -525,12 +495,13 @@ Inductive basic_split : statement -> basic_split_result->Prop :=
 | Split_break : 
   basic_split Sbreak (Pack nil nil nil nil nil nil nil nil [nil] nil)
 (*Print option.*)
+(*
 | Split_return_Some : forall e,
   basic_split (Sreturn (Some e)) (Pack nil nil nil nil nil nil nil nil nil [[inl e]])    (* return value should not be here*)
 
 | Split_return_None : 
   basic_split (Sreturn (None)) (Pack nil nil nil nil nil nil nil nil nil [nil])
-
+*)
 | Split_Sskip : 
   basic_split Sskip (Pack nil nil nil nil nil nil [nil] nil nil nil)
 (* The C loops are derived forms. Here are the three forms in Clight from CompCert:
@@ -551,244 +522,12 @@ Definition Sfor (s1: statement) (e2: expr) (s3: statement) (s4: statement) :=
    thus if there is continue in incremental step , we will have to add an 'Assert False' in that list.
 *)
 (*and about return , void return is different from other returns. we need to both modify normal and return *)
-| Split_loop_single : forall inv c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
-                     c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  basic_split (Sloop (LISingle inv) c1 c2)
-  (Pack 
-    (* pre = inv*)
-      [(nil,inv)]     
-    (
-      (* paths = (inv,pre1) ++ 
-               (inv,nc_atom1,pre2) ++ 
-               (inv,nc_atom1,nc_atom2,inv) ++
-               (paths1) ++ 
-               (nc_post1,pre2) ++
-               (nc_post1,nc_atom2,inv)++
-               (paths2) ++ 
-               (nc_post2,inv)
-      *)
-      (partial_addpre_a pre1 inv) ++ 
-      (partial_addpre_a (partial_conv_lp n_atom1 pre2) inv) ++ (partial_addpre_a (partial_conv_lp c_atom1 pre2) inv) ++
-      (partial_addpre_a (partial_addpre_b (partial_conv_ll n_atom1 n_atom2) inv)inv) ++ (partial_addpre_a (partial_addpre_b (partial_conv_ll n_atom1 c_atom2) inv)inv) 
-        ++(partial_addpre_a (partial_addpre_b (partial_conv_ll c_atom1 n_atom2) inv)inv) ++(partial_addpre_a (partial_addpre_b (partial_conv_ll c_atom1 c_atom2) inv)inv) ++
-      paths1 ++
-      (partial_conv_pp n_post1 pre2) ++ (partial_conv_pp c_post1 pre2) ++
-      (partial_addpre_c (partial_conv_pl n_post1 n_atom2) inv) ++(partial_addpre_c (partial_conv_pl n_post1 c_atom2) inv) ++
-        (partial_addpre_c (partial_conv_pl c_post1 n_atom2) inv) ++(partial_addpre_c (partial_conv_pl c_post1 c_atom2) inv) ++
-      paths2 ++
-      (partial_addpre_c n_post2 inv) ++(partial_addpre_c c_post2 inv) 
-      (*  
-      | No break or return
-      |------------------------------------------------------
-      | Considering breaks : break is the exit point of the loop. Thus jump out
-      | 
-      | No elements.    
-      | 
-      |--------------------------------------------------------                                                                                                   
-      | Considering returns
-        Return is surely not followed by an assert, thus it will not be in the path part.
- *)
-   )
-    (* n_post : b_post1 ++ b_post2 ++ (inv,b_atom1) 
-             ++ (nc_post1,b_atom2) ++ (inv,nc_atom1,b_atom2) *)
-    (
-     b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv) ++ 
-    (partial_conv_pl n_post1 b_atom2) ++ ( partial_conv_pl c_post1 b_atom2) ++
-    (partial_addpre_b (partial_conv_ll n_atom1 b_atom2)inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 b_atom2)inv) 
-    )
-    (* c_post : nil*)
-    nil 
-    (* r_post : r_post1 ++ r_ post2 ++ (inv,r_atom1)
-             ++ (nc_post1,r_atom2) ++ (inv,nc_atom1,r_atom2)
-    *)
-    (
-     r_post1 ++ r_post2 ++ (partial_addpre_b r_atom1 inv) ++ 
-    (partial_conv_pl n_post1 r_atom2) ++ ( partial_conv_pl c_post1 r_atom2) ++
-    (partial_addpre_b (partial_conv_ll n_atom1 r_atom2)inv) ++ (partial_addpre_b (partial_conv_ll c_atom1 r_atom2)inv) 
-    )
-    (* b_post : *)
-    nil
-    (*n_atom : b_atom1 ++ (nc_atom1,b_atom2)*)
-    ( b_atom1 ++ (partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2))
-    (*c_atom : nil*)    
-    nil
-    (*r_atom : r_atom1 ++ (nc_atom1,r_atom2)*)
-     ( r_atom1 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2)) 
-    (*b_atom : nil*)    
-    nil)
-    
-| Split_loop_double : forall inv1 inv2 c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
-                     c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  basic_split (Sloop (LIDouble inv1 inv2) c1 c2)
-  (Pack 
-    (*pre*)
-    [(nil,inv1)]
-    (*paths = (inv1,pre1) ++
-              (inv1,nc_atom1,inv2) ++ 
-              (paths1) ++
-              (nc_post1,inv2) ++
-              (inv2,pre2) ++
-              (inv2,nc_atom1,inv1) ++ 
-              (paths2) ++ 
-              (nc_post2,inv2) 
-    *)
-    (
-      (partial_addpre_a pre1 inv1) ++ 
-      (partial_addpre_a (partial_addpre_b (partial_conv_ll n_atom1 n_atom2) inv2)inv1) ++ (partial_addpre_a (partial_addpre_b (partial_conv_ll n_atom1 c_atom2) inv2)inv1) ++
-        (partial_addpre_a (partial_addpre_b (partial_conv_ll c_atom1 n_atom2) inv2)inv1) ++(partial_addpre_a (partial_addpre_b (partial_conv_ll c_atom1 c_atom2) inv2)inv1) ++
-      paths1 ++
-      (partial_addpre_c n_post1 inv2) ++ (partial_addpre_c c_post1 inv2) ++ 
-      (partial_addpre_a pre2 inv2) ++
-      (partial_addpre_a (partial_addpre_b n_atom1 inv1)inv2) ++ (partial_addpre_a (partial_addpre_b c_atom1 inv1)inv2) ++
-        (partial_addpre_a (partial_addpre_b n_atom1 inv1)inv2) ++(partial_addpre_a (partial_addpre_b c_atom1 inv1)inv2) ++
-      paths2 ++
-      (partial_addpre_c n_post2 inv2) ++(partial_addpre_c c_post2 inv2) 
-    )
-    (* n_post : b_post1 ++ b_post2 ++ (inv1,b_atom1) ++ (inv2,b_atom2)   *)
-     (b_post1 ++ b_post2 ++ (partial_addpre_b b_atom1 inv1) ++ (partial_addpre_b b_atom2 inv2)) 
-    (*c_post : nil*)
-    nil 
-    (* r_post : r_post1 ++ r_ post2 ++ (inv1,r_atom1) ++ (inv2,r_atom2) *)
-    (r_post1 ++ r_post2 ++ (partial_addpre_b r_atom1 inv1) ++ (partial_addpre_b r_atom2 inv2) )
-    (* b_post : nil*)
-    nil
-    (*n_atom : b_atom1  *)
-    ( b_atom1 )
-    (*c_atom : nil *)
-    nil 
-    (*r_atom : r_atom1 *)
-    ( r_atom1 )
-    (*b_atom : nil *)
-    nil
-   (*WHAT IF CONTINUE JUMPS THE ASSERT AND MAKES IT ATOM?
-     Oh! That's an error.
-   *)
-  )
-| Split_loop_null : forall c1 pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1 
-                     c2 pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2,
-    basic_split c1 (Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1)->
-    basic_split c2 (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2)->
-  (n_atom1 = nil /\ c_atom1 = nil /\ b_atom1 = nil /\ r_atom1 = nil) \/(n_atom2 = nil /\ c_atom2 = nil /\ b_atom2 = nil /\ r_atom2 = nil) ->
-  basic_split (Sloop LINull c1 c2) 
-  (Pack 
-    (* pre = pre1 ++ (n_atom1 + c_atom1 ) * pre2 *)
-     (pre1 ++ (partial_conv_lp c_atom1 pre2) ++ (partial_conv_lp n_atom1 pre2))
-    (* path = paths1 ++ 
-              nc_post1 * pre2 ++ 
-              paths2 ++
-              n_post2 * pre1++
-              (c_post2 ,FALSE)
-              (nc_post1 * c_atom2,FALSE)
-    *)
-    ( paths1 ++ 
-      partial_conv_pp n_post1 pre2 ++ partial_conv_pp c_post1 pre2 ++
-      paths2 ++ 
-      partial_conv_pp n_post2 pre1 ++ partial_conv_pp c_post2 pre2 ++
-      partial_addpre_c c_post2 FALSE ++
-      (partial_addpre_c (partial_conv_pl n_post1 c_atom2) FALSE) ++ (partial_addpre_c (partial_conv_pl c_post1 c_atom2) FALSE) 
-    )
-    (* n_post = (nc_post1) * n_atom2 ++ n_post2  
-      ++ b_post1 ++b_post2 ++ (nc_post1,b_atom2) *)
-    ((partial_conv_pl n_post1 n_atom2 ++ partial_conv_pl c_post1 n_atom2 ++ n_post2) ++
-     ( b_post1 ++ b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2)))
-    (* c_post = nil *)
-    nil
-    
-    (* r_post = r_post1 ++ r_post2 ++ (nc_post1,r_atom2) *)
-    (r_post1 ++ r_post2 ++ (partial_conv_pl n_post1 r_atom2) ++ (partial_conv_pl c_post1 r_atom2) )
-
-    
-    (*
-      b_post :nil
-    *)
-    
-      nil nil nil nil nil
-
-    (*
-    (pre1 ++ (partial_conv_lp atom1 pre2) (* ++ (partial_conv_lp atom2 pre1) *) ) 
-    (paths1++ (partial_conv_pp post1 pre2) ++ paths2 ++ (partial_conv_pp post2 pre1)) ++
-    (post2 ++ (partial_conv_pl post1 atom2) (* ++ (partial_conv_pl post2 atom1) *) )
-     nil
-     *)
-  )
   
   | (*function call regarded as atomic action , the same as assign and set.*)
   Split_func : forall ident e el,
   basic_split (Scall (ident) e el)
   (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
   .
-
-
-(*
-
-
-
-Definition merge_parallel (x y :basic_split_result) : basic_split_result:=
-match x with
-|(Pack pre1 paths1 np1 cp1 bp1 rp1 na1 ca1 ba1 ra1) 
-  => match y with 
- (Pack pre2 paths2 np2 cp2 bp2 rp2 na2 ca2 ba2 ra2) 
-    =>(Pack (pre1++pre2) (paths1++paths2) (np1++np2) (cp1++cp2) (bp1++bp2) (rp1++rp2)
-       (na1++na2) (ca1++ca2) (ba1++ba2) (ra1++ra2))
-       end
-end.
-
-Definition merge_serial (x y :basic_split_result) : basic_split_result:=
-match x,y with
-|(Pack pre1 paths1 n_post1 c_post1 r_post1 b_post1 n_atom1 c_atom1 r_atom1 b_atom1),
- (Pack pre2 paths2 n_post2 c_post2 r_post2 b_post2 n_atom2 c_atom2 r_atom2 b_atom2) =>
-(Pack
-        (pre1 ++ (partial_conv_lp n_atom1 pre2) ++ (partial_conv_lp c_atom1 pre2))
-        (paths1 ++ paths2 ++ (partial_conv_pp n_post1 pre2) ++ (partial_conv_pp c_post1 pre2) )
-        (n_post2 ++ (partial_conv_pl n_post1 n_atom2) ++ (partial_conv_pl c_post1 n_atom2) ++ (partial_conv_pl b_post1 n_atom2))
-        (c_post2 ++ (partial_conv_pl n_post1 c_atom2) ++ (partial_conv_pl c_post1 c_atom2) ++ (partial_conv_pl b_post1 c_atom2))
-        (r_post2)
-        (b_post2 ++ (partial_conv_pl n_post1 b_atom2) ++ (partial_conv_pl c_post1 b_atom2) ++ (partial_conv_pl b_post1 b_atom2))
-        ((partial_conv_ll n_atom1 n_atom2) ++ (partial_conv_ll c_atom1 n_atom2) ++ (partial_conv_ll b_atom1 n_atom2))
-        ((partial_conv_ll n_atom1 c_atom2) ++ (partial_conv_ll c_atom1 c_atom2) ++ (partial_conv_ll b_atom1 c_atom2))
-        ((partial_conv_ll n_atom1 b_atom2) ++ (partial_conv_ll c_atom1 b_atom2) ++ (partial_conv_ll b_atom1 b_atom2))
-        (r_atom2 ++ (partial_conv_ll n_atom1 r_atom2) ++ (partial_conv_ll c_atom1 r_atom2) ++ (partial_conv_ll b_atom1 r_atom2))
-      )
-end.
-*)
-
-(** Here needs further polishment, to avoid errors about given in the second PRE part.
-Inductive Bind  (merge_method : basic_split_result -> basic_split_result -> basic_split_result)  :
-               split_result -> split_result -> split_result -> Prop :=
-  | Bind_Basic: forall s1 s2,
-      Bind merge_method (Basic_Result s1) (Basic_Result s2) (Basic_Result (merge_method s1 s2))
-  | Bind_Left: forall (A:Type) res1 res2 res_sum,
-      (forall a, Bind merge_method (res1 a) res2 (res_sum a)) ->
-      Bind merge_method (Binded_Result A res1) res2 (Binded_Result A res_sum)
-  | Bind_Right: forall (A:Type) res1 res2 res_sum,
-      (forall a, Bind merge_method res1 (res2 a) (res_sum a)) ->
-      Bind merge_method res1 (Binded_Result A res2) (Binded_Result A res_sum)
-.
-
-Parameter assert_parser : statement ->  
-Inductive path_split: statement -> split_result->Prop := 
-
- **)
-
-
-    
-
-(*
-| Parallel: forall c1 c2 res1 res2 res,
-    path_split c1 res1 ->
-    path_split c2 res2 ->
-    Bind merge_parallel res1 res2 res ->
-    path_split (c1;;c2) res
-| Serial: forall c1 c2 res1 res2 res,
-    path_split c1 res1 ->
-    path_split c2 res2 ->
-    Bind merge_serial res1 res2 res ->
-    path_split (c1;;c2) res
-*)
 
 Print sigT.
     
