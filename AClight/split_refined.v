@@ -1634,9 +1634,8 @@ Proof.
 Qed. 
 
 Lemma path_conn_to_semax_reverse:forall p2 a2 (post:partial_path_statement) ,
-path_to_semax (bind_post_conn_pre post p2 a2)
-      -> add_post_to_semax (EX Q: assert, Q && !!
-                             (add_pre_to_semax Q) (Basic_partial a2,p2)) (post).
+path_to_semax (bind_post_conn_pre post p2 a2)-> 
+add_post_to_semax (EX Q: assert, Q && !! (add_pre_to_semax Q) (Basic_partial a2,p2)) (post).
 Proof.
   intros.
   destruct post as [a1 p1].
@@ -1644,7 +1643,7 @@ Proof.
   - constructor. inv H. apply path_to_statement_app in H1. apply semax_seq_inv in H1. destruct H1 as [Q [H1 H2]].
     unfold overridePost in H1. eapply semax_conseq;[..|apply H1]. 
     + apply derives_full_refl.
-    + unfold RA_normal. Search bupd later derives. apply aux1_reduceR. Search derives bupd. eapply derives_trans.
+    + unfold RA_normal. (* Search bupd later derives. *) apply aux1_reduceR. (* Search derives bupd. *) eapply derives_trans.
     2:{apply bupd_intro. }
     1:{ Exists Q. apply andp_right. solve_andp. apply prop_right. constructor. apply H2. }
     + unfold RA_break. apply derives_full_refl.
@@ -1652,8 +1651,7 @@ Proof.
     + intros. unfold RA_return. apply derives_full_refl.
   - constructor. intros. apply H0. simpl in H. inv H. apply inj_pair2 in H2. subst.
     simpl. apply H5.
-    Qed. 
-
+    Qed.
 
 Lemma posts_conn_basic_pre_cons: forall post posts a2 p2,
   posts_conn_pre (post::posts) (Basic_partial a2, p2) =
@@ -1662,7 +1660,6 @@ Proof.
   intros. destruct post as [a1 p1]. destruct a1; simpl; try auto.
   destruct p1;auto.
 Qed.
-
 
 Lemma path_conn_to_semax_reverse_group4: forall post posts pres,
   pres <> []-> In (post) posts ->
@@ -1732,6 +1729,29 @@ Proof.
   - exfalso. eapply all_basic_sem. apply H0. apply H.
 Qed. 
 
+Lemma path_conn_to_semax_reverse_group': forall x pres posts atoms,
+    In x posts->
+    ((all_basic pres = true) \/
+    ( (all_basic(posts) = true)/\
+      (all_empty_path posts = true)/\
+      (all_empty_atom atoms = true)
+    )) ->
+    Forall path_to_semax (posts_conn_pres posts pres) ->
+    pres <>nil->
+    add_post_to_semax (EX Q: assert, Q && !!
+                             Forall (add_pre_to_semax Q) pres) x.
+Proof.
+  intros. destruct H0. destruct x as [a1 p1]. (* destruct a1. *)
+  2:{ eapply path_conn_to_semax_reverse_group;auto.
+      - apply H.
+      - destruct H0;auto. split;auto.
+        intros. apply H3.
+      - auto. }
+  1:{ eapply path_conn_to_semax_reverse_group4;auto.
+      apply H. auto.
+      }  
+  Qed.
+  
 Lemma add_exp_to_atoms_nil: forall a l,  add_exp_to_atoms a l = [] -> l = [].
 Proof.
   intros.
@@ -1764,17 +1784,17 @@ Proof.
     intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H2. apply H1;auto.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
-    apply app_eq_nil in H7. destruct H7 as [? ?].
-    apply app_eq_nil in H3. destruct H3 as [? ?].
-    apply app_eq_nil in H5. destruct H5 as [? ?].
     apply app_eq_nil in H6. destruct H6 as [? ?].
+    apply app_eq_nil in H2. destruct H2 as [? ?].
+    apply app_eq_nil in H4. destruct H4 as [? ?].
+    apply app_eq_nil in H5. destruct H5 as [? ?].
     destruct (classic (normal_atom res1 = [])).
     { apply IHpath_split1;auto. }
-    apply atoms_conn_pres_nil in H9. destruct H9;auto.
-    apply atoms_conn_atoms_nil in H4. destruct H4;auto.
+    apply atoms_conn_pres_nil in H8. destruct H8;auto.
+    apply atoms_conn_atoms_nil in H3. destruct H3;auto.
+    apply atoms_conn_atoms_nil in H9. destruct H9;auto.
     apply atoms_conn_atoms_nil in H10. destruct H10;auto.
-    apply atoms_conn_atoms_nil in H11. destruct H11;auto.
-    apply atoms_conn_returns_nil in H8. destruct H8;auto.
+    apply atoms_conn_returns_nil in H7. destruct H7;auto.
     apply IHpath_split2;auto.
   + intros C.
     inv H;simpl in *;destruct C as [? [? [? [? ?]]]].
@@ -4073,12 +4093,12 @@ Proof.
         apply in_flat_map.
         exists x;auto. }
       specialize (E4 E4');clear E4'.
-      pose proof path_conn_to_semax_reverse_group
-        x _ _ H15 H1 as E5.
+      pose proof path_conn_to_semax_reverse_group'
+        x _ _ _ H14 H1 as E5.
       assert (Forall path_to_semax
                      (posts_conn_pres (normal_post res1) (pre res2))) as E5'.
-      { apply Forall_forall. intros. eapply Forall_forall in H4.
-        apply H4. apply in_or_app. right. apply in_or_app. right;auto. }
+      { apply Forall_forall. intros. eapply Forall_forall in H3.
+        apply H3. apply in_or_app. right. apply in_or_app. right;auto. }
       specialize (E5 E5');clear E5'.
       pose proof split_not_empty _ _ H0 as E.
       eapply soundness_seq_inv_aux1;auto.
@@ -4089,11 +4109,11 @@ Proof.
       2:{ apply andp_left2. apply derives_refl. }
       apply prop_right. repeat split;auto. }
   + destruct R. simpl in *.
-    apply Forall_app in H8. apply H8.
+    apply Forall_app in H7. apply H7.
   + destruct R. simpl in *.
-     apply Forall_app in H9. apply H9.
+     apply Forall_app in H8. apply H8.
   + destruct R. simpl in *.
-    apply Forall_app in H10. apply H10.
+    apply Forall_app in H9. apply H9.
   + apply Forall_forall.
     intros.
     eapply atom_to_semax_derives  with (Q1:= EX Q: assert, Q && !!
@@ -4105,22 +4125,27 @@ Proof.
                                        )).
     1:{ apply derives_refl. }
     2:{
+      destruct H1 .
+      - (* all_basic (pre res2) = true *) admit.
+      - destruct H1.
+      assert(Et: all_basic (pre res2) = false -> all_empty_atom (normal_atom res1) = true).
+      { intros. apply H15. }
       pose proof atom_conn_pres_to_semax_reverse_group3 P
-           x _ _ H15 H2 as E5.
+           x _ _ H14 Et as E5.
       assert (E5': Forall (add_pre_to_semax P)
                           (atoms_conn_pres (normal_atom res1) (pre res2))).
-      { apply Forall_forall. intros. eapply Forall_forall in H3.
-        apply H3. apply in_or_app. right. auto. }
+      { apply Forall_forall. intros. eapply Forall_forall in H2.
+        apply H2. apply in_or_app. right. auto. }
       specialize (E5 E5');clear E5'.
-      pose proof atom_conn_atom_to_semax_reverse_group _ _ _ P _ H11 H15 as E4.
+      pose proof atom_conn_atom_to_semax_reverse_group _ _ _ P _ H10 H14 as E4.
+      apply Forall_app in H11.
+      pose proof (atom_conn_atom_to_semax_reverse_group
+                    _ _ _ P _ (proj2 H11) H14) as E3.
       apply Forall_app in H12.
       pose proof (atom_conn_atom_to_semax_reverse_group
-                    _ _ _ P _ (proj2 H12) H15) as E3.
+                    _ _ _ P _ (proj2 H12) H14) as E2.
       apply Forall_app in H13.
-      pose proof (atom_conn_atom_to_semax_reverse_group
-                    _ _ _ P _ (proj2 H13) H15) as E2.
-      apply Forall_app in H14.
-      pose proof (add_return_to_atom_semax_group _ _ _ P _ (proj2 H14) H15) as E1.
+      pose proof (add_return_to_atom_semax_group _ _ _ P _ (proj2 H13) H14) as E1.
       pose proof split_not_empty _ _ H0 as E.
       eapply soundness_seq_inv_aux2;auto.
       intros C. apply E. tauto.
@@ -4130,56 +4155,40 @@ Proof.
       2:{ apply andp_left2. apply derives_refl. }
       apply prop_right. repeat split;auto. }
   + destruct R. simpl in *.
+    apply Forall_app in H11. apply H11.
+  + destruct R. simpl in *.
     apply Forall_app in H12. apply H12.
   + destruct R. simpl in *.
     apply Forall_app in H13. apply H13.
-  + destruct R. simpl in *.
-    apply Forall_app in H14. apply H14.
 } (*end of part 1*)
 
 {
-  apply IHpath_split2;[|apply H7].
+  apply IHpath_split2;[|apply H6].
   repeat split;auto;apply Forall_forall;intros.
   - eapply add_pre_to_semax_derives.
     2: { apply add_pre_to_semax_sem. }
     1: { Intros Q. Exists Q.
          apply andp_right.
          + apply prop_right.
-           eapply Forall_forall in H10. apply H10. auto.
+           eapply Forall_forall in H9. apply H9. auto.
          + apply derives_refl.
     }
   -  destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
-     simpl in *. eapply Forall_forall in H6.
-     apply H6. apply in_or_app. right. apply in_or_app. left. auto.
+     simpl in *. eapply Forall_forall in H5.
+     apply H5. apply in_or_app. right. apply in_or_app. left. auto.
+  - destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
+    simpl in *. eapply Forall_forall in H7.
+    apply H7. apply in_or_app. left;auto.
   - destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
     simpl in *. eapply Forall_forall in H8.
-    apply H8. apply in_or_app. left;auto.
+    apply H8. apply in_or_app. right. apply in_or_app. left;auto.
   - destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
     simpl in *. eapply Forall_forall in H9.
     apply H9. apply in_or_app. right. apply in_or_app. left;auto.
   - destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
     simpl in *. eapply Forall_forall in H10.
     apply H10. apply in_or_app. right. apply in_or_app. left;auto.
-  - destruct Hvalid as [? [? [? [? [? [? [? [? [? ?]]]]]]]]].
-    simpl in *. eapply Forall_forall in H11.
-    apply H11. apply in_or_app. right. apply in_or_app. left;auto.
   - eapply atom_to_semax_derives.
-    3: { apply atom_to_semax_sem. }
-    { Intros Q. Exists Q. apply andp_right.
-      - apply prop_right. eapply Forall_forall in H9.
-        apply H9. auto.
-      - apply derives_refl.
-    }
-    { apply ENTAIL_refl. }
-  -  eapply atom_to_semax_derives.
-    3: { apply atom_to_semax_sem. }
-    { Intros Q. Exists Q. apply andp_right.
-      - apply prop_right. eapply Forall_forall in H6.
-        apply H6. auto.
-      - apply derives_refl.
-    }
-    { apply ENTAIL_refl. }
-  -  eapply atom_to_semax_derives.
     3: { apply atom_to_semax_sem. }
     { Intros Q. Exists Q. apply andp_right.
       - apply prop_right. eapply Forall_forall in H8.
@@ -4187,11 +4196,27 @@ Proof.
       - apply derives_refl.
     }
     { apply ENTAIL_refl. }
+  -  eapply atom_to_semax_derives.
+    3: { apply atom_to_semax_sem. }
+    { Intros Q. Exists Q. apply andp_right.
+      - apply prop_right. eapply Forall_forall in H5.
+        apply H5. auto.
+      - apply derives_refl.
+    }
+    { apply ENTAIL_refl. }
+  -  eapply atom_to_semax_derives.
+    3: { apply atom_to_semax_sem. }
+    { Intros Q. Exists Q. apply andp_right.
+      - apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
+      - apply derives_refl.
+    }
+    { apply ENTAIL_refl. }
   - eapply atom_return_to_semax_derives.
     3: { apply atom_return_to_semax_sem. }
     { Intros Q. Exists Q. apply andp_right.
-      - apply prop_right. eapply Forall_forall in H4.
-        apply H4. auto.
+      - apply prop_right. eapply Forall_forall in H3.
+        apply H3. auto.
       - apply derives_refl.
     }
     { intros. apply ENTAIL_refl. }
