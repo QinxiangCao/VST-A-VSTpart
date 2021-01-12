@@ -1837,8 +1837,7 @@ Proof.
   intros.
   induction atoms1.
   - rewrite app_nil_l. simpl. reflexivity.
-  - rewrite <- app_comm_cons.
-    simpl.
+  - rewrite <- app_comm_cons. simpl.
     rewrite IHatoms1.
     rewrite app_assoc.
     reflexivity.
@@ -1879,8 +1878,6 @@ Proof.
         - right. apply IHatoms. apply in_or_app. auto.
       }
 Qed.
-
-   
 
 
 Lemma atom_conn_pres_to_semax_reverse_group1: forall  atoms pres P,
@@ -2069,12 +2066,11 @@ Proof. intros.
 Qed.
 
 Lemma atom_conn_pres_to_semax_reverse_group3: forall P p atoms pres,
-    In p atoms ->
+    In p atoms -> 
     (all_basic pres = false -> all_empty_atom atoms = true) ->
-     Forall (add_pre_to_semax P)
-            (atoms_conn_pres atoms pres) ->
-      pres <> nil 
-      -> atom_to_semax P (EX Q: assert, Q && !!
+    Forall (add_pre_to_semax P) (atoms_conn_pres atoms pres) ->
+    pres <> nil -> 
+      atom_to_semax P (EX Q: assert, Q && !!
                              Forall (add_pre_to_semax Q) pres) p.
 Proof.
   intros.
@@ -2084,6 +2080,24 @@ Proof.
     eapply atom_conn_pres_to_semax_reverse_group1;auto. apply H. auto.
 Qed.
 
+Lemma atom_conn_pres_to_semax_reverse_group3': forall P p atoms pres,
+    In p atoms ->
+    ((all_basic pres = true)   \/ (all_empty_atom atoms = true)) ->
+    Forall (add_pre_to_semax P) (atoms_conn_pres atoms pres) ->
+      pres <> nil -> 
+    atom_to_semax P (EX Q: assert, Q && !! Forall (add_pre_to_semax Q) pres) p.
+Proof.
+  intros. destruct H0.
+  - (*all_basic pres = true*)
+    eapply atom_conn_pres_to_semax_reverse_group2';auto. 
+    apply H. apply H1. 
+  - (*all_empty_atom atoms = true *)
+    eapply atom_conn_pres_to_semax_reverse_group3;auto.
+    apply H. intros;auto. apply H1.
+ Qed. 
+ 
+(* Lemma atom_conn_pres_to_semax_reverse_group4: forall P p atoms pres,
+ *)
 
 Lemma add_return_to_atom_semax_reverse: forall atom ret_atom ret_val P R,
   atom_return_to_semax P R ( atom ++ ret_atom, ret_val) ->
@@ -4126,8 +4140,31 @@ Proof.
     1:{ apply derives_refl. }
     2:{
       destruct H1 .
-      - (* all_basic (pre res2) = true *) admit.
-      - destruct H1.
+      - (* all_basic (pre res2) = true *)
+      assert((all_basic (pre res2) = true)   \/ (all_empty_atom (normal_atom res1) = true)).
+      { left. auto. }
+      pose proof atom_conn_pres_to_semax_reverse_group4 P
+           x _ _ H14 H15 as E5. 
+      assert (E5': Forall (add_pre_to_semax P)
+                          (atoms_conn_pres (normal_atom res1) (pre res2))).
+      { apply Forall_forall. intros. eapply Forall_forall in H2.
+      apply H2. apply in_or_app. right. auto. }
+        specialize (E5 E5');clear E5'.
+      pose proof atom_conn_atom_to_semax_reverse_group _ _ _ P _ H10 H14 as E4.
+      apply Forall_app in H11.
+      pose proof (atom_conn_atom_to_semax_reverse_group
+                    _ _ _ P _ (proj2 H11) H14) as E3.
+      apply Forall_app in H12.
+      pose proof (atom_conn_atom_to_semax_reverse_group
+                    _ _ _ P _ (proj2 H12) H14) as E2.
+      apply Forall_app in H13.
+      pose proof (add_return_to_atom_semax_group _ _ _ P _ (proj2 H13) H14) as E1.
+      pose proof split_not_empty _ _ H0 as E.
+      eapply soundness_seq_inv_aux2;auto.
+      intros C. apply E. tauto.
+
+      - (* all_empty_path (normal_post res1) = true /\ all_empty_atom (normal_atom res1) = true *)
+      destruct H1.
       assert(Et: all_basic (pre res2) = false -> all_empty_atom (normal_atom res1) = true).
       { intros. apply H15. }
       pose proof atom_conn_pres_to_semax_reverse_group3 P
