@@ -196,6 +196,7 @@ Inductive path_split: statement -> split_result -> Prop :=
     nocontinue c1' = true \/ c2 = AClight.Sskip ->
     path_split (Sloop (LIDouble inv inv) (c1;;c2) AClight.Sskip) res ->
     path_split (Sloop (LISingle inv) c1 c2) res
+    
 | Split_loop_single: forall inv c1 c2 res1 res2 
   (Econt_atom: continue_atom res2 = [])
   (Econt_post: continue_post res2 = [])
@@ -253,4 +254,35 @@ Inductive path_split: statement -> split_result -> Prop :=
       continue_atom := nil;
       return_atom := nil
           (* no continue condition in c2 *)
-    |}.
+    |}
+
+ | Split_loop_null: forall stm1 stm2 res1 res2
+  (Econt_atom: continue_atom res2 = [])
+  (Econt_post: continue_post res2 = [])
+  (Ebasic_pre1: all_basic (pre res1) = true)
+  (Ebasic_pre2: all_basic (pre res2) = true),
+  (pre res1 <> [] \/ pre res2 <> [])->
+  ((normal_atom res1 = []/\continue_atom res1 = []) \/ normal_atom res2 = [])->
+    path_split stm1 res1 ->
+    path_split stm2 res2 ->
+    path_split (Sloop (LINull) stm1 stm2)
+      ({|
+        pre := pre res1 ++ atoms_conn_pres (normal_atom res1) (pre res2) ++ atoms_conn_pres (continue_atom res1) (pre res2);
+        paths := (* path1 ++ path2 ++ nc_post1 * pre2 ++ nc_post1 *n_atom2 * pre1 ++ n_post2 * pre1 ++ n_post2 * nc_atom1 * pre2 *) 
+                paths res1 ++ paths res2 ++ posts_conn_pres (normal_post res1) (pre res2) ++ posts_conn_pres (continue_post res1) (pre res2)
+                ++ posts_conn_pres (normal_post res2) (pre res1) 
+                ++ (posts_conn_pres (posts_conn_atoms (normal_post res1) (normal_atom res2)) (pre res1))
+                ++ (posts_conn_pres (posts_conn_atoms (continue_post res1) (normal_atom res2)) (pre res1))
+                ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (normal_atom res1)) (pre res2))
+                ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (continue_atom res1)) (pre res2))
+                ;
+        normal_post := (break_post res1) ++ (posts_conn_atoms (normal_post res1) (break_atom res2)) ++(posts_conn_atoms (normal_post res1) (break_atom res2));
+        continue_post := nil;
+        break_post := nil;
+        return_post := (return_post res1) ++ (return_post res2) ;
+        normal_atom := nil;
+        continue_atom := nil;
+        break_atom := break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2) ++ atoms_conn_atoms (continue_atom res1) (break_atom res2);
+        return_atom := return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2) ++ atoms_conn_returns (continue_atom res1) (return_atom res2);
+        |}) 
+.

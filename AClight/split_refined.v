@@ -1,3 +1,7 @@
+(* Attention : the work here is before null-invariant. 
+   Later work has been merged into the split directory.
+*)
+
 Require Import AClight.AClight.
 Require Export VST.veric.base.
 Require Export VST.veric.SeparationLogic.

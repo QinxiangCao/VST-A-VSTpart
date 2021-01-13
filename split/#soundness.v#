@@ -64,7 +64,7 @@ Proof.
     destruct a0. destruct p0;auto.
     inv H.
 Qed.
-Locate path_split.
+
 Lemma split_not_empty: forall stm res, path_split stm res ->
   ~ (pre res = [] /\ normal_atom res = []
      /\ break_atom res = [] /\ continue_atom res = []
