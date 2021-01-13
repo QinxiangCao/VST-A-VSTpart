@@ -531,15 +531,14 @@ Inductive path_split: statement -> split_result -> Prop :=
       nocontinue c1' = true \/ c2 = AClight.Sskip ->
       path_split (Sloop (LIDouble inv inv) (c1;;c2) AClight.Sskip) res ->
       path_split (Sloop (LISingle inv) c1 c2) res
-  
-| Split_loop_null: forall stm1 stm2 res1 res2
+  .
+(* | Split_loop_null: forall stm1 stm2 res1 res2
   (Econt_atom: continue_atom res2 = [])
   (Econt_post: continue_post res2 = [])
   (Ebasic_pre1: all_basic (pre res1) = true)
   (Ebasic_pre2: all_basic (pre res2) = true),
   (pre res1 <> [] \/ pre res2 <> [])->
-  (normal_atom res1 = [] \/ normal_atom res2 = [])->
-  
+  (normal_atom res1 = []/\continue_atom res1 = []) \/ normal_atom res2 = [])->
     path_split stm1 res1 ->
     path_split stm2 res2 ->
     path_split (Sloop (LINull) stm1 stm2)
@@ -563,9 +562,7 @@ Inductive path_split: statement -> split_result -> Prop :=
                       ;
         continue_atom := continue_atom res1;
         |}) 
-      
-      
-      .
+      . *)
 
 
 (* | Split_loop_single: forall inv c1 c2 res1 res2 
@@ -4094,6 +4091,7 @@ Proof.
   + apply Forall_app in H3. apply H3.
   + apply Forall_forall.
     intros.
+    Print atom_to_semax.
     eapply add_post_to_semax_derives  with (Q:= EX Q: assert, Q && !!
              (Forall (atom_to_semax Q (RA_normal R)) (normal_atom res2) /\
               Forall (atom_to_semax Q (RA_break R)) (break_atom res2) /\
