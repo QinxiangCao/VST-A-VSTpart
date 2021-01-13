@@ -531,7 +531,8 @@ Inductive path_split: statement -> split_result -> Prop :=
       nocontinue c1' = true \/ c2 = AClight.Sskip ->
       path_split (Sloop (LIDouble inv inv) (c1;;c2) AClight.Sskip) res ->
       path_split (Sloop (LISingle inv) c1 c2) res
-  |  Split_loop_null: forall stm1 stm2 res1 res2
+  
+| Split_loop_null: forall stm1 stm2 res1 res2
   (Econt_atom: continue_atom res2 = [])
   (Econt_post: continue_post res2 = [])
   (Ebasic_pre1: all_basic (pre res1) = true)
