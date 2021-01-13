@@ -64,7 +64,7 @@ Proof.
     destruct a0. destruct p0;auto.
     inv H.
 Qed.
-Locate path_split.
+
 Lemma split_not_empty: forall stm res, path_split stm res ->
   ~ (pre res = [] /\ normal_atom res = []
      /\ break_atom res = [] /\ continue_atom res = []
@@ -117,6 +117,20 @@ Proof.
   + auto.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H1.
+  + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
+    clear H4 H6. 
+    destruct (pre res1). 
+    2: { inv H3. }
+    1: { inv H;auto.  inv H3.  destruct H0 as [E1 | E2].
+     ++ destruct E1. destruct IHpath_split1. repeat split;auto.
+     apply app_eq_nil in H5. destruct H5;auto.
+     apply app_eq_nil in H7. destruct H7;auto.
+     ++    apply app_eq_nil in H6. destruct H6.
+        apply atoms_conn_pres_nil in H. destruct H;auto.
+        apply atoms_conn_pres_nil in H0. destruct H0;auto.
+     apply app_eq_nil in H5. destruct H5;auto.
+     apply app_eq_nil in H7. destruct H7;auto. 
+     destruct IHpath_split1. repeat split;auto. }
 Qed.
 
 (* -------------------------------------------------
@@ -2833,7 +2847,6 @@ Proof.
   + apply Forall_app in H3. apply H3.
   + apply Forall_forall.
     intros.
-    Check atom_to_semax.
     eapply add_post_to_semax_derives  with (Q:= EX Q: assert, Q && !!
              (Forall (atom_to_semax _ Q (RA_normal R)) (normal_atom res2) /\
               Forall (atom_to_semax _ Q (RA_break R)) (break_atom res2) /\
@@ -3378,7 +3391,8 @@ Proof.
     [apply derives_full_refl|..];[apply derives_full_refl|..];
     try (intros; apply andp_left2; apply andp_left2; apply FF_left).
   }
-+ simpl. rewrite !app_nil_r. intros.
++ (* one loop invariant.*)
+  simpl. rewrite !app_nil_r. intros. 
   hnf in H1;simpl in H1. destruct H1 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]].
   inv S1. clear H5. simpl in H4. inv H4. simpl in H3.
   apply semax_skip_inv in H3. unfold RA_normal in H3.
@@ -3457,8 +3471,8 @@ Proof.
       1: { Intros Q. Exists Q. apply andp_right;[|apply derives_refl].
           apply prop_right. eapply Forall_forall in H5;[|apply H1]. auto. }
   }
-
-
-Qed.
+  + (* loop with null lopp invariant *)
+  { 
+Admitted.
 
 End Soundness.
