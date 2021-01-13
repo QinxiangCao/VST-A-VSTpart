@@ -18,8 +18,6 @@ Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 
 Axiom classic: forall P,  P \/ ~ P.
 
-
-
 Inductive atom_statement : Type :=
 | Sskip : atom_statement                   (**r do nothing *)
 | Sassign : expr -> expr -> atom_statement (**r assignment [lvalue = rvalue] *)
@@ -74,13 +72,6 @@ Record split_result:Type := Pack{
   break_atom   : atom_statements;
   return_atom  : return_atom_statements;
 }.
-
-(**
------------------------------------------------------------------------------
-  Combine two single unit as a new one , four situations 
------------------------------------------------------------------------------
-**)
-
 
 Definition FALSE := (PROP (False) LOCAL () SEP ()).
 
@@ -424,6 +415,8 @@ Definition pack_assert_into_post Q (post:partial_path_statement) :=
 Definition pack_assert_into_posts Q posts :=
   map (pack_assert_into_post Q) posts.
 
+Check semax_loop.
+Print loop1_ret_assert.
 
 Inductive path_split: statement -> split_result -> Prop :=
 | (* Given A, c(A) *)
@@ -441,8 +434,7 @@ Inductive path_split: statement -> split_result -> Prop :=
       (all_basic(normal_post res1) = true)/\
       (all_empty_path (normal_post res1)=true)/\
       (all_empty_atom (normal_atom res1)=true)
-    ))
-    ->
+    ))->
     path_split (stm1;;stm2)
       ({|
         pre := pre res1 ++ atoms_conn_pres (normal_atom res1) (pre res2);
@@ -529,8 +521,39 @@ Inductive path_split: statement -> split_result -> Prop :=
       nocontinue c2' = true ->
       nocontinue c1' = true \/ c2 = AClight.Sskip ->
       path_split (Sloop (LIDouble inv inv) (c1;;c2) AClight.Sskip) res ->
-      path_split (Sloop (LISingle inv) c1 c2) res.
-
+      path_split (Sloop (LISingle inv) c1 c2) res
+(*|  Split_loop_null: forall stm1 stm2 res1 res2
+  (Econt_atom: continue_atom res2 = [])
+  (Econt_post: continue_post res2 = [])
+  (Ebasic_pre1: all_basic (pre res1) = true)
+  (Ebasic_pre2: all_basic (pre res2) = true),
+  (pre res1 <> [] \/ pre res2 <> [])->
+  (normal_atom res1 = [] \/ normal_atom res2 = [])->
+  
+    path_split stm1 res1 ->
+    path_split stm2 res2 ->
+    path_split (Sloop (LINull) stm1 stm2)
+      ({|
+        pre := pre res1 ++ atoms_conn_pres (normal_atom res1) (pre res2) ++ atoms_conn_pres (continue_atom res1) (pre res2);
+        paths := paths res1 ++ paths res2 ++ posts_conn_pres (normal_post res1) (pre res2) ++ posts_conn_pres (continue_post res1) (pre res2) ++
+                posts_conn_pres (normal_post res2) (pre res1) ++ (posts_conn_pres (posts_conn_atoms (normal_post res1) (normal_atom res2)) (pre res1))
+                ++ (posts_conn_pres (posts_conn_atoms (continue_post res1) (normal_atom res2)) (pre res1))
+                ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (normal_atom res1)) (pre res2))
+                ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (continue_atom res1)) (pre res2))
+                ;
+        normal_post := (break_post res1) ++ (break_post res2) ++ (posts_conn_atoms (normal_post res1) );
+        continue_post := nil;
+        break_post := nil;
+        return_post := (return_post res1) ++ (return_post res2) ;
+        normal_atom := nil;
+        return_atom := return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2)
+                      ++ atoms_conn_returns (continue_atom res1) (return_atom res2);
+        break_atom := break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2)
+                      ++ atoms_conn_atoms (continue_atom res1) (break_atom res2)
+                      ;
+        continue_atom := continue_atom res1;
+        |}) *)
+      .
 
 (* | Split_loop_single: forall inv c1 c2 res1 res2 
   (Econt_atom: continue_atom res2 = [])
@@ -1837,8 +1860,7 @@ Proof.
   intros.
   induction atoms1.
   - rewrite app_nil_l. simpl. reflexivity.
-  - rewrite <- app_comm_cons.
-    simpl.
+  - rewrite <- app_comm_cons. simpl.
     rewrite IHatoms1.
     rewrite app_assoc.
     reflexivity.
@@ -1879,8 +1901,6 @@ Proof.
         - right. apply IHatoms. apply in_or_app. auto.
       }
 Qed.
-
-   
 
 
 Lemma atom_conn_pres_to_semax_reverse_group1: forall  atoms pres P,
@@ -2069,12 +2089,11 @@ Proof. intros.
 Qed.
 
 Lemma atom_conn_pres_to_semax_reverse_group3: forall P p atoms pres,
-    In p atoms ->
+    In p atoms -> 
     (all_basic pres = false -> all_empty_atom atoms = true) ->
-     Forall (add_pre_to_semax P)
-            (atoms_conn_pres atoms pres) ->
-      pres <> nil 
-      -> atom_to_semax P (EX Q: assert, Q && !!
+    Forall (add_pre_to_semax P) (atoms_conn_pres atoms pres) ->
+    pres <> nil -> 
+      atom_to_semax P (EX Q: assert, Q && !!
                              Forall (add_pre_to_semax Q) pres) p.
 Proof.
   intros.
@@ -2099,7 +2118,7 @@ Proof.
     eapply atom_conn_pres_to_semax_reverse_group3;auto.
     apply H. intros;auto. apply H1.
  Qed. 
-
+ 
 Lemma add_return_to_atom_semax_reverse: forall atom ret_atom ret_val P R,
   atom_return_to_semax P R ( atom ++ ret_atom, ret_val) ->
   atom_to_semax P (EX Q, Q && !!
@@ -4139,7 +4158,7 @@ Proof.
       Forall (add_pre_to_semax Q) (pre res2)
                                        )).
     1:{ apply derives_refl. }
-    2:{
+    2:{ 
       assert(Et: (all_basic (pre res2) = true)   \/ (all_empty_atom (normal_atom res1) = true)).
       { destruct H1 . 
         - left. auto.
@@ -4163,7 +4182,7 @@ Proof.
       pose proof split_not_empty _ _ H0 as E.
       eapply soundness_seq_inv_aux2;auto.
       intros C. apply E. tauto.
-    }
+     }
     { Intros Q.  destruct R. simpl in *. intros env.
       Exists Q. apply andp_right.
       2:{ apply andp_left2. apply derives_refl. }

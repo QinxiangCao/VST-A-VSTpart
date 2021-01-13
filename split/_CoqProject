@@ -1,0 +1,7 @@
+-Q /Users/ltzhou/GIT/coq/VST/msl VST.msl
+-Q /Users/ltzhou/GIT/coq/VST/sepcomp VST.sepcomp  
+-Q /Users/ltzhou/GIT/coq/VST/veric VST.veric  
+-Q /Users/ltzhou/GIT/coq/VST/floyd VST.floyd 
+-R /Users/ltzhou/GIT/coq/VST/compcert compcert 
+-Q ../split split 
+-Q ../AClight AClight  

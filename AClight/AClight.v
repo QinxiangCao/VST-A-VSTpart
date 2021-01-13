@@ -34,7 +34,7 @@ Require Import Clight.
 Require Export VST.floyd.proofauto.
 
 Definition assert := (environ -> mpred).
-
+Locate mpred.
 Inductive loop_invariant :=
   | LINull: loop_invariant
   | LISingle : assert -> loop_invariant
@@ -48,6 +48,7 @@ Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
   | Sgiven: forall A: Type, (A -> statement) -> statement
+  | Slocal: assert -> nat -> statement -> assert -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
@@ -96,7 +97,8 @@ Definition var_names (vars: list(ident * type)) : list ident :=
 (** Functions can either be defined ([Internal]) or declared as
   external functions ([External]). *)
 
-Definition fundef := Ctypes.fundef function.
+
+  Definition fundef := Ctypes.fundef function.
 
 (** The type of a function definition. *)
 

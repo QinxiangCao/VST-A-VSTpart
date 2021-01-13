@@ -27,10 +27,9 @@ let tool_name = "Clight generator"
 
 let option_normalize = ref false
 
-
 (* From CompCert C AST to Clight *)
 
-let compile_c_ast sourcename cmts csyntax ofile =
+let compile_c_ast sourcename csyntax ofile =
   let loc = file_loc sourcename in
   let clight =
     match SimplExpr.transl_program csyntax with
@@ -59,8 +58,8 @@ let compile_c_ast sourcename cmts csyntax ofile =
       | Errors.Error msg -> fatal_error loc "%a" print_error msg
     in
     let oc = open_out ofile in
-    ExportAClight.print_program (Format.formatter_of_out_channel oc )
-                               aclight sourcename !option_normalize cmts;
+    ExportAClight.print_program (Format.formatter_of_out_channel oc)
+                               aclight sourcename !option_normalize;
     close_out oc
   else
     let oc = open_out ofile in
@@ -77,8 +76,7 @@ let compile_c_file sourcename ifile ofile =
   set_dest Cprint.destination option_dparse ".parsed.c";
   set_dest PrintCsyntax.destination option_dcmedium ".compcert.c";
   set_dest PrintClight.destination option_dclight ".light.c";
-  let (cmts,csyntax) = parse_c_file sourcename ifile in
-  compile_c_ast sourcename cmts csyntax ofile
+  compile_c_ast sourcename (parse_c_file sourcename ifile) ofile
 
 let output_filename sourcename suff =
   let prefixname = Filename.chop_suffix sourcename suff in

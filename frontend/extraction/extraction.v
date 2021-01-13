@@ -5,12 +5,15 @@ Require ClassifyComment.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
 
+Require Import Coq.extraction.ExtrOcamlNatInt.
+
 (* Coqlib *)
 (* Extract Inlined Constant Coqlib.proj_sumbool => "(fun x -> x)". *)
 
 (* Datatypes *)
 Extract Inlined Constant Datatypes.fst => "fst".
 Extract Inlined Constant Datatypes.snd => "snd".
+Extract Inlined Constant Init.Nat.add => "(+)".
 
 (* Errors *)
 Extraction Inline Errors.bind Errors.bind2.
