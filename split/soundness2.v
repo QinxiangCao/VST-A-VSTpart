@@ -3393,7 +3393,7 @@ Proof.
   }
 + (* one loop invariant.*)
   simpl. rewrite !app_nil_r. intros. 
-  hnf in H1;simpl in H1. destruct H1 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]].
+  hnf in H1;simpl in H1. destruct H1 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]]. 
   inv S1. clear H5. simpl in H4. inv H4. simpl in H3.
   apply semax_skip_inv in H3. unfold RA_normal in H3.
   eapply semax_conseq with (R':=Q);[apply H3|..];intros;try apply derives_full_refl.
@@ -3472,77 +3472,7 @@ Proof.
           apply prop_right. eapply Forall_forall in H5;[|apply H1]. auto. }
   }
   + (* loop with null lopp invariant *)
-  { simpl. intros.
-    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]].
-    Print semax_conseq.
-    Check semax_conseq.
-    eapply semax_conseq with (P':= 
-     EX Q':assert, andp Q' (
-      !!
-        ( Forall (add_pre_to_semax Delta Q') (pre res1) /\
-          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (normal_atom res1) (pre res2)) /\
-          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (continue_atom res1) (pre res2)) /\
-          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (return_atom res1) /\
-          Forall (atom_to_semax Delta Q' (RA_normal Q)) (break_atom res1) /\ 
-          Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (normal_atom res1) (break_atom res2)) /\
-          Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (continue_atom res1) (break_atom res2)) /\
-          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (normal_atom res1) (return_atom res2)) /\
-          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2))
-      )) );try apply derives_full_refl. 
-    2:{ intros. apply derives_full_refl. } (* this is trivial*)
-    1:{  (* {P} c {inv1} *)
-      Search later bupd derives. 
-    Check semax_seq_inv'.
-       admit.
-       }
-       
-    { (* inv1 c Q *)
-      Check semax_loop.
-      inv H4.
-     eapply semax_loop with (Q':=
-    EX Q'':assert, andp Q'' (
-      !!
-        ( Forall (add_pre_to_semax Delta Q'') (pre res2) /\
-          Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1))/\
-          Forall (atom_return_to_semax Delta Q'' (RA_return Q)) (return_atom res2) /\
-          Forall (atom_to_semax Delta Q'' (RA_normal Q)) (break_atom res2))
-      )) .
-    { (* inv1 c1 inv2 *)
-      apply IHpath_split1;auto. destruct Q as [Qn Qb Qc Qr]. 
-      pose proof (split_not_empty_incr _ _ Econt_atom H2) as E.
-      repeat split;unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break, RA_continue, RA_return in *.
-      - admit.
-      - in_split_result S2.
-      - admit.
-      - in_split_result S3.
-      - admit. (* lemma here reamins to be added.*) (* according to theory, add_pre_to_semax and atom_to_semax are equavilent? *)
-      - in_split_result S4.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      
-   }
-   {  (* inv2 c2 Q *)
-      apply IHpath_split1;auto. destruct Q as [Qn Qb Qc Qr]. 
-      pose proof (split_not_empty_incr _ _ Econt_atom H2) as E.
-      repeat split;unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break, RA_continue, RA_return in *.
-      - admit.
-      - in_split_result S2.
-      - admit.
-      - in_split_result S3.
-      - admit.
-      - in_split_result S4. 
-      - admit.
-      - admit.
-      - admit.
-      - admit. 
-      - admit.
-   }
-   
-    (* apply conseq_rule *)
-    
-    
+  { 
 Admitted.
-.
+
 End Soundness.
