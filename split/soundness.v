@@ -3490,9 +3490,20 @@ Proof.
           Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2))
       )) );try apply derives_full_refl. 
     2:{ intros. apply derives_full_refl. } (* this is trivial*)
-    1:{  (* {P} c {inv1} *)
-      Search later bupd derives. 
-    Check semax_seq_inv'.
+    1:{ (* {P} c {inv1} *)
+        (* Search bupd later derives. *) apply aux1_reduceR.
+        (* Search derives bupd. *) eapply derives_trans.
+      2:{ apply bupd_intro. }
+      1:{ Exists (P ).
+          (* Exists P. only works in first three clauses*)
+           apply andp_right. solve_andp. apply prop_right. repeat constructor;try in_split_result S1. 
+           * admit.
+           *
+        }
+    + unfold RA_break. apply derives_full_refl.
+    + unfold RA_continue. apply derives_full_refl.
+    + intros. unfold RA_return. apply derives_full_refl.
+        
        admit.
        }
        
@@ -3539,10 +3550,7 @@ Proof.
       - admit. 
       - admit.
    }
-   
-    (* apply conseq_rule *)
-    
-    
+
 Admitted.
-.
+
 End Soundness.
