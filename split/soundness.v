@@ -3516,13 +3516,15 @@ Proof.
            * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
            * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
            * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
-           * apply prop_right. repeat split.
+           * { apply prop_right. repeat split. 
+            + 
+            
+            } 
         }
-    + unfold RA_break. apply derives_full_refl.
+(*     + unfold RA_break. apply derives_full_refl.
     + unfold RA_continue. apply derives_full_refl.
-    + intros. unfold RA_return. apply derives_full_refl.
+    + intros. unfold RA_return. apply derives_full_refl. *)
         
-       admit.
        }
        
     { (* inv1 c Q *)
