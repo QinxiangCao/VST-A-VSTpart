@@ -282,10 +282,10 @@ Inductive path_split: statement -> split_result -> Prop :=
         return_post := (return_post res1) ++ (return_post res2)++ 
                         posts_conn_returns(normal_post res1)(return_atom res2) ++ posts_conn_returns(continue_post res1)(return_atom res2)++
                         posts_conn_returns(normal_post res2)(return_atom res1);
-        normal_atom := nil;
-        continue_atom := nil;
-        break_atom := break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2) ++ atoms_conn_atoms (continue_atom res1) (break_atom res2)
+        normal_atom := break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2) ++ atoms_conn_atoms (continue_atom res1) (break_atom res2)
                        ++ atoms_conn_atoms (normal_atom res2) (break_atom res1);
+        continue_atom := nil;
+        break_atom := nil;
         return_atom := return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2) ++ atoms_conn_returns (continue_atom res1) (return_atom res2)
                        ++ atoms_conn_returns (normal_atom res2) (return_atom res1) ;
         |}) 

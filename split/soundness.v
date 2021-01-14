@@ -118,18 +118,18 @@ Proof.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H1.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
-    clear H4 H6. 
+    clear H5 H6. 
     destruct (pre res1). 
     2: { inv H3. }
-    1: { inv H;auto.  inv H3.  destruct H0 as [E1 | E2].
-     ++ destruct E1. destruct IHpath_split1. repeat split;auto.
-     apply app_eq_nil in H5. destruct H5;auto.
-     apply app_eq_nil in H7. destruct H7;auto.
+    1: { inv H;auto.  inv H3. destruct H0 as [E1 | E2].
+     ++ destruct E1.  destruct IHpath_split1. repeat split;auto.
+        apply app_eq_nil in H4. destruct H4;auto.
+        apply app_eq_nil in H7. destruct H7;auto.    
      ++    apply app_eq_nil in H6. destruct H6.
         apply atoms_conn_pres_nil in H. destruct H;auto.
         apply atoms_conn_pres_nil in H0. destruct H0;auto.
-     apply app_eq_nil in H5. destruct H5;auto.
-     apply app_eq_nil in H7. destruct H7;auto. 
+        apply app_eq_nil in H4. destruct H4;auto.
+        apply app_eq_nil in H7. destruct H7;auto. 
      destruct IHpath_split1. repeat split;auto. }
 Qed.
 
@@ -3473,9 +3473,9 @@ Proof.
   }
   + (* loop with null lopp invariant *)
   { simpl. intros.
-    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]].
-    Print semax_conseq.
-    Check semax_conseq.
+    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [_ [S5 [_ S6]]]]]]]]].
+    (* Print semax_conseq.
+    Check semax_conseq. *)
     eapply semax_conseq with (P':= 
      EX Q':assert, andp Q' (
       !!
@@ -3488,17 +3488,30 @@ Proof.
           Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (continue_atom res1) (break_atom res2)) /\
           Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (normal_atom res1) (return_atom res2)) /\
           Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2))
-      )) );try apply derives_full_refl. 
+      )) ); try apply derives_full_refl. 
     2:{ intros. apply derives_full_refl. } (* this is trivial*)
     1:{ (* {P} c {inv1} *)
         (* Search bupd later derives. *) apply aux1_reduceR.
         (* Search derives bupd. *) eapply derives_trans.
       2:{ apply bupd_intro. }
-      1:{ Exists (P ).
+      1:{ (* Search derives Exists. *)
+        Check add_return_to_semax_reverse_group.
+          Exists (P 
+          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (return_atom res1) ))
+          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (break_atom res1) ))
+          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (normal_atom res1) (break_atom res2)) ))
+          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (continue_atom res1) (break_atom res2)) ))
+          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (normal_atom res1) (return_atom res2)) ))
+          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2)) ))
+          ).
+            Check andp_right.
           (* Exists P. only works in first three clauses*)
-           apply andp_right. solve_andp. apply prop_right. repeat constructor;try in_split_result S1. 
-           * admit.
-           *
+           repeat apply andp_right. 
+           (* try solve_andp. apply prop_right. repeat constructor;try in_split_result S1.  *)
+           * solve_andp. 
+           * admit. (* how to get the assert from return assert? *)
+           * Exists P. apply andp_right. solve_andp. apply prop_right. admit.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. admit.
         }
     + unfold RA_break. apply derives_full_refl.
     + unfold RA_continue. apply derives_full_refl.

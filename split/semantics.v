@@ -8,7 +8,6 @@ Section Semantics.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
-
 Definition split_atom_to_statement (x : (expr + atom_statement)):=
   match x with
   | inl e => (Clight.Sifthenelse e Clight.Sskip Clight.Sbreak)
