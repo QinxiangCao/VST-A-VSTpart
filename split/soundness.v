@@ -3480,7 +3480,7 @@ Proof.
      EX Q':assert, andp Q' (
       !!
         ( Forall (add_pre_to_semax Delta Q') (pre res1) /\
-          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (normal_atom res1) (pre res2)) /\
+          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (normal_atom res1) (pre res2))  /\
           Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (continue_atom res1) (pre res2)) /\
           Forall (atom_return_to_semax Delta Q' (RA_return Q)) (return_atom res1) /\
           Forall (atom_to_semax Delta Q' (RA_normal Q)) (break_atom res1) /\ 
@@ -3494,83 +3494,115 @@ Proof.
         (* Search bupd later derives. *) apply aux1_reduceR.
         (* Search derives bupd. *) eapply derives_trans.
       2:{ apply bupd_intro. }
-      1:{ (* Search derives Exists. *)
-        Check add_return_to_semax_reverse_group.
-          Exists (P 
-          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (return_atom res1) ))
-          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (break_atom res1) ))
-          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (normal_atom res1) (break_atom res2)) ))
-          && (EX Q':assert, andp Q' ( !!Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (continue_atom res1) (break_atom res2)) ))
-          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (normal_atom res1) (return_atom res2)) ))
-          && (EX Q':assert, andp Q' ( !!Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2)) ))
-          ).
-            Check andp_right.
-          (* Exists P. only works in first three clauses*)
-           repeat apply andp_right. 
-           (* try solve_andp. apply prop_right. repeat constructor;try in_split_result S1.  *)
-           
-           * solve_andp. 
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
-           * { apply prop_right. repeat split. 
-            + 
-            
-            } 
-        }
-(*     + unfold RA_break. apply derives_full_refl.
-    + unfold RA_continue. apply derives_full_refl.
-    + intros. unfold RA_return. apply derives_full_refl. *)
-        
-       }
-       
-    { (* inv1 c Q *)
-      Check semax_loop.
-      inv H4.
-     eapply semax_loop with (Q':=
+      Exists P. repeat apply andp_right;try solve_andp.
+      apply prop_right. repeat split.
+      - in_split_result S1.
+      - in_split_result S1.
+      - in_split_result S1.
+      - in_split_result S6.
+      - in_split_result S5.
+      - in_split_result S5.
+      - in_split_result S5.
+      - in_split_result S6.
+      - in_split_result S6.
+    }
+    inv H4. destruct Q as [Qn Qb Qc Qr].
+    eapply semax_loop with (Q':=
     EX Q'':assert, andp Q'' (
       !!
         ( Forall (add_pre_to_semax Delta Q'') (pre res2) /\
           Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1))/\
-          Forall (atom_return_to_semax Delta Q'' (RA_return Q)) (return_atom res2) /\
-          Forall (atom_to_semax Delta Q'' (RA_normal Q)) (break_atom res2))
-      )) .
+          Forall (atom_return_to_semax Delta Q'' Qr) (return_atom res2) /\
+          Forall (atom_to_semax Delta Q'' Qn) (break_atom res2))
+      )); unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break,
+          RA_continue, RA_return in *.
     { (* inv1 c1 inv2 *)
-      apply IHpath_split1;auto. destruct Q as [Qn Qb Qc Qr]. 
-      pose proof (split_not_empty_incr _ _ Econt_atom H2) as E.
-      repeat split;unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break, RA_continue, RA_return in *.
-      - admit.
+      apply IHpath_split1;auto. 
+      repeat split;unfold RA_normal, RA_break,
+        RA_continue, RA_return.
+      - apply Forall_forall. intros.
+        eapply add_pre_to_semax_derives.
+        2:{ apply add_pre_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H4.
+        apply H4. auto.
       - in_split_result S2.
-      - admit.
+      - admit. (* can be inved, use a lemma *)
       - in_split_result S3.
-      - admit. (* lemma here reamins to be added.*) (* according to theory, add_pre_to_semax and atom_to_semax are equavilent? *)
+      - admit. (* can be inved, use a lemma *)
       - in_split_result S4.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      
-   }
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* normal_atom res2 must be empty
+          otherwise atoms1 and atoms2 are not empty at the same time,
+          the rest of the three clauses can be inved from H4
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_to_semax_derives_pre.
+        2:{ apply atom_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H10.
+        apply H10. auto.
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* normal_atom res2 must be empty
+          otherwise atoms1 and atoms2 are not empty at the same time,
+          the rest of the three clauses can be inved from H4
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_return_to_semax_derives_pre.
+        2:{ apply atom_return_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
+    }
    {  (* inv2 c2 Q *)
-      apply IHpath_split1;auto. destruct Q as [Qn Qb Qc Qr]. 
-      pose proof (split_not_empty_incr _ _ Econt_atom H2) as E.
-      repeat split;unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break, RA_continue, RA_return in *.
-      - admit.
+      apply IHpath_split2;auto. 
+      repeat split;unfold RA_normal, RA_break,
+        RA_continue, RA_return.
+      - apply Forall_forall. intros.
+        eapply add_pre_to_semax_derives.
+        2:{ apply add_pre_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H4.
+        apply H4. auto.
       - in_split_result S2.
-      - admit.
-      - in_split_result S3.
-      - admit.
-      - in_split_result S4. 
-      - admit.
-      - admit.
-      - admit.
-      - admit. 
-      - admit.
+      - admit. (* can be inved, write a lemma
+        normal_post2 + break_atom1 is missing in S3
+        normal_post2 + normal_atom1/continue + break_atom2 is missing in S3
+        normal_post2 + normal_atom1/continue + return_atom2 is missing in S4
+      *)
+      - admit. (* missing break_post2 in S3 *)
+      - rewrite Econt_post. constructor.
+      - admit. (* missing return_post2 in S3 *)
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* 
+          1 -> inv from H4
+          2,3 -> must be empty
+          5,6 -> must be empty
+          H4 is not powerful enough to be a weakest pre, missing:
+          - normal_atom2 + break_atom1 + Qn
+          - normal_atom2 + return_atom1 + Qr
+          should be inved from H4 after refinement
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_to_semax_derives_pre.
+        2:{ apply atom_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
+      - rewrite Econt_atom. constructor.
+      - apply Forall_forall. intros.
+        eapply atom_return_to_semax_derives_pre.
+        2:{ apply atom_return_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H6.
+        apply H6. auto.
    }
-
 Admitted.
 
 End Soundness.
