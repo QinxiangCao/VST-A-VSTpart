@@ -3473,7 +3473,7 @@ Proof.
   }
   + (* loop with null lopp invariant *)
   { simpl. intros.
-    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [_ [S5 [_ S6]]]]]]]]].
+    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [S5 [_ [_ S6]]]]]]]]].
     (* Print semax_conseq.
     Check semax_conseq. *)
     eapply semax_conseq with (P':= 
@@ -3508,10 +3508,15 @@ Proof.
           (* Exists P. only works in first three clauses*)
            repeat apply andp_right. 
            (* try solve_andp. apply prop_right. repeat constructor;try in_split_result S1.  *)
+           
            * solve_andp. 
-           * admit. (* how to get the assert from return assert? *)
-           * Exists P. apply andp_right. solve_andp. apply prop_right. admit.
-           * Exists P. apply andp_right. solve_andp. apply prop_right. admit.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S5.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
+           * Exists P. apply andp_right. solve_andp. apply prop_right. in_split_result S6.
+           * apply prop_right. repeat split.
         }
     + unfold RA_break. apply derives_full_refl.
     + unfold RA_continue. apply derives_full_refl.
