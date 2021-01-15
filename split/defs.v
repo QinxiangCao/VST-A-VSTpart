@@ -225,7 +225,7 @@ with to_Clight_seq : labeled_statements -> Clight.labeled_statements -> Prop :=
       to_Clight_seq (LScons z stm seq)
         (Clight.LScons z c_stm c_seq).
 
-
+(* 
 Lemma AClight_to_Clight_unique: forall stm c_stm1 c_stm2,
   AClight_to_Clight stm c_stm1 ->
   AClight_to_Clight stm c_stm2 ->
@@ -246,7 +246,7 @@ Proof.
     specialize (IHstm2 _ H6 _ H7). subst. auto.
   - admit.
   - specialize (IHstm _ H4 _ H3). subst. auto.
-Admitted.
+Admitted. *)
 
 Fixpoint all_basic (pres: list partial_path_statement) :=
   match pres with
