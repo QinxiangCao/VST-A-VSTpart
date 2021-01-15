@@ -180,10 +180,10 @@ Lemma add_pre_to_semax_inv: forall X (HX:Non_empty_Type X)  P pre0 pre',
 Proof.
   intros.
   induction H0.
-    - constructor.
-    - inv H. constructor.
-      * inv H3. apply inj_pair2 in H2;subst. auto.
-      * apply IHbind_partial_add. auto.
+  - constructor.
+  - inv H. constructor.
+    * inv H3. apply inj_pair2 in H2;subst. auto.
+    * apply IHbind_partial_add. auto.
 Qed.
 
 Lemma add_post_to_semax_inv: forall X (HX:Non_empty_Type X)  Q post post',
@@ -248,13 +248,12 @@ Lemma add_pre_to_semax_derives: forall P Q (x:partial_path_statement),
   add_pre_to_semax Q x.
 Proof.
   intros. destruct x as [post path].
-  induction post.
-  + constructor. inv H0.
+  induction H0.
+  + constructor.
     eapply semax_pre0.
     apply H. auto.
-  + constructor. inv H0.
-    apply inj_pair2 in H4.
-    subst. auto.
+  + constructor. intros x.
+    apply H1.
 Qed.
 
 Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
@@ -263,16 +262,14 @@ Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
   add_post_to_semax P x.
 Proof.
   intros. destruct x as [pre path].
-  induction pre.
-  + constructor. inv H0.
-    eapply semax_post;[..|apply H2].
+  induction H0.
+  + constructor.
+    eapply semax_post;[..|apply H0].
     - unfold RA_normal. apply H.
     - unfold RA_break. apply ENTAIL_refl. 
     - unfold RA_continue.  apply ENTAIL_refl. 
     - intros. unfold RA_return. apply ENTAIL_refl.
-  + constructor. inv H0.
-    apply inj_pair2 in H4.
-    subst. auto.
+  + constructor. auto.
 Qed.
 
 
