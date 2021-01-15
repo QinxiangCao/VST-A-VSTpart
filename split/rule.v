@@ -261,7 +261,6 @@ Inductive path_split: statement -> split_result -> Prop :=
   (Econt_post: continue_post res2 = [])
   (Ebasic_pre1: all_basic (pre res1) = true)
   (Ebasic_pre2: all_basic (pre res2) = true),
-  (pre res1 <> [] \/ pre res2 <> [])->
   ((normal_atom res1 = []/\continue_atom res1 = []) \/ normal_atom res2 = [])->
     path_split stm1 res1 ->
     path_split stm2 res2 ->
@@ -276,7 +275,7 @@ Inductive path_split: statement -> split_result -> Prop :=
                 ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (normal_atom res1)) (pre res2))
                 ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (continue_atom res1)) (pre res2))
                 ;
-        normal_post := (break_post res1) ++ (posts_conn_atoms (normal_post res1) (break_atom res2)) ++(posts_conn_atoms (normal_post res1) (break_atom res2));
+        normal_post := (break_post res1) ++ (posts_conn_atoms (normal_post res1) (break_atom res2)) ++(posts_conn_atoms (normal_post res2) (break_atom res1));
         continue_post := nil;
         break_post := nil;
         return_post := (return_post res1) ++ (return_post res2)++ 
@@ -290,3 +289,4 @@ Inductive path_split: statement -> split_result -> Prop :=
                        ++ atoms_conn_returns (normal_atom res2) (return_atom res1) ;
         |}) 
 .
+

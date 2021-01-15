@@ -118,18 +118,18 @@ Proof.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H1.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
-    clear H4 H6. 
+    clear H5 H6. 
     destruct (pre res1). 
     2: { inv H3. }
-    1: { inv H;auto.  inv H3.  destruct H0 as [E1 | E2].
-     ++ destruct E1. destruct IHpath_split1. repeat split;auto.
-     apply app_eq_nil in H5. destruct H5;auto.
-     apply app_eq_nil in H7. destruct H7;auto.
+    1: { inv H;auto.  inv H3. destruct H0 as [E1 | E2].
+     ++ destruct E1.  destruct IHpath_split1. repeat split;auto.
+        apply app_eq_nil in H4. destruct H4;auto.
+        apply app_eq_nil in H7. destruct H7;auto.    
      ++    apply app_eq_nil in H6. destruct H6.
         apply atoms_conn_pres_nil in H. destruct H;auto.
         apply atoms_conn_pres_nil in H0. destruct H0;auto.
-     apply app_eq_nil in H5. destruct H5;auto.
-     apply app_eq_nil in H7. destruct H7;auto. 
+        apply app_eq_nil in H4. destruct H4;auto.
+        apply app_eq_nil in H7. destruct H7;auto. 
      destruct IHpath_split1. repeat split;auto. }
 Qed.
 
@@ -636,7 +636,7 @@ Proof.
   - constructor. intros. apply H0. simpl in H. inv H. apply inj_pair2 in H2. subst.
     simpl. apply H5.
 Qed.
-
+  Locate add_pre_to_semax_sem.
 Lemma path_conn_to_semax_reverse_group4: forall post posts pres,
   pres <> []-> In (post) posts ->
    all_basic pres = true -> Forall (path_to_semax Delta) (posts_conn_pres posts pres)
@@ -3393,7 +3393,7 @@ Proof.
   }
 + (* one loop invariant.*)
   simpl. rewrite !app_nil_r. intros. 
-  hnf in H1;simpl in H1. destruct H1 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]]. 
+  hnf in H1;simpl in H1. destruct H1 as [S1 [S2 [S3 [_ [_ [S4 [_ [_ [_ _]]]]]]]]].
   inv S1. clear H5. simpl in H4. inv H4. simpl in H3.
   apply semax_skip_inv in H3. unfold RA_normal in H3.
   eapply semax_conseq with (R':=Q);[apply H3|..];intros;try apply derives_full_refl.
@@ -3472,7 +3472,137 @@ Proof.
           apply prop_right. eapply Forall_forall in H5;[|apply H1]. auto. }
   }
   + (* loop with null lopp invariant *)
-  { 
+  { simpl. intros.
+    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [S5 [_ [_ S6]]]]]]]]].
+    (* Print semax_conseq.
+    Check semax_conseq. *)
+    eapply semax_conseq with (P':= 
+     EX Q':assert, andp Q' (
+      !!
+        ( Forall (add_pre_to_semax Delta Q') (pre res1) /\
+          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (normal_atom res1) (pre res2))  /\
+          Forall (add_pre_to_semax Delta Q') (atoms_conn_pres (continue_atom res1) (pre res2)) /\
+          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (return_atom res1) /\
+          Forall (atom_to_semax Delta Q' (RA_normal Q)) (break_atom res1) /\ 
+          Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (normal_atom res1) (break_atom res2)) /\
+          Forall (atom_to_semax Delta Q' (RA_normal Q)) (atoms_conn_atoms (continue_atom res1) (break_atom res2)) /\
+          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (normal_atom res1) (return_atom res2)) /\
+          Forall (atom_return_to_semax Delta Q' (RA_return Q)) (atoms_conn_returns (continue_atom res1) (return_atom res2))
+      )) ); try apply derives_full_refl. 
+    2:{ intros. apply derives_full_refl. } (* this is trivial*)
+    1:{ (* {P} c {inv1} *)
+        (* Search bupd later derives. *) apply aux1_reduceR.
+        (* Search derives bupd. *) eapply derives_trans.
+      2:{ apply bupd_intro. }
+      Exists P. repeat apply andp_right;try solve_andp.
+      apply prop_right. repeat split.
+      - in_split_result S1.
+      - in_split_result S1.
+      - in_split_result S1.
+      - in_split_result S6.
+      - in_split_result S5.
+      - in_split_result S5.
+      - in_split_result S5.
+      - in_split_result S6.
+      - in_split_result S6.
+    }
+    inv H4. destruct Q as [Qn Qb Qc Qr].
+    eapply semax_loop with (Q':=
+    EX Q'':assert, andp Q'' (
+      !!
+        ( Forall (add_pre_to_semax Delta Q'') (pre res2) /\
+          Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1))/\
+          Forall (atom_return_to_semax Delta Q'' Qr) (return_atom res2) /\
+          Forall (atom_to_semax Delta Q'' Qn) (break_atom res2))
+      )); unfold loop1_ret_assert, loop2_ret_assert, RA_normal, RA_break,
+          RA_continue, RA_return in *.
+    { (* inv1 c1 inv2 *)
+      apply IHpath_split1;auto. 
+      repeat split;unfold RA_normal, RA_break,
+        RA_continue, RA_return.
+      - apply Forall_forall. intros.
+        eapply add_pre_to_semax_derives.
+        2:{ apply add_pre_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H4.
+        apply H4. auto.
+      - in_split_result S2.
+      - admit. (* can be inved, use a lemma *)
+      - in_split_result S3.
+      - admit. (* can be inved, use a lemma *)
+      - in_split_result S4.
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* normal_atom res2 must be empty
+          otherwise atoms1 and atoms2 are not empty at the same time,
+          the rest of the three clauses can be inved from H4
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_to_semax_derives_pre.
+        2:{ apply atom_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H10.
+        apply H10. auto.
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* normal_atom res2 must be empty
+          otherwise atoms1 and atoms2 are not empty at the same time,
+          the rest of the three clauses can be inved from H4
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_return_to_semax_derives_pre.
+        2:{ apply atom_return_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
+    }
+   {  (* inv2 c2 Q *)
+      apply IHpath_split2;auto. 
+      repeat split;unfold RA_normal, RA_break,
+        RA_continue, RA_return.
+      - apply Forall_forall. intros.
+        eapply add_pre_to_semax_derives.
+        2:{ apply add_pre_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H4.
+        apply H4. auto.
+      - in_split_result S2.
+      - admit. (* can be inved, write a lemma
+        normal_post2 + break_atom1 is missing in S3
+        normal_post2 + normal_atom1/continue + break_atom2 is missing in S3
+        normal_post2 + normal_atom1/continue + return_atom2 is missing in S4
+      *)
+      - admit. (* missing break_post2 in S3 *)
+      - rewrite Econt_post. constructor.
+      - admit. (* missing return_post2 in S3 *)
+      - apply Forall_forall. intros.
+        constructor. Intros inv.
+        rewrite andp_comm. apply semax_extract_prop.
+        intros. (* 
+          1 -> inv from H4
+          2,3 -> must be empty
+          5,6 -> must be empty
+          H4 is not powerful enough to be a weakest pre, missing:
+          - normal_atom2 + break_atom1 + Qn
+          - normal_atom2 + return_atom1 + Qr
+          should be inved from H4 after refinement
+        *) admit.
+      - apply Forall_forall. intros.
+        eapply atom_to_semax_derives_pre.
+        2:{ apply atom_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
+      - rewrite Econt_atom. constructor.
+      - apply Forall_forall. intros.
+        eapply atom_return_to_semax_derives_pre.
+        2:{ apply atom_return_to_semax_sem. }
+        Intros Q'. Exists Q'. apply andp_right;try solve_andp.
+        apply prop_right. eapply Forall_forall in H6.
+        apply H6. auto.
+   }
 Admitted.
 
 End Soundness.

@@ -118,19 +118,41 @@ Proof.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H1.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
-    clear H5 H6. 
+    clear H5 H4. 
     destruct (pre res1). 
-    2: { inv H3. }
-    1: { inv H;auto.  inv H3. destruct H0 as [E1 | E2].
+    2: { inv H2. }
+    1: { inv H2. destruct H as [E1 | E2].
      ++ destruct E1.  destruct IHpath_split1. repeat split;auto.
-        apply app_eq_nil in H4. destruct H4;auto.
-        apply app_eq_nil in H7. destruct H7;auto.    
-     ++    apply app_eq_nil in H6. destruct H6.
-        apply atoms_conn_pres_nil in H. destruct H;auto.
-        apply atoms_conn_pres_nil in H0. destruct H0;auto.
-        apply app_eq_nil in H4. destruct H4;auto.
-        apply app_eq_nil in H7. destruct H7;auto. 
-     destruct IHpath_split1. repeat split;auto. }
+        apply app_eq_nil in H3. destruct H3;auto.
+        apply app_eq_nil in H6. destruct H6;auto.    
+     ++ apply app_eq_nil in H3. destruct H3.
+        apply app_eq_nil in H6. destruct H6;auto.
+        rewrite H in IHpath_split1. rewrite H3 in IHpath_split1.
+        destruct IHpath_split1.
+        apply app_eq_nil in H5. destruct H5.
+        apply atoms_conn_pres_nil in H5.
+        apply atoms_conn_pres_nil in H6.
+        destruct (pre res2).
+        +++ clear H5 H6.  rewrite Econt_atom in IHpath_split2. rewrite E2 in IHpath_split2.
+            
+            destruct (break_atom res2),(return_atom res2).
+            - exfalso. destruct IHpath_split2. auto.
+            - apply app_eq_nil in H4. destruct H4. 
+              apply app_eq_nil in H5. destruct H5.
+              apply atoms_conn_returns_nil in H4;destruct H4;auto.
+              apply atoms_conn_returns_nil in H5;destruct H5;auto. discriminate. discriminate.
+            - apply app_eq_nil in H2. destruct H2. 
+              apply app_eq_nil in H5. destruct H5.
+              apply atoms_conn_atoms_nil in H2;destruct H2;auto.
+              apply atoms_conn_atoms_nil in H5;destruct H5;auto. discriminate. discriminate.
+            - apply app_eq_nil in H4. destruct H4. 
+              apply app_eq_nil in H5. destruct H5.
+              apply atoms_conn_returns_nil in H4;destruct H4;auto.
+              apply atoms_conn_returns_nil in H5;destruct H5;auto. discriminate. discriminate.
+       +++ repeat split;auto.
+        destruct H5;auto;discriminate.
+        destruct H6;auto;discriminate.
+        }
 Qed.
 
 (* -------------------------------------------------
@@ -3527,7 +3549,28 @@ Proof.
         apply prop_right. eapply Forall_forall in H4.
         apply H4. auto.
       - in_split_result S2.
-      - admit. (* can be inved, use a lemma *)
+      - apply Forall_forall. intros.
+        eapply add_post_to_semax_derives.
+        2:{
+          inv H. 
+          + apply path_conn_to_semax_reverse_group4 with (normal_post res1);auto.
+            apply H4. auto.
+          + apply path_conn_to_semax_reverse_group4 with (normal_post res1);auto.
+            apply H4. auto.
+             in_split_result S2.
+          }
+        1:{
+            
+          
+          Check add_post_to_semax_reverse_group2.
+          apply add_post_to_semax_reverse_group2.
+             
+(*          apply Forall_app in S3;destruct S3 as [H4 S3].
+         apply Forall_app in S3;destruct S3 as [H5 S3].
+ *)        admit. }
+
+
+       (* can be inved, use a lemma *)
       - in_split_result S3.
       - admit. (* can be inved, use a lemma *)
       - in_split_result S4.
