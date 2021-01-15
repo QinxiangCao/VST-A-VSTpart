@@ -262,6 +262,7 @@ Inductive path_split: statement -> split_result -> Prop :=
   (Ebasic_pre1: all_basic (pre res1) = true)
   (Ebasic_pre2: all_basic (pre res2) = true),
   ((normal_atom res1 = []/\continue_atom res1 = []) \/ normal_atom res2 = [])->
+  (pre res1 <> []) -> (pre res2 <> [])->
     path_split stm1 res1 ->
     path_split stm2 res2 ->
     path_split (Sloop (LINull) stm1 stm2)
@@ -288,5 +289,6 @@ Inductive path_split: statement -> split_result -> Prop :=
         return_atom := return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2) ++ atoms_conn_returns (continue_atom res1) (return_atom res2)
                        ++ atoms_conn_returns (normal_atom res2) (return_atom res1) ;
         |}) 
+        
 .
 

@@ -118,16 +118,16 @@ Proof.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H1.
   + intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
-    clear H5 H4. 
+    clear H7 H6. 
     destruct (pre res1). 
-    2: { inv H2. }
-    1: { inv H2. destruct H as [E1 | E2].
+    2: { inv H4. }
+    1: { inv H4. destruct H as [E1 | E2].
      ++ destruct E1.  destruct IHpath_split1. repeat split;auto.
-        apply app_eq_nil in H3. destruct H3;auto.
-        apply app_eq_nil in H6. destruct H6;auto.    
-     ++ apply app_eq_nil in H3. destruct H3.
-        apply app_eq_nil in H6. destruct H6;auto.
-        rewrite H in IHpath_split1. rewrite H3 in IHpath_split1.
+        apply app_eq_nil in H5. destruct H5;auto.
+        apply app_eq_nil in H8. destruct H8;auto.    
+     ++ apply app_eq_nil in H5. destruct H5.
+        apply app_eq_nil in H8. destruct H8;auto.
+(*         rewrite H in IHpath_split1. rewrite H3 in IHpath_split1.
         destruct IHpath_split1.
         apply app_eq_nil in H5. destruct H5.
         apply atoms_conn_pres_nil in H5.
@@ -151,7 +151,7 @@ Proof.
               apply atoms_conn_returns_nil in H5;destruct H5;auto. discriminate. discriminate.
        +++ repeat split;auto.
         destruct H5;auto;discriminate.
-        destruct H6;auto;discriminate.
+        destruct H6;auto;discriminate. *)
         }
 Qed.
 
@@ -1494,6 +1494,36 @@ Proof.
         [exfalso; apply H; repeat split;auto|..];
         combine_aux_atom_auto.
 Qed. 
+
+Lemma soundness_null_aux1:  forall l1 l2 l3 l4 R1 R2 x,
+  ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] ) ->
+   (l1 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l1) x) ->
+   (l2 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l2) x) ->
+  (l3 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R1) l3) x) ->
+  (l4 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_return_to_semax Delta Q R2) l4) x) ->
+    add_post_to_semax Delta
+      (EX Q: assert,
+             Q &&
+             !! (Forall (add_pre_to_semax Delta Q) l1 /\
+                 Forall (add_pre_to_semax Delta Q) l2 /\
+                 Forall (atom_return_to_semax Delta Q R2) l4/\
+                 Forall (atom_to_semax Delta Q R1) l3 
+                )
+       ) x.
+Proof.
+  intros.
+  destruct l1,l2,l3,l4;
+  try specialize (H0 nil_cons);
+    try specialize (H1 nil_cons);
+      try specialize (H2 nil_cons);
+        try specialize (H3 nil_cons);
+        [exfalso; apply H; repeat split;auto|..];
+        combine_aux_post_auto.
+Qed.
 
 
 (*-------------------
@@ -3493,9 +3523,9 @@ Proof.
       1: { Intros Q. Exists Q. apply andp_right;[|apply derives_refl].
           apply prop_right. eapply Forall_forall in H5;[|apply H1]. auto. }
   }
-  + (* loop with null lopp invariant *)
+  + (* loop with null loop invariant *)
   { simpl. intros.
-    hnf in H3;simpl in H3. destruct H3 as [S1 [S2 [S3 [_ [_ [S4 [S5 [_ [_ S6]]]]]]]]].
+    hnf in H2;simpl in H2. destruct H4 as [S1 [S2 [S3 [_ [_ [S4 [S5 [_ [_ S6]]]]]]]]].
     (* Print semax_conseq.
     Check semax_conseq. *)
     eapply semax_conseq with (P':= 
@@ -3528,7 +3558,7 @@ Proof.
       - in_split_result S6.
       - in_split_result S6.
     }
-    inv H4. destruct Q as [Qn Qb Qc Qr].
+    inv H5. destruct Q as [Qn Qb Qc Qr].
     eapply semax_loop with (Q':=
     EX Q'':assert, andp Q'' (
       !!
@@ -3546,30 +3576,29 @@ Proof.
         eapply add_pre_to_semax_derives.
         2:{ apply add_pre_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H4.
-        apply H4. auto.
+        apply prop_right. eapply Forall_forall in H5.
+        apply H5. auto.
       - in_split_result S2.
-      - apply Forall_forall. intros.
-        eapply add_post_to_semax_derives.
-        2:{
-          inv H. 
-          + apply path_conn_to_semax_reverse_group4 with (normal_post res1);auto.
-            apply H4. auto.
-          + apply path_conn_to_semax_reverse_group4 with (normal_post res1);auto.
-            apply H4. auto.
-             in_split_result S2.
-          }
-        1:{
-            
-          
-          Check add_post_to_semax_reverse_group2.
-          apply add_post_to_semax_reverse_group2.
-             
+      - {
+        apply Forall_forall. intros.
+        assert (Enpe :(normal_post res1) <> nil). 
+        {destruct (normal_post res1);try discriminate. exfalso. apply H4. }
+        eapply 
+        
+(*         eapply soundness_null_aux1;auto;try assumption.
+        + assert (TNE: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
+        { apply split_not_empty with stm2. try assumption. }
+        rewrite Econt_atom in TNE. intro. apply TNE. repeat split;try apply H5. destruct H.
+          2:{auto. }
+          1:{
+
 (*          apply Forall_app in S3;destruct S3 as [H4 S3].
          apply Forall_app in S3;destruct S3 as [H5 S3].
- *)        admit. }
+ *)        admit.   
+*)
+        }  
 
-
+        
        (* can be inved, use a lemma *)
       - in_split_result S3.
       - admit. (* can be inved, use a lemma *)
@@ -3585,8 +3614,8 @@ Proof.
         eapply atom_to_semax_derives_pre.
         2:{ apply atom_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H10.
-        apply H10. auto.
+        apply prop_right. eapply Forall_forall in H11.
+        apply H11. auto.
       - apply Forall_forall. intros.
         constructor. Intros inv.
         rewrite andp_comm. apply semax_extract_prop.
@@ -3598,8 +3627,8 @@ Proof.
         eapply atom_return_to_semax_derives_pre.
         2:{ apply atom_return_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H7.
-        apply H7. auto.
+        apply prop_right. eapply Forall_forall in H8.
+        apply H8. auto.
     }
    {  (* inv2 c2 Q *)
       apply IHpath_split2;auto. 
@@ -3609,8 +3638,8 @@ Proof.
         eapply add_pre_to_semax_derives.
         2:{ apply add_pre_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H4.
-        apply H4. auto.
+        apply prop_right. eapply Forall_forall in H5.
+        apply H5. auto.
       - in_split_result S2.
       - admit. (* can be inved, write a lemma
         normal_post2 + break_atom1 is missing in S3
@@ -3636,15 +3665,15 @@ Proof.
         eapply atom_to_semax_derives_pre.
         2:{ apply atom_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H7.
-        apply H7. auto.
+        apply prop_right. eapply Forall_forall in H8.
+        apply H8. auto.
       - rewrite Econt_atom. constructor.
       - apply Forall_forall. intros.
         eapply atom_return_to_semax_derives_pre.
         2:{ apply atom_return_to_semax_sem. }
         Intros Q'. Exists Q'. apply andp_right;try solve_andp.
-        apply prop_right. eapply Forall_forall in H6.
-        apply H6. auto.
+        apply prop_right. eapply Forall_forall in H7.
+        apply H7. auto.
    }
 Admitted.
 
