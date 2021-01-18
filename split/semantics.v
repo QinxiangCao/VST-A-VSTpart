@@ -333,7 +333,6 @@ Proof.
     + apply derives_refl.
 Qed.
 
-
 Lemma add_post_to_semax_reverse: forall post atom R,
   add_post_to_semax R (post_conn_atom post atom) ->
   add_post_to_semax (EX Q, Q && !! ( atom_to_semax Q R atom)) post.

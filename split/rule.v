@@ -279,7 +279,8 @@ Inductive path_split: statement -> split_result -> Prop :=
                 ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (normal_atom res1)) (pre res2))
                 ++ (posts_conn_pres (posts_conn_atoms (normal_post res2) (continue_atom res1)) (pre res2))
                 ;
-        normal_post := (break_post res1) ++ (posts_conn_atoms (normal_post res1) (break_atom res2)) ++(posts_conn_atoms (normal_post res2) (break_atom res1));
+        normal_post := (break_post res1) ++ (posts_conn_atoms (normal_post res1) (break_atom res2)) ++(posts_conn_atoms (normal_post res2) (break_atom res1))
+                        ++ (posts_conn_atoms (continue_post res1) (break_atom res2)) ;
         continue_post := nil;
         break_post := nil;
         return_post := (return_post res1) ++ (return_post res2)++ 

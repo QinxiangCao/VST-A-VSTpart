@@ -225,7 +225,7 @@ with to_Clight_seq : labeled_statements -> Clight.labeled_statements -> Prop :=
       to_Clight_seq (LScons z stm seq)
         (Clight.LScons z c_stm c_seq).
 
-(* 
+
 Lemma AClight_to_Clight_unique: forall stm c_stm1 c_stm2,
   AClight_to_Clight stm c_stm1 ->
   AClight_to_Clight stm c_stm2 ->
@@ -246,7 +246,7 @@ Proof.
     specialize (IHstm2 _ H6 _ H7). subst. auto.
   - admit.
   - specialize (IHstm _ H4 _ H3). subst. auto.
-Admitted. *)
+Admitted. 
 
 Fixpoint all_basic (pres: list partial_path_statement) :=
   match pres with
@@ -315,6 +315,38 @@ Proof.
       rewrite H in IHatoms. 
      apply IHatoms.  eauto.
      Qed.
+
+Lemma posts_conn_pres_nil : forall posts pres,
+  all_basic posts = true->
+  all_basic pres = true->
+  posts_conn_pres posts pres = [] <->
+  posts = [] \/ pres = [].
+Proof.
+  intros posts pres E1 E2. split.
+  + intros. induction pres.
+    - eauto.
+    - intros. 
+      simpl in H. destruct posts;eauto.
+      exfalso. 
+      Check app_eq_nil.
+      apply app_eq_nil in H.
+      destruct H. clear H0.
+      
+       destruct a. destruct p. simpl in H. destruct p;auto. destruct p2;auto.
+      destruct p0.
+      * simpl in H. discriminate H.
+      * simpl in H. discriminate H.
+      * destruct p0; simpl in H.
+        ** discriminate H.
+        ** discriminate E2.
+      * simpl in H.
+        discriminate E1.
+  + intros. destruct H;subst;eauto.
+    unfold posts_conn_pres. rewrite flat_map_concat_map. unfold posts_conn_pre. induction pres;eauto.   
+    simpl. apply IHpres. unfold all_basic in E2. destruct a. destruct p. 
+    * destruct pres;eauto.
+    * exfalso. discriminate E2.
+Qed.    
 
 Lemma atoms_conn_atoms_nil: forall atoms1 atoms2,
   atoms_conn_atoms atoms1 atoms2 = []
