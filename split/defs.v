@@ -300,35 +300,57 @@ match a with
 end.
 
 Lemma atoms_conn_pres_nil: forall atoms pres,
-  atoms_conn_pres atoms pres = [] ->
+  atoms_conn_pres atoms pres = [] <->
   atoms = [] \/ pres = [].
 Proof.
-  induction atoms.
-  + intros. simpl in H. auto.
-  + intros. right. destruct pres;auto.
+  split.
+  + induction atoms. 
+  - intros. simpl in H. auto.
+  - intros. right. destruct pres;auto.
     simpl in *. inversion H.
-Qed.
+  + induction atoms;eauto.
+    intros. destruct H;eauto.
+    - rewrite H. eauto.
+    - rewrite H. simpl.
+      rewrite H in IHatoms. 
+     apply IHatoms.  eauto.
+     Qed.
 
 Lemma atoms_conn_atoms_nil: forall atoms1 atoms2,
   atoms_conn_atoms atoms1 atoms2 = []
-  -> atoms1 = [] \/ atoms2 = [].
+  <-> atoms1 = [] \/ atoms2 = [].
 Proof.
-  intros.
+  intros. split.
+  - intros. 
   destruct atoms1;auto.
   right. destruct atoms2;auto.
   inversion H.
+  - intros. destruct H. 
+  + rewrite H. eauto.
+  + rewrite H. induction atoms1;eauto.
 Qed.
 
 Lemma atoms_conn_returns_nil: forall atoms1 rets2,
   atoms_conn_returns atoms1 rets2 = []
-  -> atoms1 = [] \/ rets2 = [].
+  <-> atoms1 = [] \/ rets2 = [].
 Proof.
-  intros.
+  intros. split.
+  -
   destruct atoms1;auto.
   right. destruct rets2;auto.
   inversion H.
-Qed.
-
+  - intros. destruct H. 
+  + rewrite H.
+  destruct rets2;eauto.
+  + rewrite H. 
+  destruct atoms1;eauto. 
+  unfold atoms_conn_returns. 
+  rewrite flat_map_concat_map.
+  simpl. 
+  induction atoms1 ; eauto.
+  Qed.
+  
+  
 Lemma posts_conn_basic_pre_cons: forall post posts a2 p2,
   posts_conn_pre (post::posts) (Basic_partial a2, p2) =
   (bind_post_conn_pre post p2 a2) :: posts_conn_pre posts (Basic_partial a2, p2).

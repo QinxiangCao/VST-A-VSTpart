@@ -260,7 +260,10 @@ Inductive path_split: statement -> split_result -> Prop :=
   (Econt_atom: continue_atom res2 = [])
   (Econt_post: continue_post res2 = [])
   (Ebasic_pre1: all_basic (pre res1) = true)
-  (Ebasic_pre2: all_basic (pre res2) = true),
+  (Ebasic_pre2: all_basic (pre res2) = true)
+  (Ebasic_post1:all_basic (normal_post res1) = true)
+  (Ebasic_post2:all_basic (normal_post res2) = true)
+  ,
   ((normal_atom res1 = []/\continue_atom res1 = []) \/ normal_atom res2 = [])->
   (pre res1 <> []) -> (pre res2 <> [])->
     path_split stm1 res1 ->

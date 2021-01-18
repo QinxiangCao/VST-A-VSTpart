@@ -2860,6 +2860,28 @@ Proof.
   left. simpl. reflexivity.
 Qed.
 
+Lemma conn_assoc1:forall pres posts atoms,
+ (posts_conn_pres (posts_conn_atoms (posts) (atoms)) (pres)) = 
+ (posts_conn_pres posts (atoms_conn_pres (atoms) (pres))).
+Proof.
+  intros. destruct posts.
+  Admitted.
+
+Lemma all_basic_atoms_conn_pres:forall (atoms:atom_statements) pres,
+all_basic (pres) = true ->
+all_basic (atoms_conn_pres atoms pres) = true.
+Proof.
+intros. Print all_basic.
+destruct atoms.
+- Check atoms_conn_pres_nil1.
+  rewrite atoms_conn_pres_nil. auto.
+- Check atoms_conn_pres_app1.
+
+unfold atoms_conn_pres. simpl. 
+unfold all_basic.
+
+
+
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (stm: statement) (c_stm: Clight.statement)
 (s: split_result),
@@ -3525,7 +3547,7 @@ Proof.
   }
   + (* loop with null loop invariant *)
   { simpl. intros.
-    hnf in H2;simpl in H2. destruct H4 as [S1 [S2 [S3 [_ [_ [S4 [S5 [_ [_ S6]]]]]]]]].
+    hnf in H4;simpl in H4. destruct H4 as (S1 & S2 & S3 & _ & _ & S4 & S5 & S6 & _ & S7).
     (* Print semax_conseq.
     Check semax_conseq. *)
     eapply semax_conseq with (P':= 
@@ -3547,8 +3569,8 @@ Proof.
         (* Search derives bupd. *) eapply derives_trans.
       2:{ apply bupd_intro. }
       Exists P. repeat apply andp_right;try solve_andp.
-      apply prop_right. repeat split.
-      - in_split_result S1.
+      apply prop_right. repeat split;try in_split_result S1;try in_split_result S5;try in_split_result S7.
+  (*    - in_split_result S1.
       - in_split_result S1.
       - in_split_result S1.
       - in_split_result S6.
@@ -3556,7 +3578,7 @@ Proof.
       - in_split_result S5.
       - in_split_result S5.
       - in_split_result S6.
-      - in_split_result S6.
+      - in_split_result S6. *)
     }
     inv H5. destruct Q as [Qn Qb Qc Qr].
     eapply semax_loop with (Q':=
@@ -3582,9 +3604,28 @@ Proof.
       - {
         apply Forall_forall. intros.
         assert (Enpe :(normal_post res1) <> nil). 
-        {destruct (normal_post res1);try discriminate. exfalso. apply H4. }
-        eapply 
-        
+        {destruct (normal_post res1);try discriminate. exfalso. eauto. (*  wxw nb *)  }
+        eapply soundness_null_aux1;eauto.
+        + assert ( WXWNB: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
+        { apply split_not_empty with stm2. eauto. }
+        rewrite Econt_atom in WXWNB. intro T. apply WXWNB. repeat split;try apply T. destruct H;eauto.
+         destruct T as (_ & T & _).  apply atoms_conn_pres_nil in T. destruct T;eauto. exfalso;eauto.
+        + intros. 
+         Check path_conn_to_semax_reverse_group4.
+          apply path_conn_to_semax_reverse_group4 with (normal_post res1);eauto.
+          in_split_result S2.
+       + intros.
+       Check path_conn_to_semax_reverse_group4. 
+         apply path_conn_to_semax_reverse_group4 with (normal_post res1);eauto.
+         2:{
+         Print in_split_result. 
+         assert (Forall (path_to_semax Delta) (posts_conn_pres (posts_conn_atoms (normal_post res1) (normal_atom res2)) (pre res1))) .
+         { in_split_result S2. }          
+         rewrite conn_assoc1 in H6;eauto. } 
+         
+       +  
+       + admit.
+                                
 (*         eapply soundness_null_aux1;auto;try assumption.
         + assert (TNE: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
         { apply split_not_empty with stm2. try assumption. }
