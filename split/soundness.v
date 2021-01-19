@@ -2890,6 +2890,33 @@ Proof.
   left. simpl. reflexivity.
 Qed.
 
+Lemma in_or_concat0 : forall(A : Type) (a b: list A)  x,
+In x (concat(app [a] [b])) <-> In x a \/ In x b .
+Proof.
+intros. induction a;eauto.
+- split. 
+  + simpl. intros. apply in_app_or in H. inv H;eauto.
+  + simpl. intros. inv H;eauto. inv H0. apply in_or_app. left. apply H0.
+- split.
+  + simpl. intros. destruct H.
+   ++ left. left. auto.
+   ++ apply in_app_or in H. destruct H;eauto. apply in_app_or in H. inv H;eauto. inv H0.
+  + simpl. intros. destruct H.
+   ++ destruct H;auto. right. apply in_or_app. left. auto.
+   ++ right. apply in_or_app. right. apply in_or_app. auto.   
+Qed.
+
+Lemma in_or_concat1 : forall(A : Type) (a b: list (list A))  x,
+In x (concat(app a b)) -> In x (concat a) \/ In x (concat b) .
+Proof.
+intros. induction a;eauto. simpl in H. simpl.
+apply in_app_or in H. destruct H.
+- left. apply in_app. left. auto.
+- apply IHa in H. destruct H. 
+ + left. apply in_app. right. auto.
+ + right. auto.
+ Qed.
+
 Lemma conn_assoc1:forall pres posts atoms x,
  all_basic pres= true->
  all_basic posts = true->
@@ -2902,25 +2929,35 @@ Proof.
   split.
   - revert dependent posts. revert dependent atoms.
    induction pres;intros;eauto.
-  + simpl in H. exfalso. eauto.
-  + assert(a::pres =[a] ++ pres). { reflexivity. } rewrite H2 in *.
+  + exfalso. eauto.
+  + assert(a::pres =[a] ++ pres). { reflexivity. } rewrite H2 in *. 
     induction posts;eauto. simpl in H2.  
     * unfold posts_conn_pres in *. rewrite flat_map_concat_map in *. 
-      induction pres ; simpl in * ; eauto. 
+      induction pres ;  eauto. 
       -- exfalso. eauto.
-      -- 
-    Check atoms_conn_pres_app2. 
-(*   - intros. simpl. assert ((atoms_conn_pres atoms []) = []) .
-  { unfold atoms_conn_pres. Search flat_map. rewrite flat_map_concat_map.
-    simpl. induction atoms;eauto. }
-    rewrite H. eauto.
-  - intros. simpl. rewrite IHpres. 
-    unfold posts_conn_pres. unfold atoms_conn_pres. repeat rewrite flat_map_concat_map. simpl.
-    revert posts.
-    induction atoms ; eauto.
-    + intros. simpl. unfold posts_conn_atoms. rewrite flat_map_concat_map. simpl. induction posts ; eauto.
-    + intros. simpl. unfold posts_conn_atoms. rewrite flat_map_concat_map. simpl.  *)
-    
+      -- simpl in H1. exfalso.
+         induction pres in H1;eauto.
+    * unfold posts_conn_pres in *. rewrite flat_map_concat_map in *. 
+      Search map app.
+      Check posts_conn_pre_app.
+      assert (E1:(posts_conn_atoms (a0 :: posts) atoms) = ( (posts_conn_atoms [a0] atoms)++posts_conn_atoms posts atoms)).
+      { simpl. rewrite app_nil_r. auto. }
+      rewrite E1 in H1.  Check map_app.
+      assert (E2: (@map partial_path_statement (list path_statement)
+             (posts_conn_pre(@app partial_path_statement
+                   (posts_conn_atoms (@cons partial_path_statement a0 (@nil partial_path_statement)) atoms)
+                   (posts_conn_atoms posts atoms)))
+             (@app partial_path_statement (@cons partial_path_statement a (@nil partial_path_statement))       pres)
+           = map  (posts_conn_pre (app (posts_conn_atoms (cons a0 nil) atoms) (posts_conn_atoms posts atoms))) [a] ++ 
+             map  (posts_conn_pre (app (posts_conn_atoms (cons a0 nil) atoms) (posts_conn_atoms posts atoms))) pres
+             )).
+      { apply map_app. }  
+      rewrite E2 in H1.
+      apply in_or_concat1 in H1. destruct H1.
+      ++ admit.
+      ++ admit.
+ - intros.
+   
     
     Admitted.
 
@@ -3604,7 +3641,7 @@ Proof.
   }
   + (* loop with null loop invariant *)
   { simpl. intros.
-    hnf in H4;simpl in H4. destruct H4 as (S1 & S2 & S3 & _ & _ & S4 & S5 & S6 & _ & S7).
+    hnf in H4;simpl in H4. destruct H4 as (S1 & S2 & S3 & _ & _ & S4 & S5 & _ & _ & S6).
     (* Print semax_conseq.
     Check semax_conseq. *)
     eapply semax_conseq with (P':= 
@@ -3626,7 +3663,9 @@ Proof.
         (* Search derives bupd. *) eapply derives_trans.
       2:{ apply bupd_intro. }
       Exists P. repeat apply andp_right;try solve_andp.
-      apply prop_right. repeat split;try in_split_result S1;try in_split_result S5;try in_split_result S7.
+      apply prop_right. 
+      repeat split;try in_split_result S1;try in_split_result S2;try in_split_result S3;
+        try in_split_result S4;try in_split_result S5;try in_split_result S6.
   (*    - in_split_result S1.
       - in_split_result S1.
       - in_split_result S1.
@@ -3677,7 +3716,10 @@ Proof.
          ++ apply all_basic_atoms_conn_pres;eauto.
          ++ assert (Forall (path_to_semax Delta) (posts_conn_pres (posts_conn_atoms (normal_post res1) (normal_atom res2)) (pre res1))) .
             { in_split_result S2. } 
-            rewrite conn_assoc1 in H6;eauto.  
+            pose proof conn_assoc1.
+            eapply Forall_forall. intros.
+            apply conn_assoc1 in H8;eauto. 
+            eapply Forall_forall in H6. apply H6. auto.
        + intros. 
       (* assert (Forall (atom_to_semax Delta P Qn) (atoms_conn_atoms (normal_atom res1) (break_atom res2))).
        { in_split_result S5. } *)
@@ -3708,7 +3750,10 @@ Proof.
          ++ apply all_basic_atoms_conn_pres;eauto.
          ++ assert (Forall (path_to_semax Delta) (posts_conn_pres (posts_conn_atoms (continue_post res1) (normal_atom res2)) (pre res1))) .
             { in_split_result S2. }          
-            rewrite conn_assoc1 in H6;eauto.  
+            pose proof conn_assoc1.
+            eapply Forall_forall. intros.
+            apply conn_assoc1 in H8;eauto. 
+            eapply Forall_forall in H6. apply H6. auto.
        + intros. 
         apply add_post_to_semax_reverse_group2 with (continue_post res1);auto.
         in_split_result S3.
@@ -3731,7 +3776,7 @@ Proof.
           exfalso. apply H6; destruct H. eauto.
         }
 (*          rewrite Enr2. simpl. 
- *)     assert (Easy: atom_to_semax Delta inv  ( EX Q'' : assert,
+ *)         assert (Easy: atom_to_semax Delta inv  ( EX Q'' : assert,
                Q'' &&
                !! (Forall (add_pre_to_semax Delta Q'') (pre res2) /\
                    Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1)) /\
@@ -3744,12 +3789,14 @@ Proof.
             destruct H6 as (PT1 & PT2&PT3&PT4). 
             apply atoms_conn_pres_nil in PT4. eauto.
           + intros.
+            
           
-          Search atom_to_semax.
-          Check atom_conn_pres_to_semax_reverse_group3'. 
-            apply atom_conn_pres_to_semax_reverse_group3.
+          Check atom_conn_pres_to_semax_reverse_group3'.
+          admit. 
+          
+(*             apply atom_conn_pres_to_semax_reverse_group3.
             apply path_conn_to_semax_reverse_group4 with (continue_post res1);eauto.
-
+ *)
         + intros. 
 (*          Check path_conn_to_semax_reverse_group4. *)
           apply path_conn_to_semax_reverse_group4 with (normal_post res1);eauto.

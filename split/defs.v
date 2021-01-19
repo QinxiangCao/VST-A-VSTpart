@@ -328,10 +328,8 @@ Proof.
     - intros. 
       simpl in H. destruct posts;eauto.
       exfalso. 
-      Check app_eq_nil.
       apply app_eq_nil in H.
       destruct H. clear H0.
-      
        destruct a. destruct p. simpl in H. destruct p;auto. destruct p2;auto.
       destruct p0.
       * simpl in H. discriminate H.
