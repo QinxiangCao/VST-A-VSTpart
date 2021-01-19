@@ -1493,6 +1493,38 @@ Proof.
         combine_aux_atom_auto.
 Qed. 
 
+Lemma soundness_seq_inv_aux3:  forall l1 l2 l3 l4 l5 R1 R2 R3 R4 P x ,
+  ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] /\ l5 = []) ->
+  (l1 <> [] -> atom_to_semax Delta P  (EX Q : assert, Q &&
+                                           !! Forall (atom_to_semax Delta Q R1) l1) x) ->
+  (l2 <> [] -> atom_to_semax Delta P (EX Q : assert, Q &&
+                                           !! Forall (atom_to_semax Delta Q R2) l2) x) ->
+  (l3 <> [] -> atom_to_semax Delta P (EX Q : assert, Q &&
+                                           !! Forall (atom_to_semax Delta Q R3) l3) x) ->
+  (l4 <> [] -> atom_to_semax Delta P (EX Q : assert, Q &&
+                                    !! Forall (atom_return_to_semax Delta Q R4) l4) x) ->
+   (l5 <> [] ->atom_to_semax Delta P (EX Q : assert, Q &&
+                                         !! Forall (add_pre_to_semax Delta Q) l5) x) ->
+    atom_to_semax Delta P
+      (EX Q: assert,
+             Q &&
+             !! (Forall (atom_to_semax Delta Q R1) l1 /\
+                 Forall (atom_to_semax Delta Q R2) l2 /\
+                 Forall (atom_to_semax Delta Q R3) l3 /\
+                 Forall (atom_return_to_semax Delta Q R4) l4 /\
+                 Forall (add_pre_to_semax Delta Q) l5)) x.
+Proof.
+  intros.
+  destruct l1,l2,l3,l4,l5;
+  try specialize (H0 nil_cons);
+    try specialize (H1 nil_cons);
+      try specialize (H2 nil_cons);
+        try specialize (H3 nil_cons);
+        try specialize (H4 nil_cons);
+        [exfalso; apply H; repeat split;auto|..];
+        combine_aux_atom_auto.
+Qed. 
+
 Lemma soundness_null_aux1:  forall l1 l2 l3 l4 R1 R2 x,
   ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] ) ->
    (l1 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
@@ -1554,6 +1586,188 @@ Proof.
         [exfalso; apply H; repeat split;auto|..];
         combine_aux_atom_auto.
 Qed. 
+
+Lemma soundness_null_aux3_1:  forall l1 l2 l3 l4 R1  x,
+  ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = []  ) ->
+   (l1 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l1) x) ->
+   (l2 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l2) x) ->
+   (l3 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l3) x) ->
+   (l4 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_return_to_semax Delta Q R1) l4) x) ->
+
+    add_post_to_semax Delta
+      (EX Q: assert,
+             Q &&
+             !! (Forall (add_pre_to_semax Delta Q) l1 /\
+                 Forall (add_pre_to_semax Delta Q) l2 /\
+                 Forall (add_pre_to_semax Delta Q) l3 /\
+                 Forall (atom_return_to_semax Delta Q R1) l4
+
+                )
+       ) x.
+Proof.
+  intros.
+  destruct l1,l2,l3,l4;
+  try specialize (H0 nil_cons);
+    try specialize (H1 nil_cons);
+      try specialize (H2 nil_cons);
+        try specialize (H3 nil_cons);
+        try specialize (H4 nil_cons);
+        [exfalso; apply H; repeat split;auto|..];
+        combine_aux_post_auto.
+Qed.
+ 
+
+Lemma soundness_null_aux3_2: forall l5 l6 l7 l8 l9 R2 R3 R4 R5 R6 x,
+~ (l5 = []/\l6 = [] /\ l7 = [] /\ l8 = [] /\l9 = [] )->
+  (l5 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R2) l5) x) ->
+  (l6 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R3) l6) x) ->
+  (l7 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R4) l7) x) ->
+  (l8 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                  !! Forall (atom_return_to_semax Delta Q R5) l8) x) ->
+  (l9 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                  !! Forall (atom_return_to_semax Delta Q R6) l9) x) ->
+add_post_to_semax Delta
+      (EX Q: assert,
+             Q &&
+             !! (
+                 Forall (atom_to_semax Delta Q R2) l5 /\
+                 Forall (atom_to_semax Delta Q R3) l6 /\
+                 Forall (atom_to_semax Delta Q R4) l7 /\
+                 Forall (atom_return_to_semax Delta Q R5) l8/\
+                 Forall (atom_return_to_semax Delta Q R6) l9
+                )
+       ) x.
+Proof.
+  intros.
+  destruct l5,l6,l7,l8,l9;
+  try specialize (H0 nil_cons);
+    try specialize (H1 nil_cons);
+      try specialize (H2 nil_cons);
+        try specialize (H3 nil_cons);
+        try specialize (H4 nil_cons);
+        [exfalso; apply H; repeat split;auto|..];
+        combine_aux_post_auto.
+Qed.
+
+(* Lemma soundness_null_aux3_3:  forall (A:Type)(l1 l2 l3 l4 l5 l6 l7 l8 l9 :list A),
+~(l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] /\l5 = [] /\ l6 = [] /\ l7 = [] /\ l8 = [] /\l9 = [] ) <->
+~(l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] /\l5 = []) \/ ~(l6 = [] /\ l7 = [] /\ l8 = [] /\l9 = []).
+Proof.
+split.
+- intros. apply Classical_Prop.not_and_or. intro.  apply H. repeat econstructor;auto;apply H0.
+- intros. destruct H;intro;destruct H0 as (S1&S2&S3&S4&S5&S6&S7&S8&S9);subst;apply H;eauto.
+Qed.  *)
+
+Lemma soundness_null_aux3:  forall l1 l2 l3 l4 l5 l6 l7 l8 l9 R1 R2 R3 R4 R5 R6 x,
+  ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] /\l5 = [] /\ l6 = [] /\ l7 = [] /\ l8 = [] /\l9 = [] ) ->
+   (l1 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l1) x) ->
+   (l2 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l2) x) ->
+   (l3 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (add_pre_to_semax Delta Q) l3) x) ->
+   (l4 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_return_to_semax Delta Q R1) l4) x) ->
+  (l5 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R2) l5) x) ->
+  (l6 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R3) l6) x) ->
+  (l7 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                    !! Forall (atom_to_semax Delta Q R4) l7) x) ->
+  (l8 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                  !! Forall (atom_return_to_semax Delta Q R5) l8) x) ->
+  (l9 <> [] -> add_post_to_semax Delta (EX Q : assert, Q &&
+                                  !! Forall (atom_return_to_semax Delta Q R6) l9) x) ->
+    add_post_to_semax Delta
+      (EX Q: assert,
+             Q &&
+             !! (Forall (add_pre_to_semax Delta Q) l1 /\
+                 Forall (add_pre_to_semax Delta Q) l2 /\
+                 Forall (add_pre_to_semax Delta Q) l3 /\
+                 Forall (atom_return_to_semax Delta Q R1) l4/\
+                 Forall (atom_to_semax Delta Q R2) l5 /\
+                 Forall (atom_to_semax Delta Q R3) l6 /\
+                 Forall (atom_to_semax Delta Q R4) l7 /\
+                 Forall (atom_return_to_semax Delta Q R5) l8/\
+                 Forall (atom_return_to_semax Delta Q R6) l9
+                )
+       ) x.
+Proof.
+  intros.
+  pose proof soundness_null_aux3_1 as T1.
+  pose proof soundness_null_aux3_2 as T2.
+  Search and not.
+  assert (~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] /\ l5 = [] /\ l6 = [] /\ l7 = [] /\ l8 = [] /\ l9 = []) ->
+        ((~((l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [] ))) \/ (~(l5 = []/\l6 = [] /\ l7 = [] /\ l8 = [] /\ l9 = [])))
+        ) .
+        
+(*   assert ((not
+      (and (@eq (list partial_path_statement) l1 (@nil partial_path_statement))
+         (and (@eq (list partial_path_statement) l2 (@nil partial_path_statement))
+            (and (@eq (list partial_path_statement) l3 (@nil partial_path_statement))
+               (and (@eq (list (prod path (option expr))) l4 (@nil (prod path (option expr))))
+                  (and (@eq (list path) l5 (@nil path))
+                     (and (@eq (list path) l6 (@nil path))
+                        (and (@eq (list path) l7 (@nil path))
+                           (and (@eq (list (prod path (option expr))) l8 (@nil (prod path (option expr))))
+                              (@eq (list (prod path (option expr))) l9 (@nil (prod path (option expr)))))))))))))
+    = (not ((and (@eq (list partial_path_statement) l1 (@nil partial_path_statement))
+         (and (@eq (list partial_path_statement) l2 (@nil partial_path_statement))
+            (and (@eq (list partial_path_statement) l3 (@nil partial_path_statement))
+               (and (@eq (list (prod path (option expr))) l4 (@nil (prod path (option expr))))
+                  (and (@eq (list path) l5 (@nil path)))))))))
+      or (not (                     (and (@eq (list path) l6 (@nil path))
+                        (and (@eq (list path) l7 (@nil path))
+                           (and (@eq (list (prod path (option expr))) l8 (@nil (prod path (option expr))))
+                              (@eq (list (prod path (option expr))) l9 (@nil (prod path (option expr)))))))))). *)
+
+  {intros HP. apply Classical_Prop.not_and_or. intro.  apply H. repeat econstructor;auto;apply H9. }
+  apply H9 in H. clear H9.  
+  assert (Ept1 :(l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = []) \/ ~ (l1 = [] /\ l2 = [] /\ l3 = [] /\ l4 = [])). 
+  { apply Classical_Prop.classic. }
+  assert (Ept2: (l5 = [] /\ l6 = [] /\ l7 = [] /\ l8 = [] /\ l9 = []) \/ ~ ((l5 = [] /\ l6 = [] /\ l7 = [] /\ l8 = [] /\ l9 = []) )).
+  { apply Classical_Prop.classic. }
+  destruct Ept1,Ept2.
+  - exfalso. inv H;apply H11;auto.
+  - apply T2 with(R2:= R2)(R3:= R3)(R4:= R4)(R5:= R5)(R6:= R6)(x:=x) in H10;eauto.
+    destruct H9 as (S1&S2&S3&S4). subst. 
+    eapply add_post_to_semax_derives. 2:{ apply H10. } Intros Q. Exists Q. 
+    apply andp_right. 
+    solve_andp. apply prop_right. repeat split;try apply Forall_nil; auto.
+  - apply T1 with(R1:= R1)(x:=x) in H9;eauto.
+    destruct H10 as (S1&S2&S3&S4&S5). subst. 
+    eapply add_post_to_semax_derives. 2:{ apply H9. } Intros Q. Exists Q. 
+    apply andp_right. 
+    solve_andp. apply prop_right. repeat split;try apply Forall_nil; auto.
+  - apply T2 with(R2:= R2)(R3:= R3)(R4:= R4)(R5:= R5)(R6:= R6)(x:=x) in H10;eauto.   
+    apply T1 with(R1:= R1)(x:=x) in H9;eauto.
+    eapply add_post_to_semax_derives. 2:{ apply add_post_to_semax_conj_rule. apply H9. apply H10. }
+     Intros Q1 Q2. Exists (Q1 && Q2). 
+      assert ( G : Q1&& Q2 |-- Q1). { apply andp_left1. apply derives_refl. } 
+      assert ( G' : Q1&& Q2 |-- Q2). { apply andp_left2. apply derives_refl. } 
+    apply andp_right.       
+    solve_andp. apply prop_right. repeat split; auto;apply Forall_forall;intros.
+ 
+    apply add_pre_to_semax_derives with (P:=Q1) ;try apply G;rewrite Forall_forall in H11; apply H11; auto.
+    apply add_pre_to_semax_derives with (P:=Q1) ;try apply G;rewrite Forall_forall in H12; apply H12; auto.
+    apply add_pre_to_semax_derives with (P:=Q1) ;try apply G;rewrite Forall_forall in H13; apply H13; auto.
+    apply atom_return_to_semax_derives_pre with (P1:=Q1&&Q2)(P2:=Q1);try apply G; rewrite Forall_forall in H14; try  apply H14; auto.
+    apply atom_to_semax_derives_pre with (P2:=Q2) ;try apply G';rewrite Forall_forall in H15; try apply H15; auto.
+    apply atom_to_semax_derives_pre with (P2:=Q2) ;try apply G';rewrite Forall_forall in H16; try apply H16; auto.
+    apply atom_to_semax_derives_pre with (P2:=Q2) ;try apply G';rewrite Forall_forall in H17; try apply H17; auto.
+    apply atom_return_to_semax_derives_pre with (P1:=Q1&&Q2)(P2:=Q2);try apply G'; rewrite Forall_forall in H18; try  apply H18; auto.
+    apply atom_return_to_semax_derives_pre with (P1:=Q1&&Q2)(P2:=Q2);try apply G'; rewrite Forall_forall in H19; try  apply H19; auto.
+
+Qed. 
+  
+
 
 (*-------------------
 Proofs for split_seq soundness
@@ -2938,7 +3152,7 @@ Proof.
       -- simpl in H1. exfalso.
          induction pres in H1;eauto.
     * unfold posts_conn_pres in *. rewrite flat_map_concat_map in *. 
-      Search map app.
+      
       Check posts_conn_pre_app.
       assert (E1:(posts_conn_atoms (a0 :: posts) atoms) = ( (posts_conn_atoms [a0] atoms)++posts_conn_atoms posts atoms)).
       { simpl. rewrite app_nil_r. auto. }
@@ -3762,9 +3976,7 @@ Proof.
        Check add_return_to_semax_reverse_group2. *)
        apply add_return_to_semax_reverse_group2 with (continue_post res1);auto.
        in_split_result S4. 
-
         }
-      
       - in_split_result S4.
       - apply Forall_forall. intros.
         constructor. Intros inv.
@@ -3775,62 +3987,45 @@ Proof.
           assert (normal_atom res1 <> []). { intro. rewrite H6 in H4. inversion H4. }
           exfalso. apply H6; destruct H. eauto.
         }
-(*          rewrite Enr2. simpl. 
- *)         assert (Easy: atom_to_semax Delta inv  ( EX Q'' : assert,
+        assert (Easy: atom_to_semax Delta inv  ( EX Q'' : assert,
                Q'' &&
                !! (Forall (add_pre_to_semax Delta Q'') (pre res2) /\
                    Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1)) /\
                    Forall (atom_return_to_semax Delta Q'' Qr) (return_atom res2) /\
                    Forall (atom_to_semax Delta Q'' Qn) (break_atom res2)) )(x)).
          { 
-          eapply soundness_null_aux2;eauto.
-          + assert ( T1: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
+          eapply soundness_null_aux2;eauto. 
+          +   assert ( T1: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
             { apply split_not_empty with stm2. eauto. } intro.
             destruct H6 as (PT1 & PT2&PT3&PT4). 
             apply atoms_conn_pres_nil in PT4. eauto.
           + intros.
-            
-          
-          Check atom_conn_pres_to_semax_reverse_group3'.
-          admit. 
-          
-(*             apply atom_conn_pres_to_semax_reverse_group3.
-            apply path_conn_to_semax_reverse_group4 with (continue_post res1);eauto.
- *)
-        + intros. 
-(*          Check path_conn_to_semax_reverse_group4. *)
-          apply path_conn_to_semax_reverse_group4 with (normal_post res1);eauto.
-          in_split_result S2.
-       + intros.
-(*        Check path_conn_to_semax_reverse_group4.  *)
-         apply path_conn_to_semax_reverse_group4 with (normal_post res1);eauto.
-         ++ apply all_basic_atoms_conn_pres;eauto.
-         ++ assert (Forall (path_to_semax Delta) (posts_conn_pres (posts_conn_atoms (normal_post res1) (normal_atom res2)) (pre res1))) .
-            { in_split_result S2. }          
-            rewrite conn_assoc1 in H6;eauto.  
-       + intros. 
-      (* assert (Forall (atom_to_semax Delta P Qn) (atoms_conn_atoms (normal_atom res1) (break_atom res2))).
-       { in_split_result S5. } *)
-        apply add_post_to_semax_reverse_group2 with (normal_post res1);auto.
-        in_split_result S3.
-       + intros. 
-       (* Check add_post_to_semax_reverse_group2.
-       Check add_return_to_semax_reverse_group2. *)
-       apply add_return_to_semax_reverse_group2 with (normal_post res1);auto.
-       in_split_result S4.
-          
-          
-          }
-
-          
-
-            
-
-
-         (* normal_atom res2 must be empty
-          otherwise atoms1 and atoms2 are not empty at the same time,
-          the rest of the three clauses can be inved from H4
-        *) admit.
+(*             Check atom_conn_atom_to_semax_reverse_group. *)
+            apply atom_conn_atom_to_semax_reverse_group with (normal_atom res1);eauto.
+            destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+            in_split_result G6;eauto.
+          + intros.
+(*           Check add_return_to_atom_semax_group. *)
+            eapply add_return_to_atom_semax_group with (normal_atom res1);eauto.
+            destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+            in_split_result G8;eauto. 
+          + intros.
+    (*          Check atom_conn_pres_to_semax_reverse_group3. *)
+            apply atom_conn_pres_to_semax_reverse_group3' with (normal_atom res1);eauto.
+            destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+            in_split_result G2;eauto. 
+          + intros.
+(*           Check atom_conn_pres_to_semax_reverse_group3'. *)
+            apply atom_conn_pres_to_semax_reverse_group3' with (normal_atom res1);eauto.
+            left. apply all_basic_atoms_conn_pres. auto.
+            assert (EMP1 :(atoms_conn_pres (normal_atom res1) (atoms_conn_pres (normal_atom res2) (pre res1))) = []).
+           { destruct H. 
+            - destruct H. rewrite H . simpl. auto.
+            - rewrite H. simpl. induction (normal_atom res1) ;eauto. apply atoms_conn_pres_nil. right. auto. 
+           }
+          rewrite EMP1. auto.
+        }
+        inv Easy. apply H6.
       - apply Forall_forall. intros.
         eapply atom_to_semax_derives_pre.
         2:{ apply atom_to_semax_sem. }
@@ -3846,10 +4041,49 @@ Proof.
           assert (continue_atom res1 <> []). {   intro. rewrite H6 in H4. inversion H4. }
           exfalso.
          apply H6; destruct H. eauto.
-        }  (* normal_atom res2 must be empty
+        } 
+        assert (Easy: atom_to_semax Delta inv  ( EX Q'' : assert,
+               Q'' &&
+               !! (Forall (add_pre_to_semax Delta Q'') (pre res2) /\
+                   Forall (add_pre_to_semax Delta Q'') (atoms_conn_pres (normal_atom res2) (pre res1)) /\
+                   Forall (atom_return_to_semax Delta Q'' Qr) (return_atom res2) /\
+                   Forall (atom_to_semax Delta Q'' Qn) (break_atom res2)) )(x)).
+         { 
+          eapply soundness_null_aux2;eauto. 
+          +   assert ( T1: ~ (pre res2 = [] /\ normal_atom res2 = [] /\ break_atom res2 = [] /\ continue_atom res2 = [] /\ return_atom res2 = [])).
+            { apply split_not_empty with stm2. eauto. } intro.
+            destruct H6 as (PT1 & PT2&PT3&PT4). 
+            apply atoms_conn_pres_nil in PT4. eauto.
+          + intros.
+(*             Check atom_conn_atom_to_semax_reverse_group. *)
+            apply atom_conn_atom_to_semax_reverse_group with (continue_atom res1);eauto.
+            destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+            in_split_result G7;eauto.
+        + intros.
+(*           Check add_return_to_atom_semax_group. *)
+          eapply add_return_to_atom_semax_group with (continue_atom res1);eauto.
+          destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+          in_split_result G9;eauto. 
+       + intros.
+(*          Check atom_conn_pres_to_semax_reverse_group3. *)
+         apply atom_conn_pres_to_semax_reverse_group3' with (continue_atom res1);eauto.
+          destruct H5 as (G1 & G2 & G3 & G4 & G5 &G6 & G7 & G8 &G9). 
+          in_split_result G3;eauto. 
+       + intros.
+(*          Check atom_conn_pres_to_semax_reverse_group3'. *)
+         apply atom_conn_pres_to_semax_reverse_group3' with (continue_atom res1);eauto.
+         left. apply all_basic_atoms_conn_pres. auto.
+         assert (EMP1 :(atoms_conn_pres (continue_atom res1) (atoms_conn_pres (normal_atom res2) (pre res1))) = []).
+         { destruct H. 
+          - destruct H. rewrite H7 . simpl. auto.
+          - rewrite H. simpl. induction (continue_atom res1) ;eauto. apply atoms_conn_pres_nil. right. auto. 
+         }
+         rewrite EMP1. auto.
+         (* normal_atom res2 must be empty
           otherwise atoms1 and atoms2 are not empty at the same time,
           the rest of the three clauses can be inved from H4
-        *) admit.
+        *)}
+        inv Easy. apply H6.
       - apply Forall_forall. intros.
         eapply atom_return_to_semax_derives_pre.
         2:{ apply atom_return_to_semax_sem. }
@@ -3868,14 +4102,15 @@ Proof.
         apply prop_right. eapply Forall_forall in H5.
         apply H5. auto.
       - in_split_result S2.
-      - admit. (* can be inved, write a lemma
-        normal_post2 + break_atom1 is missing in S3
-        normal_post2 + normal_atom1/continue + break_atom2 is missing in S3
-        normal_post2 + normal_atom1/continue + return_atom2 is missing in S4
-      *)
-      - admit. (* missing break_post2 in S3 *)
+      - eapply Forall_forall . intros. admit.
+        (* eapply soundness_null_aux3 .
+        {
+         
+        } *)
+      (* can be inved, write a lemma *)
+      - in_split_result S3;eauto. 
       - rewrite Econt_post. constructor.
-      - admit. (* missing return_post2 in S3 *)
+      - in_split_result S4.  
       - apply Forall_forall. intros.
         constructor. Intros inv.
         rewrite andp_comm. apply semax_extract_prop.
