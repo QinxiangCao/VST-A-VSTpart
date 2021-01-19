@@ -2917,63 +2917,294 @@ apply in_app_or in H. destruct H.
  + right. auto.
  Qed.
 
+(* post = basic + [], pre = binded pre
+   then In x ((post + atom) + pre) is invalid
+   can't derive In x (post + (atom + pre))
+
+   to avoid this case, we specify that pre should 
+   be basic to ensure safety
+*)
+Lemma conn_assoc_help1:forall pre post atoms x
+(Epre: all_basic [pre] = true),
+In x 
+  (posts_conn_pre (posts_conn_atoms ([post]) (atoms)) (pre)) <->
+In x
+  (posts_conn_pres [post] (atoms_conn_pres (atoms) [pre])).
+Proof.
+  intros. induction atoms as [|p2].
+  - simpl. tauto.
+  - split;intros.
+    + destruct post as [a3 p3], pre as [a1 p1].
+      destruct a3 as [a3|], a1 as [a1|];simpl in *;
+      rewrite !app_nil_r in *.
+      * destruct p3 as[|p3 p3'], p2 as [|p2 p2'];
+        simpl in *;try rewrite !app_nil_r in *.
+        { destruct H;auto. right.
+          apply IHatoms;auto. }
+        { destruct H;auto. right.
+          apply IHatoms;auto. }
+        { destruct H;auto. right.
+          apply IHatoms;auto. }
+        { destruct H;auto.
+          { left. subst x.
+            replace (p3' ++ p2 :: p2' ++ p1)
+              with ((p3' ++ p2 :: p2') ++ p1). auto.
+            { rewrite app_comm_cons.
+              simpl. rewrite <- app_assoc. simpl. reflexivity. } }
+          { right. apply IHatoms. auto. }
+        }
+      * simpl in H.
+        destruct p3 as[|p3 p3'], p2 as [|p2 p2'];simpl in H;simpl.
+        { destruct H;auto. right.
+          apply IHatoms. auto. }
+        { right.
+          apply IHatoms. auto. }
+        { apply IHatoms. auto. }
+        { apply IHatoms. auto. }
+      * simpl in H. simpl.
+        destruct H.
+        { rewrite app_assoc in *. left;auto. }
+        { right. apply IHatoms.
+          auto. }
+      * simpl in H. simpl.
+        apply IHatoms. simpl. auto.
+    + destruct post as [a3 p3], pre as [a1 p1].
+      destruct a3 as [a3|], a1 as [a1|].
+      * simpl in H. 
+        destruct p3 as[|p3 p3'], p2 as [|p2 p2'];
+        simpl in *;rewrite !app_nil_r in *.
+        { destruct H;auto. right.
+          apply IHatoms. auto. }
+        { destruct H;auto. right.
+          apply IHatoms. auto. }
+        { destruct H;auto. right.
+          apply IHatoms. simpl.
+          auto. }
+        { destruct H;auto.
+          { left. subst x.
+            replace (p3' ++ p2 :: p2' ++ p1)
+              with ((p3' ++ p2 :: p2') ++ p1). auto.
+            { rewrite app_comm_cons.
+              simpl. rewrite <- app_assoc. simpl. reflexivity. } }
+          { right. apply IHatoms. simpl. auto. }
+        }
+      * simpl in H.
+        destruct p3 as[|p3h p3'] eqn:E1, p2 as [|p2h p2'] eqn:E2;
+        simpl in *;
+        rewrite !app_nil_r in *.
+        { destruct H;auto. right.
+          apply IHatoms. simpl. auto. }
+        { inv Epre. (* special case*) }
+        { apply IHatoms. simpl. auto. }
+        { apply IHatoms. simpl. auto. }
+      * simpl in H. simpl.
+        destruct H.
+        { rewrite app_assoc in *. left;auto. }
+        { right.
+          apply IHatoms. simpl. auto. }
+      * simpl in H.
+        apply IHatoms. simpl.
+        auto.
+Qed.
+
+
+Lemma posts_conn_pres_app: forall x posts1 posts2 pres,
+    In x (posts_conn_pres (posts1 ++ posts2) pres) <->
+    In x (posts_conn_pres posts1 pres ++ posts_conn_pres posts2 pres).
+Proof.
+  intros.
+  induction pres.
+  - rewrite app_nil_l. simpl. tauto.
+  - simpl. rewrite posts_conn_pre_app.
+    split;intro H;repeat (apply in_app_or in H;destruct H);
+    apply in_or_app.
+    * left. apply in_or_app. auto.
+    * right. apply in_or_app. auto.
+    * apply IHpres in H. apply in_app_or in H;destruct H.
+      { left. apply in_or_app. auto. }
+      { right. apply in_or_app. auto. }
+    * left. apply in_or_app. auto.
+    * right. apply IHpres. apply in_or_app. auto.
+    * left. apply in_or_app. auto.
+    * right. apply IHpres. apply in_or_app. auto.
+Qed.
+
+Lemma conn_assoc_help:forall pre posts atoms x,
+all_basic [pre]= true->
+In x 
+(posts_conn_pre (posts_conn_atoms (posts) (atoms)) (pre)) <->
+In x
+(posts_conn_pres posts (atoms_conn_pres (atoms) [pre])).
+Proof.
+  intros. induction posts as [|post posts'].
+  - simpl. split;intros;try destruct H0.
+    induction atoms;simpl in H0; auto.
+  - split;intros.
+    + replace (post::posts') with ([post]++posts') by reflexivity.
+      apply posts_conn_pres_app. apply in_or_app.
+      unfold posts_conn_atoms in H0.
+      rewrite flat_map_concat_map in H0. simpl in H0.
+      rewrite posts_conn_pre_app in H0.
+      apply in_app_or in H0. destruct H0.
+      { left.
+        apply conn_assoc_help1;auto. simpl. 
+        rewrite app_nil_r. auto.
+      }
+      { right. apply IHposts'.
+        unfold posts_conn_atoms. rewrite flat_map_concat_map.
+        auto. }
+    + replace (post::posts') with ([post]++posts') in H0 by reflexivity.
+      apply posts_conn_pres_app in H0. apply in_app_or in H0.
+      unfold posts_conn_atoms.
+      rewrite flat_map_concat_map. simpl.
+      rewrite posts_conn_pre_app.
+      apply in_or_app. destruct H0.
+      { left.
+        apply conn_assoc_help1 in H0;auto. simpl in H0. 
+        rewrite app_nil_r in *. auto.
+      }
+      { right. apply IHposts' in H0.
+        unfold posts_conn_atoms in H0.
+        rewrite flat_map_concat_map in H0.
+        auto. }
+Qed.
+
+Lemma posts_conn_pres_proper_help: 
+  forall post pres1 pres2,
+  (forall y, In y pres1 -> In y pres2) ->
+  (forall x ,In x (posts_conn_pres [post] pres1) 
+    -> In x (posts_conn_pres [post] pres2)).
+Proof.
+  intros. revert dependent pres2.
+  induction pres1 as [|pre pres1'].
+  - intros. simpl in *. destruct H0.
+  - intros. unfold posts_conn_pres in H0.
+    rewrite flat_map_concat_map in H0.
+    rewrite map_cons in H0.
+    rewrite concat_cons in H0. apply in_app_or in H0.
+    destruct H0.
+    + specialize (H pre).
+      assert (In pre (pre::pres1')) by (simpl;auto).
+      specialize (H H1).
+      apply in_split in H. destruct H as [l1 [l2 H]].
+      rewrite H. unfold posts_conn_pres.
+      rewrite flat_map_concat_map.
+      rewrite map_app. rewrite concat_app. apply in_or_app.
+      right. rewrite map_cons. rewrite concat_cons.
+      apply in_or_app. left. auto.
+    + apply IHpres1'.
+      { unfold posts_conn_pres. rewrite flat_map_concat_map.
+        apply H0. }
+      { intros. apply H. right. auto. }
+Qed.
+
+Lemma posts_conn_pres_proper: forall posts pres1 pres2,
+  (forall y, In y pres1 -> In y pres2) ->
+  (forall x ,In x (posts_conn_pres posts pres1) -> In x (posts_conn_pres posts pres2)).
+Proof.
+  intros. induction posts.
+  - unfold posts_conn_pres in H0. exfalso.
+    clear dependent pres2.
+    induction pres1;simpl in H0;try destruct H0;auto.
+- replace (a::posts) with ([a]++posts) in * by reflexivity.
+    rewrite !posts_conn_pres_app in *.
+    apply in_app_or in H0;
+    destruct H0;apply in_or_app;try tauto;left.
+    { eapply posts_conn_pres_proper_help in H0.
+      apply H0. apply H. }
+Qed.
+
+Lemma posts_conn_pres_proper_iff: forall posts pres1 pres2,
+  (forall y, In y pres1 <-> In y pres2) ->
+  (forall x ,In x (posts_conn_pres posts pres1) <-> In x (posts_conn_pres posts pres2)).
+Proof.
+  intros. split;intro.
+  - eapply posts_conn_pres_proper. 2:{ apply H0. }
+    intros. apply H. auto.
+  - eapply posts_conn_pres_proper. 2:{ apply H0. }
+    intros. apply H. auto.
+Qed.
+
+
 Lemma conn_assoc1:forall pres posts atoms x,
  all_basic pres= true->
- all_basic posts = true->
  In x 
  (posts_conn_pres (posts_conn_atoms (posts) (atoms)) (pres)) <->
  In x
  (posts_conn_pres posts (atoms_conn_pres (atoms) (pres))).
 Proof.
   intros.
-  split.
-  - revert dependent posts. revert dependent atoms.
-   induction pres;intros;eauto.
-  + exfalso. eauto.
-  + assert(a::pres =[a] ++ pres). { reflexivity. } rewrite H2 in *. 
-    induction posts;eauto. simpl in H2.  
-    * unfold posts_conn_pres in *. rewrite flat_map_concat_map in *. 
-      induction pres ;  eauto. 
-      -- exfalso. eauto.
-      -- simpl in H1. exfalso.
-         induction pres in H1;eauto.
-    * unfold posts_conn_pres in *. rewrite flat_map_concat_map in *. 
-      Search map app.
-      Check posts_conn_pre_app.
-      assert (E1:(posts_conn_atoms (a0 :: posts) atoms) = ( (posts_conn_atoms [a0] atoms)++posts_conn_atoms posts atoms)).
-      { simpl. rewrite app_nil_r. auto. }
-      rewrite E1 in H1.  Check map_app.
-      assert (E2: (@map partial_path_statement (list path_statement)
-             (posts_conn_pre(@app partial_path_statement
-                   (posts_conn_atoms (@cons partial_path_statement a0 (@nil partial_path_statement)) atoms)
-                   (posts_conn_atoms posts atoms)))
-             (@app partial_path_statement (@cons partial_path_statement a (@nil partial_path_statement))       pres)
-           = map  (posts_conn_pre (app (posts_conn_atoms (cons a0 nil) atoms) (posts_conn_atoms posts atoms))) [a] ++ 
-             map  (posts_conn_pre (app (posts_conn_atoms (cons a0 nil) atoms) (posts_conn_atoms posts atoms))) pres
-             )).
-      { apply map_app. }  
-      rewrite E2 in H1.
-      apply in_or_concat1 in H1. destruct H1.
-      ++ admit.
-      ++ admit.
- - intros.
-   
-    
-    Admitted.
+  induction pres.
+  - simpl. split;intro;try destruct H0.
+    induction atoms;simpl in H0;auto.
+  - simpl. destruct a as [p2 a2]. destruct p2 as [p2|];try inv H.
+    specialize (IHpres H1). split;intro.
+    + apply in_app_or in H. destruct H.
+      { pose proof (atoms_conn_pres_app2 [(Basic_partial p2, a2)]
+                      pres atoms).
+        eapply posts_conn_pres_proper_iff in H0. simpl in H0.
+        apply H0. unfold posts_conn_pres.
+        rewrite flat_map_concat_map. rewrite map_app.
+        rewrite concat_app. apply in_or_app. left.
+        apply conn_assoc_help in H;[|reflexivity].
+        unfold posts_conn_pres in H. rewrite flat_map_concat_map in H.
+        auto. }
+      { pose proof (atoms_conn_pres_app2 [(Basic_partial p2, a2)]
+              pres atoms).
+        eapply posts_conn_pres_proper_iff in H0. simpl in H0.
+        apply H0. unfold posts_conn_pres.
+        rewrite flat_map_concat_map. rewrite map_app.
+        rewrite concat_app. apply in_or_app. right.
+        rewrite <- flat_map_concat_map.
+        apply IHpres. auto.
+      }
+    + apply in_or_app. 
+      pose proof (atoms_conn_pres_app2 [(Basic_partial p2, a2)]
+        pres atoms).
+      eapply posts_conn_pres_proper_iff 
+        with (x:=x) (posts:=posts)in H0. simpl in H0.
+      apply H0 in H. clear H0.
+      unfold posts_conn_pres in H.
+      rewrite flat_map_concat_map in H. rewrite map_app in H.
+      rewrite concat_app in H. apply in_app_or in H.
+      destruct H.
+      { left. apply conn_assoc_help;[reflexivity|].
+        unfold posts_conn_pres. rewrite flat_map_concat_map.
+        auto. }
+      { right. apply IHpres.
+        unfold posts_conn_pres.
+        rewrite flat_map_concat_map. auto.
+      }
+Qed.
+
+Lemma all_basic_app: forall pres1 pres2,
+  all_basic (pres1 ++ pres2) = true <->
+  all_basic pres1 = true /\ all_basic pres2 = true.
+Proof.
+  intros.
+  induction pres1.
+  - simpl. tauto.
+  - destruct a as [a1 p1];destruct a1.
+    + simpl. auto.
+    + simpl. split;intros;[discriminate H|].
+      destruct H. discriminate H.
+Qed.
 
 Lemma all_basic_atoms_conn_pres:forall (atoms:atom_statements) pres,
 all_basic (pres) = true ->
 all_basic (atoms_conn_pres atoms pres) = true.
 Proof.
-intros. Print all_basic.
-destruct atoms.
-- eauto.
-- destruct pres.
-+ simpl. 
-  Admitted.
-
-
-
+  intros.
+  induction pres.
+  - induction atoms;auto.
+  - destruct a as [a1 p1];destruct a1;try inv H.
+    specialize (IHpres H1).
+    induction atoms; auto.
+    simpl in *.
+    apply all_basic_app in IHpres.
+    destruct IHpres as [E1 E2]. rewrite H1 in *. apply all_basic_app.
+    split;auto.
+Qed.
 
 
 Theorem soundness: forall 
