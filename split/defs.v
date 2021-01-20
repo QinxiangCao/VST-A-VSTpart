@@ -226,28 +226,6 @@ with to_Clight_seq : labeled_statements -> Clight.labeled_statements -> Prop :=
         (Clight.LScons z c_stm c_seq).
 
 
-Lemma AClight_to_Clight_unique: forall stm c_stm1 c_stm2,
-  AClight_to_Clight stm c_stm1 ->
-  AClight_to_Clight stm c_stm2 ->
-  c_stm1 = c_stm2.
-Proof.
-  intros. generalize dependent c_stm1.
-  generalize dependent c_stm2.
-  induction stm; intros;
-  try (inv H0; inv H; auto).
-  - inv H0. inv H1. destruct HA as [a _]. specialize (H a).
-    apply inj_pair2 in H4. apply inj_pair2 in H3. subst.
-    apply H; auto. 
-  - specialize (IHstm1 _ H2 _ H3).
-    specialize (IHstm2 _ H5 _ H6). subst. auto.
-  - specialize (IHstm1 _ H4 _ H5).
-    specialize (IHstm2 _ H7 _ H6). subst. auto.
-  - specialize (IHstm1 _ H4 _ H5).
-    specialize (IHstm2 _ H6 _ H7). subst. auto.
-  - admit.
-  - specialize (IHstm _ H4 _ H3). subst. auto.
-Admitted. 
-
 Fixpoint all_basic (pres: list partial_path_statement) :=
   match pres with
   | (Binded_partial _ _  _, _)::_ => false
