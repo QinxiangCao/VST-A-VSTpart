@@ -1,3 +1,6 @@
+.DS_store
+aclightgen
+
 # Object files, in general
 *.vo
 *.glob
