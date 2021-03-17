@@ -3,7 +3,7 @@ Require Import VST.floyd.proofauto.
 Require Import split.vst_ext.
 Require Import split.defs.
 Require Import split.rule.
-
+Require Import split.strong.
 Section Semantics.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).

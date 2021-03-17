@@ -3785,7 +3785,7 @@ Proof.
     pose proof bind_result_add_inv _ _ _ _ _ _ _ H2 H.
     (* non empty type is also used here *)
     destruct HX as [? ?].
-    apply (H1 x);auto.
+    apply (H1 x). auto.
   + intros R P Hvalid c_stm Hc. inv Hc.
      eapply semax_seq
       with (Q:=
