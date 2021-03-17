@@ -186,6 +186,14 @@ Proof.
     solve_andp.
 Qed.
 
+Lemma semax_aux_seq_inv: forall CS Espec (Delta : tycontext) (P : environ -> mpred) 
+      (R : ret_assert) (h t : Clight.statement),
+    @semax_aux CS Espec Delta P (Clight.Ssequence h  t)%C R ->
+    exists Q : environ -> mpred,
+      @semax_aux CS Espec Delta P h (overridePost Q R) /\
+      @semax_aux CS Espec Delta Q t R.
+Admitted.
+
 
 Theorem semax_aux_conj_rule: forall  CS Espec Delta P Q c Q1 Q2 ,
   @semax_aux CS Espec Delta P c (overridePost Q1 Q) ->

@@ -4,14 +4,12 @@ Require Import split.vst_ext.
 Require Import split.defs.
 Require Import split.rule.
 Require Import split.semantics.
+Require Import split.strong.
 Section Soundness.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
-Axiom conj_rule : forall  P Q c Q1 Q2 ,
-  @semax CS Espec Delta P c (overridePost Q1 Q) ->
-  @semax CS Espec Delta P c (overridePost Q2 Q) ->
-  @semax CS Espec Delta P c (overridePost (andp Q1 Q2) Q).
+Definition conj_rule := semax_aux_conj_rule.
 
 
 Axiom bupd_tc_expr_cong: forall a, (|==> |> FF || tc_expr Delta a) 

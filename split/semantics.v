@@ -72,6 +72,13 @@ Proof.
   - apply semax_equiv. apply path_to_statement_app. apply semax_equiv. auto.
 Qed.
 
+Lemma path_to_statement_app_aux: forall P Q l1 l2,
+  semax_aux Delta P (Clight.Ssequence (path_to_statement l1)
+    (path_to_statement l2)) Q <->
+    semax_aux Delta P (path_to_statement (l1++l2)) Q.
+Proof.
+Admitted.
+
 Inductive extract_exp_from_path (X:Type): 
   (X -> split_assert) -> (X -> split_assert) -> Prop :=
 (* extract the first EX out from pre condition *)
@@ -109,7 +116,7 @@ Inductive path_to_semax : path_statement -> Prop :=
 Inductive add_post_to_semax (post: assert):
   partial_path_statement -> Prop :=
 | add_post_to_semax_basic: forall pre path,
-    @semax CS Espec Delta pre (path_to_statement path)
+    @semax_aux CS Espec Delta pre (path_to_statement path)
     {| RA_normal := post;
       RA_break := FALSE;
       RA_continue := FALSE;
@@ -123,7 +130,7 @@ Inductive add_post_to_semax (post: assert):
 Inductive add_return_to_semax (post: option val -> assert):
   return_post_statement -> Prop :=
 | add_return_to_semax_basic: forall pre path ret_val,
-    @semax CS Espec Delta pre (Clight.Ssequence 
+    @semax_aux CS Espec Delta pre (Clight.Ssequence 
         (path_to_statement path) (Clight.Sreturn ret_val))
     {| RA_normal := FALSE;
       RA_break := FALSE;
@@ -138,7 +145,7 @@ Inductive add_return_to_semax (post: option val -> assert):
 Inductive add_pre_to_semax (pre: assert):
   partial_path_statement -> Prop :=
 | add_pre_to_semax_basic: forall post path,
-    @semax_aux CS Espec Delta pre (path_to_statement path)
+    @semax CS Espec Delta pre (path_to_statement path)
     {| RA_normal := post;
       RA_break := FALSE;
       RA_continue := FALSE;
@@ -253,25 +260,25 @@ Proof.
 Qed.
 
 Lemma add_pre_to_semax_derives: forall P Q (x:partial_path_statement),
-  derives Q P ->
+  ENTAIL Delta, ((allp_fun_id Delta) && Q) |-- |==> |> FF || P ->
   add_pre_to_semax P x ->
   add_pre_to_semax Q x.
 Proof.
   intros. destruct x as [post path].
   induction H0.
   + constructor.
-    eapply semax_aux_conseq with (P':=P)(R':={|
+    eapply semax_conseq with (P':=P)(R':={|
       RA_normal:=post0; RA_break:=FALSE; RA_continue:=FALSE;RA_return:=(fun v=>FALSE)
     |});
       unfold RA_normal, RA_break, RA_continue, RA_return;
-      intros;try apply ENTAIL_refl.
+      intros;try apply derives_full_refl.
     { eapply derives_trans;[|apply H];solve_andp. }
     apply H0.
   + constructor. intros x.
     apply H1.
 Qed.
 
-Lemma add_post_to_semax_derives_weak: forall P Q (x:partial_path_statement),
+Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
   ENTAIL Delta, Q |--  P ->
   add_post_to_semax Q x ->
   add_post_to_semax P x.
@@ -279,18 +286,17 @@ Proof.
   intros. destruct x as [pre path].
   induction H0.
   + constructor.
-    eapply semax_conseq with (P':=pre0)(R':={|
+    eapply semax_aux_conseq with (P':=pre0)(R':={|
     RA_normal:=Q; RA_break:=FALSE; RA_continue:=FALSE;RA_return:=(fun v=>FALSE)
   |});
     unfold RA_normal, RA_break, RA_continue, RA_return;
-    intros;try apply derives_full_refl.
-    { apply aux1_reduceR. apply aux2_reduceR.
-      eapply derives_trans;[|apply H]. solve_andp. }
+    intros;try apply ENTAIL_refl.
+    { eapply derives_trans;[|apply H]. solve_andp. }
     auto.
   + constructor. auto.
 Qed.
 
-Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
+(* Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
   ENTAIL Delta, ((allp_fun_id Delta) && Q) |-- |==> |> FF || P ->
   add_post_to_semax Q x ->
   add_post_to_semax P x.
@@ -305,7 +311,7 @@ Proof.
     intros;try apply derives_full_refl;
     auto.
   + constructor. auto.
-Qed.
+Qed. *)
 
 Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
   P2 |-- P1 ->
@@ -371,19 +377,21 @@ Proof.
   intros. destruct x as [post path].
   induction post.
   - constructor.
-    apply aux_extract_exists_pre.
+    apply semax_equiv.
+    apply extract_exists_pre.
     intros Q.
-    apply aux_semax_extract_prop.
-    intros. inv H. auto.
+    apply semax_extract_prop.
+    intros. inv H.
+    apply semax_equiv. auto.
   - constructor.
     intros x.
     specialize (H x).
     eapply add_pre_to_semax_derives;[|apply H].
-    Intros Q. Exists Q.
+    Intros Q. apply aux1_reduceR. apply aux2_reduceR. Exists Q.
     apply andp_right.
     + apply prop_right. inv H0. apply inj_pair2 in H3. subst.
       auto.
-    + apply derives_refl.
+    + solve_andp.
 Qed.
 
 Lemma add_post_to_semax_reverse: forall post atom R,
@@ -393,12 +401,10 @@ Proof.
   intros. destruct post as [post path].
   induction post.
   - simpl in H. inv H.
-    apply path_to_statement_app' in H1.
-    apply semax_equiv in H1.
-    apply semax_seq_inv in H1.
+    apply path_to_statement_app_aux in H1.
+    apply semax_aux_seq_inv in H1.
     destruct H1 as [Q [? ?]].
-    apply semax_equiv in H. apply semax_equiv in H0.
-    eapply add_post_to_semax_derives_weak.
+    eapply add_post_to_semax_derives.
     2: { constructor.
           apply H. }
     Exists Q.
