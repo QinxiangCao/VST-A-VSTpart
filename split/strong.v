@@ -219,3 +219,85 @@ Admitted.
 Theorem semax_equiv: forall CS Espec Delta P c Q,
   @semax CS Espec Delta P c Q <-> @SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q.
 Admitted.
+
+(* Lemma semax_aux_seq_inv: forall {CS: compspecs} {Espec: OracleKind} Delta P R h t,
+    @semax CS Espec Delta P (Clight.Ssequence h t) R ->
+    exists Q, @semax CS Espec Delta P h (overridePost Q R) /\
+              @semax_aux CS Espec Delta Q t R.
+Proof.
+  intros.
+  remember (Clight.Ssequence h t) as c eqn:?H.
+  induction H; try solve [inv H0].
+  + induction H; try solve [inv H0].
+    - inv H0.
+      exists Q; split;auto.
+      apply semax_aux_intro. auto.
+    - subst c. specialize (IHsemax_aux eq_refl).
+      destruct IHsemax_aux as [Q [? ?]].
+      exists Q. split.
+      { destruct R as [Rn Rb Rc Rr],  R' as [Rn' Rb' Rc' Rr'];
+        unfold overridePost in *;
+         unfold RA_normal, RA_break, RA_continue, RA_return in *.
+        apply semax_conseq with (P'0:=P') (R' := {| RA_normal := Q; RA_break := Rb'; RA_continue := Rc'; RA_return := Rr' |});auto;
+        unfold RA_normal, RA_break, RA_continue, RA_return in *;
+        try apply derives_full_refl; try apply ENTAIL_refl.
+        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H]. solve_andp. 
+        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H2]. solve_andp. 
+        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H3]. solve_andp. 
+        * intros. apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H4]. solve_andp. }
+      { destruct R as [Rn Rb Rc Rr],  R' as [Rn' Rb' Rc' Rr'];
+        unfold overridePost in *;
+         unfold RA_normal, RA_break, RA_continue, RA_return in *.
+        eapply semax_aux_conseq;[..|apply H6];auto;
+        unfold RA_normal, RA_break, RA_continue, RA_return in *;
+        try apply derives_full_refl; try apply ENTAIL_refl. }
+  + subst c.
+    pose proof IHsemax eq_refl. clear IHsemax.
+    destruct H0 as [Q [? ?]].
+    exists Q.
+    split.
+    - apply (semax_conseq _ P' (overridePost Q R')); auto.
+      * clear.
+        destruct R, R'.
+        apply derives_full_refl.
+      * destruct R, R'; auto.
+      * destruct R, R'; auto.
+      * destruct R, R'; auto.
+    - eapply semax_aux_conseq;[..|apply H6].
+    
+    ; eauto.
+      apply derives_full_refl.
+      
+
+  + subst c.
+    pose proof IHsemax eq_refl. clear IHsemax.
+    destruct H0 as [Q [? ?]].
+    exists Q.
+    split.
+    - apply (AuxDefs.semax_conseq _ P' (overridePost Q R')); auto.
+      * clear.
+        destruct R, R'.
+        apply derives_full_refl.
+      * destruct R, R'; auto.
+      * destruct R, R'; auto.
+      * destruct R, R'; auto.
+    - eapply semax_conseq; eauto.
+      apply derives_full_refl.
+Qed. *)
+
+
+
+
+Lemma aux_extract_exists_pre: forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
+      (c : Clight.statement) (Delta : tycontext) 
+      (R : ret_assert),
+    (forall x : A, @semax_aux CS Espec Delta (P x) c R) ->
+    semax_aux Delta (EX x : A, P x) c R.
+Admitted.
+
+Lemma aux_semax_extract_prop: forall (CS : compspecs) (Espec : OracleKind) 
+      (Delta : tycontext) (PP : Prop) (P : environ -> mpred)
+      (c : Clight.statement) (Q : ret_assert),
+    (PP -> semax_aux Delta P c Q) ->
+    semax_aux Delta (!! PP && P) c Q.
+Admitted.
