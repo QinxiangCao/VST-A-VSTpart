@@ -6,6 +6,7 @@ Require Import split.rule.
 Require Import split.strong.
 Section Semantics.
 
+
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
 Definition split_atom_to_statement (x : (expr + atom_statement)):=
@@ -66,11 +67,8 @@ Lemma path_to_statement_app': forall P Q l1 l2,
   semax Delta P (Clight.Ssequence (path_to_statement l1)
     (path_to_statement l2)) Q <->
     semax Delta P (path_to_statement (l1++l2)) Q.
-Proof.
-  intros. split;intro.
-  - apply semax_equiv. apply path_to_statement_app. apply semax_equiv. auto.
-  - apply semax_equiv. apply path_to_statement_app. apply semax_equiv. auto.
-Qed.
+Admitted.
+(* used in inv path -> post + pre *)
 
 Lemma path_to_statement_app_aux: forall P Q l1 l2,
   semax_aux Delta P (Clight.Ssequence (path_to_statement l1)
@@ -278,6 +276,17 @@ Proof.
     apply H1.
 Qed.
 
+Lemma add_pre_to_semax_derives_weak: forall P Q (x:partial_path_statement),
+  Q |--  P ->
+  add_pre_to_semax P x ->
+  add_pre_to_semax Q x.
+Proof.
+  intros.
+  eapply add_pre_to_semax_derives;[|apply H0].
+  apply aux1_reduceR. apply aux2_reduceR.
+  eapply derives_trans;[|apply H];solve_andp.
+Qed.
+
 Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
   ENTAIL Delta, Q |--  P ->
   add_post_to_semax Q x ->
@@ -377,12 +386,10 @@ Proof.
   intros. destruct x as [post path].
   induction post.
   - constructor.
-    apply semax_equiv.
-    apply extract_exists_pre.
+    apply aux_extract_exists_pre'.
     intros Q.
-    apply semax_extract_prop.
-    intros. inv H.
-    apply semax_equiv. auto.
+    apply aux_semax_extract_prop'.
+    intros. inv H. auto.
   - constructor.
     intros x.
     specialize (H x).
@@ -426,4 +433,136 @@ Proof.
   - inv H. apply inj_pair2 in H2. subst.
     constructor. intros. apply H0. simpl. auto.
 Qed.
+
+
+(* -------------------------------------------------
+   Assertion Derivation 
+   for paths/partial paths/atoms 
+--------------------------------------------------- *)
+Lemma atom_return_to_semax_derives_pre: forall p P1 P2 Q,
+P1 |-- P2 ->
+atom_return_to_semax P2 Q p ->
+atom_return_to_semax P1 Q p.
+Proof.
+ intros.
+ eapply atom_return_to_semax_derives.
+ { apply H. }
+ { intros. apply ENTAIL_refl. }
+ { auto. }
+Qed.
+
+
+Lemma atom_return_to_semax_derives_pre_group: forall P1 P2 Q atoms,
+  P1 |-- P2 ->
+  Forall (atom_return_to_semax P2 Q) atoms ->
+  Forall (atom_return_to_semax P1 Q) atoms.
+Proof. 
+  intros.
+  eapply Forall_forall.
+  intros. eapply atom_return_to_semax_derives_pre.
+  apply H. eapply Forall_forall in H0. apply H0. auto.
+Qed.
+
+Lemma add_pre_to_semax_derives_group_weak: forall P1 P2 pres,
+  P1 |-- P2 ->
+  Forall (add_pre_to_semax P2) pres ->
+  Forall (add_pre_to_semax P1) pres.
+Proof. 
+  intros.
+  eapply Forall_forall.
+  intros. eapply add_pre_to_semax_derives_weak.
+  apply H. eapply Forall_forall in H0. apply H0. auto.
+Qed.
+
+
+Lemma add_pre_to_semax_derives_group: forall P1 P2 pres,
+  ENTAIL Delta, ((allp_fun_id Delta) && P1) |-- |==> |> FF || P2 ->
+  Forall (add_pre_to_semax P2) pres ->
+  Forall (add_pre_to_semax P1) pres.
+Proof. 
+  intros.
+  eapply Forall_forall.
+  intros. eapply add_pre_to_semax_derives.
+  apply H. eapply Forall_forall in H0. apply H0. auto.
+Qed.
+
+Lemma atom_to_semax_derives_pre: forall p P1 P2 Q,
+  P1 |-- P2 ->
+  atom_to_semax P2 Q p ->
+  atom_to_semax P1 Q p.
+Proof.
+  intros.
+  eapply atom_to_semax_derives.
+  - apply H.
+  - apply ENTAIL_refl.
+  - auto.
+Qed.
+
+Lemma atom_to_semax_derives_pre_group: forall P1 P2 Q atoms,
+  P1 |-- P2 ->
+  Forall (atom_to_semax P2 Q) atoms ->
+  Forall (atom_to_semax P1 Q) atoms.
+Proof. 
+  intros.
+  eapply Forall_forall.
+  intros. eapply atom_to_semax_derives_pre.
+  apply H. eapply Forall_forall in H0. apply H0. auto.
+Qed.
+
+Lemma atom_to_semax_derives_post: forall p P Q1 Q2,
+  ENTAIL Delta, Q1 |-- Q2 ->
+  atom_to_semax P Q1 p ->
+  atom_to_semax P Q2 p.
+Proof.
+  intros.
+  eapply atom_to_semax_derives.
+  - apply derives_refl.
+  - apply H.
+  - auto.
+Qed.
+
+Lemma add_post_to_semax_conj_rule: forall Q1 Q2 post,
+add_post_to_semax Q1 post ->
+add_post_to_semax Q2 post ->
+add_post_to_semax (Q1 && Q2) post.
+Proof.
+  intros. destruct post as [post path].
+  induction post.
+  - constructor. inv H. inv H0.
+    eapply semax_aux_conseq.
+    6: { eapply semax_aux_conj_rule with (Q1:=Q1) (Q2:=Q2)
+          (Q:= {|
+            RA_normal := Q2;
+            RA_break := FALSE;
+            RA_continue := FALSE;
+            RA_return := fun _ : option val => FALSE |}).
+        + apply H2.
+        + apply H1.
+    }
+    { apply andp_left2. apply derives_refl. }
+    { apply ENTAIL_refl. }
+    { apply ENTAIL_refl. }
+    { apply ENTAIL_refl. }
+    { intros. apply ENTAIL_refl. }
+  - constructor. intros. inv H. apply inj_pair2 in H4. subst.
+    inv H0. apply inj_pair2 in H4. subst.
+    apply H1;auto.
+Qed.
+
+Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,
+  atom_to_semax P Q1 atom ->
+  atom_to_semax P Q2 atom ->
+  atom_to_semax P (Q1 && Q2) atom.
+Proof.
+  intros.
+  constructor.
+  inv H. inv H0.
+  eapply semax_aux_conj_rule with (Q1:=Q1) (Q2:=Q2)
+          (Q:= {|
+            RA_normal := Q2;
+            RA_break := FALSE;
+            RA_continue := FALSE;
+            RA_return := fun _ : option val => FALSE |});auto.
+Qed.
+
 End Semantics.

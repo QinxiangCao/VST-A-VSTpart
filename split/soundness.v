@@ -152,124 +152,6 @@ Proof.
         }
 Qed.
 
-(* -------------------------------------------------
-   Assertion Derivation 
-   for paths/partial paths/atoms 
---------------------------------------------------- *)
-Lemma atom_return_to_semax_derives_pre: forall p P1 P2 Q,
-P1 |-- P2 ->
-atom_return_to_semax Delta P2 Q p ->
-atom_return_to_semax Delta P1 Q p.
-Proof.
- intros.
- destruct p.
- constructor.
- inv H0.
- eapply semax_pre.
- + simpl. intros. apply andp_left2. apply H.
- + apply H2.
-Qed.
-
-Lemma atom_return_to_semax_derives_pre_group: forall P1 P2 Q atoms,
-  P1 |-- P2 ->
-  Forall (atom_return_to_semax Delta P2 Q) atoms ->
-  Forall (atom_return_to_semax Delta P1 Q) atoms.
-Proof. 
-  intros.
-  eapply Forall_forall.
-  intros. eapply atom_return_to_semax_derives_pre.
-  apply H. eapply Forall_forall in H0. apply H0. auto.
-Qed.
-
-Lemma add_pre_to_semax_derives_group: forall P1 P2 pres,
-  P1 |-- P2 ->
-  Forall (add_pre_to_semax Delta P2) pres ->
-  Forall (add_pre_to_semax Delta P1) pres.
-Proof. 
-  intros.
-  eapply Forall_forall.
-  intros. eapply add_pre_to_semax_derives.
-  apply H. eapply Forall_forall in H0. apply H0. auto.
-Qed.
-
-Lemma atom_to_semax_derives_pre: forall p P1 P2 Q,
-  P1 |-- P2 ->
-  atom_to_semax Delta P2 Q p ->
-  atom_to_semax Delta P1 Q p.
-Proof.
-  intros.
-  eapply atom_to_semax_derives.
-  - apply H.
-  - apply ENTAIL_refl.
-  - auto.
-Qed.
-
-Lemma atom_to_semax_derives_pre_group: forall P1 P2 Q atoms,
-  P1 |-- P2 ->
-  Forall (atom_to_semax Delta P2 Q) atoms ->
-  Forall (atom_to_semax Delta P1 Q) atoms.
-Proof. 
-  intros.
-  eapply Forall_forall.
-  intros. eapply atom_to_semax_derives_pre.
-  apply H. eapply Forall_forall in H0. apply H0. auto.
-Qed.
-
-Lemma atom_to_semax_derives_post: forall p P Q1 Q2,
-  ENTAIL Delta, Q1 |-- Q2 ->
-  atom_to_semax Delta P Q1 p ->
-  atom_to_semax Delta P Q2 p.
-Proof.
-  intros.
-  eapply atom_to_semax_derives.
-  - apply derives_refl.
-  - apply H.
-  - auto.
-Qed.
-
-Lemma add_post_to_semax_conj_rule: forall Q1 Q2 post,
-add_post_to_semax Delta Q1 post ->
-add_post_to_semax Delta Q2 post ->
-add_post_to_semax Delta (Q1 && Q2) post.
-Proof.
-  intros. destruct post as [post path].
-  induction post.
-  - constructor. inv H. inv H0.
-    eapply semax_post.
-    5: { eapply conj_rule with (Q1:=Q1) (Q2:=Q2)
-          (Q:= {|
-            RA_normal := Q2;
-            RA_break := FALSE;
-            RA_continue := FALSE;
-            RA_return := fun _ : option val => FALSE |}).
-        + apply H2.
-        + apply H1.
-    }
-    { apply andp_left2. apply derives_refl. }
-    { apply ENTAIL_refl. }
-    { apply ENTAIL_refl. }
-    { intros. apply ENTAIL_refl. }
-  - constructor. intros. inv H. apply inj_pair2 in H4. subst.
-    inv H0. apply inj_pair2 in H4. subst.
-    apply H1;auto.
-Qed.
-
-Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,
-  atom_to_semax Delta P Q1 atom ->
-  atom_to_semax Delta P Q2 atom ->
-  atom_to_semax Delta P (Q1 && Q2) atom.
-Proof.
-  intros.
-  constructor.
-  inv H. inv H0.
-  eapply conj_rule with (Q1:=Q1) (Q2:=Q2)
-          (Q:= {|
-            RA_normal := Q2;
-            RA_break := FALSE;
-            RA_continue := FALSE;
-            RA_return := fun _ : option val => FALSE |});auto.
-Qed.
-
 
 Lemma nocontinue_split_result: forall c, nocontinue (path_to_statement c) = true.
 Proof.
@@ -309,13 +191,13 @@ Proof.
   induction post.
   - simpl in H.
     inv H.
-    apply semax_seq_inv in H1.
+    apply semax_aux_seq_inv in H1.
     destruct H1 as [Qret [H1 E2]].
-    apply path_to_statement_app in H1.
-    apply semax_seq_inv' in H1. unfold overridePost in H1.
+    apply path_to_statement_app_aux in H1.
+    apply semax_aux_seq_inv' in H1. unfold overridePost in H1.
     eapply add_post_to_semax_derives with (Q:=
     (EX Q : environ -> mpred,
-                       !! DeepEmbeddedDef.semax Delta Q
+                       !! semax_aux Delta Q
                             (path_to_statement ret_atom)
                             {|
                             RA_normal := Qret;
@@ -324,13 +206,12 @@ Proof.
                             RA_return := R |} && Q)%assert).
     { Intros Q. Exists Q. apply andp_right.
       apply ENTAIL_refl. apply prop_right. constructor.
-      eapply semax_seq. apply H.
+      eapply semax_aux_seq. apply H.
       apply E2.
     }
     { constructor.
-      eapply semax_noreturn_inv in H1;[apply H1|..];eauto.
+      eapply semax_noreturn_inv_aux in H1;[apply H1|..];eauto.
       apply noreturn_split_result.
-      
     }
   - constructor. intros.
     apply H0. inv H. apply inj_pair2 in H3. subst. simpl. auto.
@@ -450,17 +331,18 @@ Proof.
     { constructor.
       simpl in H1. rewrite app_nil_r in H1.
       pose proof proj1 (Forall_forall _ _) H1.
-      eapply DeepEmbedded.ConseqFacts.semax_post_simple;[..|apply semax_skip];
+      eapply semax_aux_conseq;[..|apply semax_aux_skip];
         unfold normal_ret_assert.
+      + apply ENTAIL_refl.
       + unfold RA_normal, normal_ret_assert. Exists a1. apply andp_right.
-        apply derives_refl. apply prop_right. constructor;[|constructor].
+        apply ENTAIL_refl. apply prop_right. constructor;[|constructor].
         eapply path_conn_to_semax_reverse_simple. apply H2.
         apply in_split in H. destruct H as [posts1 [posts2 H]].
         rewrite H. rewrite posts_conn_pre_app. apply in_or_app. right.
         destruct p as [p2 a2]. destruct p2;simpl;auto.
-      + unfold RA_break. apply FF_left.
-      + apply FF_left.
-      + intros. apply FF_left. }
+      + unfold RA_break. apply andp_left2. apply FF_left.
+      + apply andp_left2. apply FF_left.
+      + intros. apply andp_left2.  apply FF_left. }
     { assert (p::pres<>[]) by (intros C;inversion C).
       specialize (IHpres H2).
       assert (Forall (path_to_semax Delta) (posts_conn_pres posts (p :: pres))).
@@ -472,19 +354,20 @@ Proof.
              (EX Q : assert, Q && !! Forall (add_pre_to_semax Delta Q) [a])
              (Basic_partial a1, [])).
       { constructor.
-        eapply DeepEmbedded.ConseqFacts.semax_post_simple;[..|apply semax_skip];
+        eapply semax_aux_conseq;[..|apply semax_aux_skip];
         unfold normal_ret_assert.
+        + apply ENTAIL_refl.
         + unfold RA_normal, normal_ret_assert. Exists a1. apply andp_right.
-          apply derives_refl. apply prop_right. constructor;[|constructor].
+          apply ENTAIL_refl. apply prop_right. constructor;[|constructor].
           eapply path_conn_to_semax_reverse_simple.
           apply (proj1 (Forall_forall _ _) H1). apply in_or_app. right.
           apply in_or_app. left.
           apply in_split in H. destruct H as [posts1 [posts2 H]].
           rewrite H. rewrite posts_conn_pre_app. apply in_or_app. right.
           destruct a as [p2 a2]. destruct p2;simpl;auto.
-        + unfold RA_break. apply FF_left.
-        + apply FF_left.
-        + intros. apply FF_left.
+        + unfold RA_break. apply andp_left2.  apply FF_left.
+        + apply andp_left2.  apply FF_left.
+        + intros. apply andp_left2.  apply FF_left.
       }
       eapply add_post_to_semax_derives.
       2:{ eapply add_post_to_semax_conj_rule.
@@ -496,13 +379,13 @@ Proof.
         + apply prop_right. constructor.
           - inv H6.
             eapply add_pre_to_semax_derives;[..|apply H9].
-            { apply andp_left2. apply derives_refl. }
+            { apply aux1_reduceR. apply aux2_reduceR. solve_andp. }
           - constructor.
-            { inv H5. eapply add_pre_to_semax_derives;[..|apply H9].
+            { inv H5. eapply add_pre_to_semax_derives_weak;[..|apply H9].
               { apply andp_left1. apply derives_refl. } }
             { inv H6. apply Forall_forall. intros.
               apply (proj1 (Forall_forall _ _) H10) in H6.
-              eapply add_pre_to_semax_derives;[..|apply H6].
+              eapply add_pre_to_semax_derives_weak;[..|apply H6].
               { apply andp_left2. apply derives_refl. } }
       }
     }    
@@ -536,7 +419,7 @@ Proof.
         - simpl. left;auto.
       }
       apply H3 in H4.
-      inv H4. apply path_to_statement_app in H6.
+      inv H4. apply path_to_statement_app' in H6.
       apply semax_seq_inv' in H6. simpl in H6.
       eapply DeepEmbedded.ConseqFacts.semax_post_simple;[..|apply H6];intros;
         try apply derives_refl.
