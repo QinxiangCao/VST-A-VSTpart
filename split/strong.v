@@ -17,7 +17,7 @@ Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_Sound.DeepEmbedded.
 Require Import VST.floyd.proofauto.
 Import Ctypes LiftNotation.
 Local Open Scope logic.
-Require Import split.vst_ext.
+Require Import Split.vst_ext.
 
 Definition obox (Delta: tycontext) (i: ident) (P: environ -> mpred): environ -> mpred :=
   ALL v: _,
@@ -986,7 +986,7 @@ Proof.
         { apply andp_derives.
           { apply mapsto_wand_reduce_writable; try eassumption. }
           apply andp_derives.
-          { apply+ derives_refl. }
+          { apply derives_refl. }
           { apply mapsto_wand_reduce_writable; try eassumption. }
         } (* typecheck envrion? => tc_val t v2 *)
         admit.

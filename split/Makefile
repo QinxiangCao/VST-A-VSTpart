@@ -6,7 +6,7 @@ COQDEP=$(COQBIN)coqdep
 
 VST_DIRS = msl sepcomp veric floyd
 
-INCLUDE_ACLIGHT = -Q ../AClight AClight -Q ../split split
+INCLUDE_ACLIGHT = -Q ../AClight AClight -Q ../Split Split
 INCLUDE_COMPCERT = -R $(COMPCERTDIR) compcert
 INCLUDE_VST = $(foreach d, $(VST_DIRS), -Q $(VSTDIR)/$(d) VST.$(d))
 NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)

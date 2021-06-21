@@ -1,7 +1,7 @@
 Require Import AClight.AClight.
 Require Import VST.floyd.proofauto.
-Require Import split.vst_ext.
-Require Import split.defs.
+Require Import Split.vst_ext.
+Require Import Split.defs.
 Require Import VST.veric.semax_lemmas.
 
 Inductive bind_partial_add (X:Type) (HX: Non_empty_Type X ):
