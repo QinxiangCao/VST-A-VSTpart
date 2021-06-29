@@ -39,31 +39,6 @@ exists z''. split.
 * eapply IHn;try eassumption;apply power_age_age1;auto.
 Qed.
 
-(* Lemma join_necR_aux2: forall n x y z x' y',
-relation_power n age x x' -> 
-relation_power n age y y' -> join x y z ->
-exists z', join x' y' z' /\ relation_power n age z z'.
-Proof.
-intros n. induction n.
-{ intros. simpl in *. subst.
-  exists z. split;auto. }
-intros.  
-apply power_age_age1 in H. simpl in H.
-destruct (age1 x) as [x''|] eqn:Ex.
-2:{ inversion H. }
-apply power_age_age1 in H0. simpl in H0.
-destruct (age1 y) as [y''|] eqn:Ey.
-2:{ inversion H0. }
-pose proof @age1_join _ _ _ _ _ _ _ _ H1 Ex.
-destruct H2 as [y''' [z'' [H3 [? ?]]]].
-assert (y'' = y''').
-{ hnf in H4. congruence. } subst y'''.
-Search age join.
-exists z''. split.
-* auto.
-* eapply IHn;try eassumption;apply power_age_age1;auto.
-Qed. *)
-
 
 Lemma relation_power_level: forall n x y,
  relation_power n age x y -> ((level x) = n + (level y))%nat.
@@ -117,219 +92,6 @@ subst. auto.
 Qed.
 
 
-Ltac unfold_Byte_const :=
-unfold Byte.max_unsigned in *;
-unfold Byte.modulus in *;
-unfold two_power_pos in *;
-unfold Byte.wordsize in *; simpl in *;
-repeat (unfold Int.modulus in *; unfold Int.wordsize in *;
-unfold Wordsize_32.wordsize in *; unfold Int.half_modulus in *;
-unfold two_power_nat, two_power_pos in *;
-unfold Int.max_unsigned, Int.min_signed, Int.max_signed,
-Int.zwordsize in *; simpl in *).
-
-
-Lemma Byte_unsigned_inj: forall i1 i2,
-Byte.unsigned i1 = Byte.unsigned i2 -> i1 = i2.
-Proof.
-intros.
-eapply Byte.same_bits_eq; intros.
-destruct i1, i2. simpl in *. unfold Byte.testbit.
-unfold Byte.unsigned. simpl. rewrite H. reflexivity.
-Qed.
-
-Lemma Byte_unsigned_inj_32: forall ia1 ia2 ib1 ib2,
-Byte.unsigned ia1 + Byte.unsigned ia2 * 256
- = Byte.unsigned ib1 + Byte.unsigned ib2 * 256-> 
-ia1 = ib1 /\ ia2 = ib2.
-Proof.
-intros.
-assert ((Byte.unsigned ia1 + Byte.unsigned ia2 * 256) mod 256
-       = ( Byte.unsigned ib1 + Byte.unsigned ib2 * 256) mod 256).
-{ rewrite H. reflexivity. }
-rewrite !Z_mod_plus_full in H0.
-rewrite (Z.mod_small) in H0. 2:{ apply Byte.unsigned_range. }
-rewrite (Z.mod_small) in H0. 2:{ apply Byte.unsigned_range. }
-apply Byte_unsigned_inj in H0. split;auto.
-assert ( Byte.unsigned ia2 = Byte.unsigned ib2).
-{ subst. omega. }
-apply Byte_unsigned_inj in H1. auto.
-Qed.
-
-
-Lemma decode_byte_deterministic: forall i1 i2,
-decode_val Mint8signed (Byte i1 :: nil) = decode_val Mint8signed (Byte i2 :: nil) ->
-i1 = i2.
-Proof.
-intros. unfold decode_val in *.
-simpl in H. apply Vint_inj in H.
-unfold decode_int in H.
-assert (Ht1: rev_if_be (i1 :: nil) = i1::nil).
-{ unfold rev_if_be. 
-  destruct (Archi.big_endian);auto. }
-assert (Ht2: rev_if_be (i2 :: nil) = i2::nil).
-  { unfold rev_if_be. 
-    destruct (Archi.big_endian);auto. }
-rewrite Ht1, Ht2 in *. clear Ht1. clear Ht2.
-{ simpl in H. rewrite !Z.add_0_r in H.
-  pose proof Byte.unsigned_range i1.
-  pose proof Byte.unsigned_range i2.
-  remember (Byte.unsigned i1) as v1.
-  remember (Byte.unsigned i2) as v2.
-  assert (E: 0 < 8 < Int.zwordsize). 
-  { unfold_Byte_const. omega. }
-  pose proof Int.eqmod_sign_ext _ ((Int.repr v1)) E as E1.
-  pose proof Int.eqmod_sign_ext _ ((Int.repr v2)) E as E2.
-  rewrite H in E1. apply Zbits.eqmod_sym in E1.
-  pose proof Zbits.eqmod_trans _ _ _ _ E1 E2 as E3.
-  apply Zbits.eqmod_mod_eq in E3.
-  2:{ unfold_Byte_const. omega. }
-  rewrite !Int.unsigned_repr_eq in E3.
-  unfold_Byte_const.
-  assert (v1 = v2).
-  { rewrite (Z.mod_small v1 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 256) in E3; try omega.
-    rewrite (Z.mod_small v1 256) in E3; try omega.
-  }
-  apply Byte_unsigned_inj. rewrite <- Heqv1, <- Heqv2. omega.
-}
-Qed.
-
-
-Lemma decode_byte_deterministic_unsigned: forall i1 i2,
-decode_val Mint8unsigned (Byte i1 :: nil) = 
-decode_val Mint8unsigned (Byte i2 :: nil) ->
-i1 = i2.
-Proof.
-intros. unfold decode_val in *.
-simpl in H. apply Vint_inj in H.
-unfold decode_int in H.
-assert (Ht1: rev_if_be (i1 :: nil) = i1::nil).
-{ unfold rev_if_be. 
-  destruct (Archi.big_endian);auto. }
-assert (Ht2: rev_if_be (i2 :: nil) = i2::nil).
-  { unfold rev_if_be. 
-    destruct (Archi.big_endian);auto. }
-rewrite Ht1, Ht2 in *. clear Ht1. clear Ht2.
-{ simpl in H. rewrite !Z.add_0_r in H.
-  pose proof Byte.unsigned_range i1.
-  pose proof Byte.unsigned_range i2.
-  remember (Byte.unsigned i1) as v1.
-  remember (Byte.unsigned i2) as v2.
-  assert (E: 0 <= 8 < Int.zwordsize). 
-  { unfold_Byte_const. omega. }
-  pose proof Int.eqmod_zero_ext _ ((Int.repr v1)) E as E1.
-  pose proof Int.eqmod_zero_ext _ ((Int.repr v2)) E as E2.
-  rewrite H in E1. apply Zbits.eqmod_sym in E1.
-  pose proof Zbits.eqmod_trans _ _ _ _ E1 E2 as E3.
-  apply Zbits.eqmod_mod_eq in E3.
-  2:{ unfold_Byte_const. omega. }
-  rewrite !Int.unsigned_repr_eq in E3.
-  unfold_Byte_const.
-  assert (v1 = v2).
-  { rewrite (Z.mod_small v1 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 256) in E3; try omega.
-    rewrite (Z.mod_small v1 256) in E3; try omega.
-  }
-  apply Byte_unsigned_inj. rewrite <- Heqv1, <- Heqv2. omega.
-}
-Qed.
-
-Lemma Int_unsign_ext_inj_byte: forall ia1 ia2 ib1 ib2,
-Int.zero_ext 16 (Int.repr (int_of_bytes ((ia1 :: ia2 :: nil)))) =
-Int.zero_ext 16 (Int.repr (int_of_bytes ((ib1 :: ib2 :: nil)))) ->
-ia1 :: ia2 :: nil = ib1 :: ib2 :: nil.
-Proof.
-intros. 
-{ simpl in H. rewrite !Z.add_0_r in H.
-  pose proof Byte.unsigned_range ia1.
-  pose proof Byte.unsigned_range ia2.
-  pose proof Byte.unsigned_range ib1.
-  pose proof Byte.unsigned_range ib2.
-  remember (Byte.unsigned ia1 + Byte.unsigned ia2 * 256) as v1.
-  remember (Byte.unsigned ib1 + Byte.unsigned ib2 * 256) as v2.
-  assert (E: 0 <=  16 < Int.zwordsize). 
-  { unfold_Byte_const. omega. }
-  pose proof Int.eqmod_zero_ext _ ((Int.repr v1)) E as E1.
-  pose proof Int.eqmod_zero_ext _ ((Int.repr v2)) E as E2.
-  rewrite H in E1. apply Zbits.eqmod_sym in E1.
-  pose proof Zbits.eqmod_trans _ _ _ _ E1 E2 as E3.
-  apply Zbits.eqmod_mod_eq in E3.
-  2:{ unfold_Byte_const. omega. }
-  rewrite !Int.unsigned_repr_eq in E3.
-  unfold_Byte_const.
-  assert (v1 = v2).
-  { rewrite (Z.mod_small v1 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 65536) in E3; try omega.
-    rewrite (Z.mod_small v1 65536) in E3; try omega.
-  } 
-  rewrite Heqv1, Heqv2 in H4.
-  apply Byte_unsigned_inj_32 in H4.
-  destruct H4;subst. auto.
-}
-Qed.
-
-
-Lemma Int_sign_ext_inj_byte: forall ia1 ia2 ib1 ib2,
-Int.sign_ext 16 (Int.repr (int_of_bytes ((ia1 :: ia2 :: nil)))) =
-Int.sign_ext 16 (Int.repr (int_of_bytes ((ib1 :: ib2 :: nil)))) ->
-ia1 :: ia2 :: nil = ib1 :: ib2 :: nil.
-Proof.
-intros. 
-{ simpl in H. rewrite !Z.add_0_r in H.
-  pose proof Byte.unsigned_range ia1.
-  pose proof Byte.unsigned_range ia2.
-  pose proof Byte.unsigned_range ib1.
-  pose proof Byte.unsigned_range ib2.
-  remember (Byte.unsigned ia1 + Byte.unsigned ia2 * 256) as v1.
-  remember (Byte.unsigned ib1 + Byte.unsigned ib2 * 256) as v2.
-  assert (E: 0 <  16 < Int.zwordsize). 
-  { unfold_Byte_const. omega. }
-  pose proof Int.eqmod_sign_ext _ ((Int.repr v1)) E as E1.
-  pose proof Int.eqmod_sign_ext _ ((Int.repr v2)) E as E2.
-  rewrite H in E1. apply Zbits.eqmod_sym in E1.
-  pose proof Zbits.eqmod_trans _ _ _ _ E1 E2 as E3.
-  apply Zbits.eqmod_mod_eq in E3.
-  2:{ unfold_Byte_const. omega. }
-  rewrite !Int.unsigned_repr_eq in E3.
-  unfold_Byte_const.
-  assert (v1 = v2).
-  { rewrite (Z.mod_small v1 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 4294967296) in E3; try omega.
-    rewrite (Z.mod_small v2 65536) in E3; try omega.
-    rewrite (Z.mod_small v1 65536) in E3; try omega.
-  } 
-  rewrite Heqv1, Heqv2 in H4.
-  apply Byte_unsigned_inj_32 in H4.
-  destruct H4;subst. auto.
-}
-Qed.
-
-
-Lemma resource_at_expand_share: forall 
-(r1 r2 r : rmap) (sh : share)
-(p: preds) l k
-(rsh: readable_share sh),
-join r1 r2 r -> 
-r1 @ l = YES sh rsh k p ->
-exists sh' (rsh':readable_share sh'),
-join_sub sh sh' /\
-r @ l = YES sh' rsh' k p.
-Proof.
-intros.
-pose proof resource_at_join _ _ _ l H.
-inv H1; try congruence.
-- exists sh3, rsh3.
-  rewrite H0 in H3. inv H3.
-  split;auto. exists sh2. auto.
-- exists sh3, rsh3.
-  rewrite H0 in H3. inv H3.
-  split;auto. exists sh2. auto.
-Qed.
-
 Lemma share_sub_lub: forall sh1 sh2 sh3,
 join_sub sh1 sh2 ->
 join_sub sh1 sh3 ->
@@ -347,7 +109,6 @@ split.
   rewrite Share.lub_commute. reflexivity.
 Qed.
 
-(* TODO: IMPORTANT LEMMA *)
 
 Definition join_sub_share sh1 res :=
 match res with
@@ -421,13 +182,6 @@ intros C. apply nsh. destruct rall.
 Qed.
 
 
-Lemma join_rem_single rall sh1 
-(nsh:  ~ readable_share (share_of rall))
-(JS1:join_sub sh1 (share_of rall)) :
-~ readable_share (Share.glb (share_of rall) (Share.comp sh1)).
-Admitted.
-
-
 Definition join_rem_of sh1 sh2 rall
 (JS1:join_sub sh1 (share_of rall))
 (JS2:join_sub sh2 (share_of rall)) :=
@@ -449,25 +203,6 @@ match rall with
 | PURE k p => PURE k p
 end.
 
-Definition join_rem_single_of sh1 rall
-(JS1:join_sub sh1 (share_of rall)) :=
-match rall with
-| YES sh rsh k p =>
-    let sh' := Share.glb sh (Share.comp sh1) in
-    match (dec_readable sh') with
-    | left rsh' => YES sh' rsh' k p
-    | right nsh' => NO sh' nsh'
-    end
-| NO sh nsh =>
-    let sh' := Share.glb (share_of rall) 
-        (Share.comp sh1) in
-    match (dec_readable (share_of rall)) with
-    | left rsh' => NO Share.bot bot_unreadable
-    | right nsh' =>
-        NO sh' (join_rem_single rall sh1 nsh' JS1)
-    end
-| PURE k p => PURE k p
-end.
 
 Local Open Scope pred_derives.
 
@@ -1053,105 +788,6 @@ Proof.
           rewrite ghost_of_approx. apply ghost_of_join.
           auto. }
 Qed.
-  (* * assert (JS3: forall l, adr_range lbase (Z.of_nat (Datatypes.length b1)) l 
-      -> join_sub (Share.glb (share_of (r1 @ l)) (Share.comp sh2)) (share_of (r1 @ l))).
-    { intros. exists (Share.glb (share_of (r1 @ l)) sh2).
-      split.
-      - rewrite (Share.glb_commute _ sh2). rewrite Share.glb_assoc. rewrite <- (Share.glb_assoc _ sh2).
-        rewrite (Share.glb_commute _ sh2). rewrite Share.comp2. rewrite (Share.glb_commute Share.bot).
-        rewrite !Share.glb_bot. reflexivity.
-      - rewrite <- Share.distrib1. rewrite (Share.lub_commute _ sh2). rewrite Share.comp1.
-        rewrite Share.glb_top. reflexivity.
-    }
-    exists (squash (level r, (
-    (fun l => match (adr_range_dec lbase (Z.of_nat (Datatypes.length b1)) l) with
-              | left i => join_rem_single_of (Share.glb (share_of (r1 @ l)) (Share.comp sh2)) (r1 @ l) (JS3 l i)
-              | right _ => identity_resource_of (r @ l)
-              end,
-    ghost_of r1)))).
-    apply join_unsquash. constructor.
-    + rewrite !unsquash_squash. simpl.
-      replace (level r) with (level r1).
-      rewrite rmap_level_eq. constructor;auto.
-      apply join_level in HJ1. tauto.
-    + rewrite !unsquash_squash. simpl. constructor.
-      { unfold join. unfold Join_pi. intros l.
-        pose proof resource_at_join _ _ _ l HJ1 as Hl1.
-        pose proof resource_at_join _ _ _ l HJ2 as Hl2.
-        pose proof Hm1 l as Hml1. pose proof Hm2 l as Hml2.
-        hnf in Hml1. hnf in Hml2.
-        simpl. unfold compose.
-        destruct (adr_range_dec lbase (Z.of_nat (Datatypes.length b1)) l).
-        * simpl. 
-          assert (join_sub sh1 (share_of (r@l))).
-          { apply JS1. auto. }
-          pose proof proof_irr (JS1 l a) H1. rewrite H2. clear H2.
-          clear JS1.
-          assert (join_sub sh2 (share_of (r@l))).
-          { apply JS2. auto. }
-          pose proof proof_irr (JS2 l a) H2. rewrite H3. clear H3.
-          clear JS2.
-          assert (join_sub (Share.glb (share_of (r1 @ l)) (Share.comp sh2))
-          (share_of (r1 @ l))).
-          { apply JS3. auto. }
-          pose proof proof_irr (JS3 l a) H3. rewrite H4. clear H4.
-          clear JS3.
-          unfold join_rem_of. unfold join_rem_single_of.
-          destruct (r@l) eqn:E;simpl.
-          + destruct (dec_readable);try contradiction.
-            destruct Hml1. rewrite H4 in Hl1. inv Hl1.
-          + destruct Hml1 as [rsha Hml1], Hml2 as [rshb Hml2].
-            rewrite Hml1 in Hl1. rewrite Hml2 in Hl2.
-            assert (p = (SomeP (rmaps.ConstType unit) (fun _ : list Type => tt))).
-            { inversion Hl1; try congruence;auto. }
-            subst p.
-            destruct (r1@l) eqn:E';simpl.
-            - destruct (dec_readable sh0);try contradiction.
-              destruct dec_readable;simpl.
-              destruct Hml1. Admitted. *)
-(* 
-      }
-      { simpl.
-        replace (level r) with (level r_mapsto1).
-        2:{ apply join_level in HJ1. tauto. }
-        rewrite ghost_of_approx.
-        replace (level r_mapsto1) with (level r1).
-        2:{ apply join_level in HJ1. omega. }
-        rewrite ghost_of_approx. apply ghost_of_join.
-        auto. } *)
-
-
-(* Lemma cut_resource_sub: forall sh' sh lbase len r1 r,
-  join_sub sh' sh ->
-  cut_resource_rmap sh lbase len r1 r ->
-  exists r2, cut_resource_rmap sh' lbase len r2 r.
-Proof.
-  intros.
-  inversion H0 as [b1 ? ? H']. subst.
-  inversion H' as [r_mapsto1 ? ? Hl1 [Hm1 Hg1] HJ1];subst.
-  destruct H as [sh_rem H].
-  exists (squash (level r, (
-    (fun l => if (adr_range_dec lbase (Z.of_nat (Datatypes.length b1)) l) 
-              then match (dec_readable sh_rem) with
-              | left rsh => YES sh_rem rsh (VAL (nth (Z.to_nat (snd l - snd lbase)) b1 Undef)) NoneP 
-              | right nsh =>  NO sh_rem nsh
-              end
-              else (r @ l)),
-    ghost_of r1))).
-  apply cut_resource_intro with (bl:=b1).
-  apply cut_resource_exp_intro with (r_mapsto:=squash (level r, (
-    (fun l => if (adr_range_dec lbase (Z.of_nat (Datatypes.length b1)) l) 
-              then match (dec_readable sh') with
-              | left rsh => YES sh' rsh (VAL (nth (Z.to_nat (snd l - snd lbase)) b1 Undef)) NoneP 
-              | right nsh =>  NO sh' nsh
-              end
-              else identity_resource_of (r @ l)),
-    ghost_of r_mapsto1)));auto;[split|].
-  - simpl. intros. if_tac.
-    +  intros. split.
-   intros.
-  
-  ) *)
 
 
 Lemma list_nth_eq': forall {A:Type} (l1 l2: list A) d,
@@ -1289,18 +925,6 @@ hnf. exists bl. destruct H5. repeat split;auto.
 Qed.
 
 
-(* Lemma address_mapsto_sub: forall sh' sh r1_maps r1_rem r v1 m b i,
-join_sub sh' sh ->
-join r1_maps r1_rem r -> 
-address_mapsto m v1 sh (b, Ptrofs.unsigned i) r1_maps ->
-exists r_maps r_rem, join r_maps r_rem r /\
-address_mapsto m v1 sh' (b, Ptrofs.unsigned i) r_maps.
-Proof.
-  intros. *)
-
-
-
-
 Lemma mapsto_join_andp: forall  sh1 sh2 t p v1 v2,
 (* tc_val t v2 -> can't be undefined *)
 v1 <> Vundef -> v2 <> Vundef ->
@@ -1339,25 +963,6 @@ Proof.
     split;auto.
   }
 Qed.
-
-(* Lemma address_mapsto_precise_weak: forall (ch : memory_chunk) (v1 v2 : val) (sh : Share.t) 
-  (l : AV.address) (w w1 w2 : rmap),
-  address_mapsto ch v1 sh l w1 ->
-  address_mapsto ch v2 sh l w2 -> joins w1 w -> joins w2 w -> w1 = w2.
-Proof.
-  intros.
-  destruct H1 as [wa1 H1], H2 as [wa2 H2].
-  apply rmap_ext.
-  - admit.
-  - intros. apply resource_at_join with (loc:=l0) in H1.
-    apply resource_at_join with (loc:=l0) in H2.
-    destruct H as [bm1 [[E1 E2] E3]], H0 as [bm2 [[E4 E5] E6]].
-    specialize (E2 l0). specialize (E5 l0).
-    hnf in E2. hnf in E5. if_tac in E2.
-    + destruct E2. destruct E5. rewrite H0 in *. rewrite H3 in *.
-      f_equal.
-    hnf in H. *)
-
 
 
 Lemma mapsto_join_andp_write: forall sh1 sh2 t p P1 P2,
@@ -1456,66 +1061,7 @@ Proof.
       }
   }
 Qed.
-    
-    (* destruct E2 as [E2 [E3 E4]]. intros r_rem' r_maps' r'.
-      intros. split.
-      + assert (H5: exists v', address_mapsto m v' (Share.lub sh1 sh2) (b, Ptrofs.unsigned i) r_maps').
-        { destruct H4.
-          - destruct H4. exists v'. auto.
-          - destruct H4. destruct H5. exists x. auto. }
-        clear H4 v'.  destruct H5 as [v' H4].
-      assert (exists r_maps1' r_maps2',
-        join r_maps1' r_maps2' r_maps' /\
-        address_mapsto m v' sh1 (b, Ptrofs.unsigned i) r_maps1'
-      ) by admit.
-      destruct H5 as [r_maps1' [r_maps2' [H5 H6]]].
-      assert (exists r_maps2,
-        join r1_maps r_maps2 r_maps /\
-        ghost_of r_maps2 = ghost_of  r_maps2'
-      ) by admit.
-      destruct H7 as [r_maps2 [H8 H9]].
-      assert (level r_rem = level r_rem') by admit.
-      apply join_comm in Ea1.
-      assert (r_maps2' = r_maps2).
-      { apply rmap_ext.
-        - admit.
-        - intros. hnf in H6. destruct H6 as [bm1 [[H8a H8b] H8c]].
-          destruct Eb1 as [bm2 [[H10a H10b] H10c]].
-          apply resource_at_join with (loc:=l) in H5.
-          apply resource_at_join with (loc:=l) in H8.
-          specialize (H10b l). hnf in H10b.
-          specialize (H8b l). hnf in H8b. if_tac in H10b.
-          + 
-            destruct H8b. destruct H10b. assert (x=x0). { apply proof_irr. }
-            subst x0. rewrite H11 in H8. rewrite H10 in H5.
-            inv H5; inv H8; try solve [
-            pose proof join_writable_readable RJ Hsh1w;
-            pose proof join_writable_readable RJ0 Hsh1w; tauto].
-            destruct H4 as [bm3 [[H4a H4b] H4c]].
-            specialize (H4b l). hnf in H4b. if_tac in H4b;try tauto.
-            destruct H4b. rewrite H5 in H17. inv H17.
-            destruct E2 as [bm4 [[E2a E2b] E2c]]. specialize (E2b l).
-            hnf in E2b. if_tac in E2b;try tauto. destruct E2b.
-            rewrite H12 in H18. inv H18. assert (sh3 = sh5).
-            { eapply join_canc;apply join_comm;eassumption. }
-            subst. f_equal. apply proof_irr.
-          + simpl in H8b. apply H8b in H5. rewrite H5.
-            apply H10b in H8. rewrite H8.
-          simpl in H8b. hnf in H8b.
-          admit.
-      }
-      subst r_maps2'. apply join_comm in H3.
-      pose proof join_assoc H5 H3. destruct X as [r_0 [HJ1 HJ2]].
-      eapply Ec1 with (y:=r_maps1') (b0:=Vundef).
-      3:{ right. split;auto. { simpl. auto. } exists v'. auto. }
-      2:{ apply join_comm. apply HJ2. }
-      Search necR resource_at.
-      Search
 
-
-
-
-  split;auto. *)
 
 Lemma necR_split_1n: forall n r1 r2,
 relation_power (S n) age r1 r2 -> exists y, age r1 y /\ necR y r2.
