@@ -1,7 +1,7 @@
 
 Require Import AClight.AClight.
 Require Import VST.floyd.proofauto.
-Require Import split.vst_ext.
+Require Import Split.vst_ext.
 Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 
 Axiom classic: forall P,  P \/ ~ P.
