@@ -1124,6 +1124,139 @@ Proof.
   }
 Qed.
 
+Lemma mapsto_join_andp_det: forall  sh1 sh2 t p v1 v2,
+(* tc_val t v2 -> can't be undefined *)
+v1 <> Vundef -> v2 <> Vundef ->
+readable_share sh1 -> readable_share sh2 ->
+(mapsto sh1 t p v1 * TT) && (mapsto sh2 t p v2 * TT)
+|-- (mapsto (Share.lub sh1 sh2) t p v1 * TT) && !!(v1 = v2).
+Proof.
+  intros sh1 sh2 t p v1 v2 H H0 Hsh1 Hsh2. unfold mapsto.
+  assert (E: forall P, FF * TT && (FF * TT) |-- P).
+  { rewrite !FF_sepcon. rewrite FF_and.
+    apply FF_derives. }
+  destruct (access_mode t);auto.
+  destruct (type_is_volatile t);auto.
+  destruct p;auto.
+  if_tac; if_tac; try tauto.
+  hnf. intros r.
+  intros E0.
+  destruct E0 as [Ea Eb].
+  destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+  destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+  destruct Eb1 as [Eb1 | Eb1].
+  2:{ simpl in Eb1. tauto. }
+  destruct Eb1 as [Eb1 Ec1].
+  destruct Eb2 as [Eb2 | Eb2].
+  2:{ simpl in Eb2. tauto. }
+  destruct Eb2 as [Eb2 Ec2].
+  { pose proof address_mapsto_join
+        _ _ _ _ _ _ _ _ _ _ _ _ H1 H2 Ea1 Ea2 Ec1 Ec2.
+    destruct H3. subst v2.
+    destruct H4 as [r_maps [r_rem [E1 E2]]].
+    if_tac.
+    2:{ exfalso. apply H3. apply readable_share_lub. auto. }
+    split. 2:{ simpl. auto. }
+    exists r_maps, r_rem. repeat split;auto. left.
+    split;auto.
+  }
+Qed.
+
+
+
+Lemma mapsto__join_andp_det: forall  sh1 sh2 t p,
+(* tc_val t v2 -> can't be undefined *)
+(* v1 <> Vundef -> v2 <> Vundef -> *)
+readable_share sh1 -> readable_share sh2 ->
+(mapsto_ sh1 t p * TT) && (mapsto_ sh2 t p * TT)
+|-- (mapsto_ (Share.lub sh1 sh2) t p * TT).
+Proof.
+  intros sh1 sh2 t p Hsh1 Hsh2. unfold mapsto_. unfold mapsto.
+  assert (E: forall P, FF * TT && (FF * TT) |-- P).
+  { rewrite !FF_sepcon. rewrite FF_and.
+    apply FF_derives. }
+  destruct (access_mode t);auto.
+  destruct (type_is_volatile t);auto.
+  destruct p;auto.
+  if_tac; if_tac; try tauto.
+  hnf. intros r.
+  intros E0.
+  destruct E0 as [Ea Eb].
+  destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+  destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+  destruct Eb1 as [Eb1 | Eb1].
+  { exfalso. destruct Eb1. apply tc_val_Vundef in H1. auto. }
+  destruct Eb1 as [_ [v1 Ec1]].
+  destruct Eb2 as [Eb2 | Eb2].
+  { exfalso. destruct Eb2. apply tc_val_Vundef in H1. auto. }
+  destruct Eb2 as [_ [v2 Ec2]].
+  { pose proof address_mapsto_join
+        _ _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
+    destruct H1. subst v2.
+    destruct H2 as [r_maps [r_rem [E1 E2]]].
+    if_tac.
+    2:{ exfalso. apply H1. apply readable_share_lub. auto. }
+    exists r_maps, r_rem. repeat split;auto. right.
+    split. { reflexivity. } exists v1. auto.
+  }
+Qed.
+
+Lemma TODO_mapsto__join_andp_det: forall  sh1 sh2 t p,
+(* tc_val t v2 -> can't be undefined *)
+(* v1 <> Vundef -> v2 <> Vundef -> *)
+(* readable_share sh1 -> readable_share sh2 -> *)
+(mapsto_ sh1 t p * TT) && (mapsto_ sh2 t p * TT)
+|-- (mapsto_ (Share.lub sh1 sh2) t p * TT).
+Proof.
+  intros sh1 sh2 t p. unfold mapsto_. unfold mapsto.
+  assert (E: forall P, FF * TT && (FF * TT) |-- P).
+  { rewrite !FF_sepcon. rewrite FF_and.
+    apply FF_derives. }
+  destruct (access_mode t);auto.
+  destruct (type_is_volatile t);auto.
+  destruct p;auto.
+  if_tac; if_tac; try tauto.
+  { hnf. intros r.
+    intros E0.
+    destruct E0 as [Ea Eb].
+    destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+    destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+    destruct Eb1 as [Eb1 | Eb1].
+    { exfalso. destruct Eb1. apply tc_val_Vundef in H1. auto. }
+    destruct Eb1 as [_ [v1 Ec1]].
+    destruct Eb2 as [Eb2 | Eb2].
+    { exfalso. destruct Eb2. apply tc_val_Vundef in H1. auto. }
+    destruct Eb2 as [_ [v2 Ec2]].
+    { pose proof address_mapsto_join
+          _ _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
+      destruct H1. subst v2.
+      destruct H2 as [r_maps [r_rem [E1 E2]]].
+      if_tac.
+      2:{ exfalso. apply H1. apply readable_share_lub. auto. }
+      exists r_maps, r_rem. repeat split;auto. right.
+      split. { reflexivity. } exists v1. auto.
+    }
+  }
+  { hnf. intros r.
+    intros E0.
+    destruct E0 as [Ea Eb].
+    destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+    destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+    destruct Eb1 as [Eb1 | Eb1].
+    { exfalso. destruct Eb1. apply tc_val_Vundef in H1. auto. }
+    destruct Eb1 as [_ [v1 Ec1]].
+    destruct Eb2 as [[Eb2 Ec2] Ed2].
+    { if_tac.
+      (* pose proof address_mapsto_join
+          _ _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
+      destruct H1. subst v2.
+      destruct H2 as [r_maps [r_rem [E1 E2]]].
+      if_tac.
+      2:{ exfalso. apply H1. apply readable_share_lub. auto. }
+      exists r_maps, r_rem. repeat split;auto. right.
+      split. { reflexivity. } exists v1. auto.
+    } *)
+Admitted.
 
 Lemma mapsto_join_andp_write: forall sh1 sh2 t p P1 P2,
 (* tc_val t v2 -> can't be undefined *)
@@ -1224,14 +1357,14 @@ Qed.
 
 
 Lemma mapsto_join_andp_write_det: forall sh1 sh2 t p P1 P2 v',
-(* tc_val t v' ->  *)
+tc_val t v' -> 
 writable_share sh1 -> writable_share sh2 ->
 (mapsto_ sh1 t p * (mapsto sh1 t p v' -* P1)) && 
 (mapsto_ sh2 t p * (mapsto sh2 t p v' -* P2))
 |-- 
 (mapsto_ (Share.lub sh1 sh2) t p * (mapsto (Share.lub sh1 sh2) t p v' -* (P1 && P2))).
 Proof.
-  intros sh1 sh2 t p P1 P2 v' Hsh1w Hsh2w.
+  intros sh1 sh2 t p P1 P2 v' Htc Hsh1w Hsh2w.
   unfold mapsto_. unfold mapsto.
   pose proof writable_readable_share Hsh1w as Hsh1.
   pose proof writable_readable_share Hsh2w as Hsh2.
@@ -1260,11 +1393,7 @@ Proof.
       split;auto. split;try eassumption.
       hnf. intros.
       eapply Ec1. { apply H1. } { apply H2. }
-      { destruct (eq_dec v' Vundef).
-        { right. split;auto. exists v'. auto. }
-        { left. split;auto. } left;split;auto. }
-        { right. split;auto. Search tc_val Vundef. }
-      left. split;auto. simpl.  }
+      left. split;auto.
     }
     assert (EP2: forall r', cut_resource_rejoin sh2
                     (b, Ptrofs.unsigned i) m v' r r' -> P2 r').

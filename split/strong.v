@@ -761,6 +761,252 @@ Proof.
   solve_andp.
 Qed.
 
+Lemma distrib_orp_andp2:
+forall (A : Type) (ND : NatDed A) (P Q R : A),
+ R && (P || Q) = R && P || R && Q.
+Proof.
+  intros.
+  rewrite andp_comm.
+  rewrite distrib_orp_andp.
+  rewrite andp_comm at 1.
+  f_equal. rewrite andp_comm. reflexivity.
+Qed.
+
+
+Lemma read_contra1: forall (CS:compspecs) ty t1 t2 v1 v2 cmp
+  (Hcmp: is_comparison cmp = true),
+ eqb_type t1 int_or_ptr_type = false ->
+ eqb_type t2 int_or_ptr_type = false ->
+ tc_val ty
+       (force_val
+          (sem_binary_operation' cmp t1 t2 
+             v1 v2)) ->
+ force_val
+        (sem_binary_operation' cmp t1 t2
+           v1 v2) <> Vundef -> False.
+Proof.
+Admitted.
+
+Lemma share_nonidentity_lub: forall sh1 sh2,
+  sepalg.nonidentity sh1 -> sepalg.nonidentity sh2 ->
+  sepalg.nonidentity (Share.lub sh1 sh2).
+Proof.
+  intros. intros C.
+  apply identity_share_bot in C.
+  apply lub_bot_e in C. apply H.
+  destruct C. subst. apply bot_identity.
+Qed.
+
+Lemma mapsto__join_andp_det_logic:forall  sh1 sh2 t p,
+readable_share sh1 -> readable_share sh2 ->
+(mapsto_ sh1 t p * TT) && (mapsto_ sh2 t p * TT)
+|-- (mapsto_ (Share.lub sh1 sh2) t p * TT).
+Proof.
+  intros.
+  apply mapsto__join_andp_det;auto.
+Qed.
+
+Lemma mapsto_conj_der_ptr_cmp: forall {CS:compspecs} Delta sh1 sh2 t e,
+readable_share sh1 -> readable_share sh2 ->
+ENTAIL Delta,
+((` (mapsto_ sh1 t)) (eval_expr e)  * TT) &&
+((` (mapsto_ sh2 t)) (eval_expr e)  * TT)
+|-- (` (mapsto_ (Share.lub sh1 sh2) t)) (eval_expr e) * TT.
+Proof.
+  intros.
+  pose proof mapsto__join_andp_det_logic.
+  unfold liftx. simpl. intros. unfold lift.
+  eapply derives_trans;[|apply H1];auto.
+  solve_andp.
+Qed.
+
+Lemma mapsto_join_andp_det_logic: forall  sh1 sh2 t p v1 v2,
+v1 <> Vundef -> v2 <> Vundef ->
+readable_share sh1 -> readable_share sh2 ->
+(mapsto sh1 t p v1 * TT) && (mapsto sh2 t p v2 * TT)
+|-- (mapsto (Share.lub sh1 sh2) t p v1 * TT) && !!(v1 = v2).
+Proof.
+  intros.
+  apply mapsto_join_andp_det;auto.
+Qed.
+
+Lemma mapsto_conj_der_mem: forall {CS:compspecs} Delta sh1 sh2 t e v1 v2 Q1 Q2 i,
+readable_share sh1 -> readable_share sh2 ->
+ENTAIL Delta,  local (` (tc_val t v1)) &&
+((` (mapsto sh1 t)) (eval_lvalue e) (` v1) * TT) && subst i (` v1) Q1 &&
+(tc_lvalue Delta e && local (` (tc_val t v2)) &&
+ ((` (mapsto sh2 t)) (eval_lvalue e) (` v2) * TT) && subst i (` v2) Q2)
+|-- tc_lvalue Delta e && local (` (tc_val t v1)) &&
+    ((` (mapsto (Share.lub sh1 sh2) t)) (eval_lvalue e) (` v1) * TT) &&
+    (subst i (` v1) Q1 && subst i (` v1) Q2).
+Proof.
+  intros.
+  assert_PROP (v1 <> Vundef).
+  { destruct (eq_dec v1 Vundef).
+    { subst. unfold local. unfold lift1. simpl. intros. Intros.
+      apply tc_val_Vundef in H2. tauto. }
+    apply prop_right. auto. }
+  assert_PROP (v2 <> Vundef).
+  { destruct (eq_dec v2 Vundef).
+    { subst. unfold local. unfold lift1. simpl. intros. Intros.
+      apply tc_val_Vundef in H4. tauto. }
+    apply prop_right. auto. }
+  unfold liftx. simpl. unfold lift. intros r.
+  pose proof mapsto_join_andp_det_logic 
+    sh1 sh2 t (eval_lvalue e r) v1 v2 H1 H2 H H0.
+  eapply derives_trans.
+  { apply andp_right.
+    + eapply derives_trans. 2:{ apply H3. }
+      solve_andp.
+    + apply derives_refl.
+  }
+  Intros. subst. solve_andp.
+Qed.
+
+Lemma mapsto_conj_der_mem2: forall {CS:compspecs} Delta sh1 sh2 t2 e2 v1 v2 Q1 Q2 i,
+readable_share sh1 -> readable_share sh2 ->
+  ENTAIL Delta,
+  tc_lvalue Delta e2 &&
+  local ((` (tc_val t2)) (` (eval_cast (typeof e2) t2 v1))) &&
+  ((` (mapsto sh1 (typeof e2))) (eval_lvalue e2) (` v1) * TT) &&
+  subst i (` (force_val (sem_cast (typeof e2) t2 v1))) Q1 &&
+  (tc_lvalue Delta e2 &&
+  local ((` (tc_val t2)) (` (eval_cast (typeof e2) t2 v2))) &&
+  ((` (mapsto sh2 (typeof e2))) (eval_lvalue e2) (` v2) * TT) &&
+  subst i (` (force_val (sem_cast (typeof e2) t2 v2))) Q2)
+  |-- tc_lvalue Delta e2 &&
+      local ((` (tc_val t2)) (` (eval_cast (typeof e2) t2 v1))) &&
+      ((` (mapsto (Share.lub sh1 sh2) (typeof e2))) (eval_lvalue e2) (` v1) *
+      TT) &&
+      (subst i (` (force_val (sem_cast (typeof e2) t2 v1))) Q1 &&
+      subst i (` (force_val (sem_cast (typeof e2) t2 v1))) Q2).
+Proof.
+  intros.
+  destruct (eq_dec v1 Vundef).
+  { subst. rewrite semax_straight.eval_cast_Vundef.
+    unfold local. unfold lift1. simpl. intros. Intros.
+    apply tc_val_Vundef in H2. tauto. }
+  destruct (eq_dec v2 Vundef).
+  { subst. rewrite semax_straight.eval_cast_Vundef.
+    unfold local. unfold lift1. simpl. intros. Intros.
+    apply tc_val_Vundef in H3. tauto. }
+  unfold liftx. simpl. unfold lift. intros r.
+  pose proof mapsto_join_andp_det_logic 
+    sh1 sh2 (typeof e2) (eval_lvalue e2 r) v1 v2 n n0 H H0.
+  eapply derives_trans.
+  { apply andp_right.
+    + eapply derives_trans. 2:{ apply H1. } solve_andp.
+    + apply derives_refl.
+  }
+  Intros. subst.
+  solve_andp.
+Qed.
+
+Lemma semax_aux_conj_set: forall CS Espec Delta P Q Q1 Q2 i e,
+  @semax_aux CS Espec Delta P (Clight.Sset i e) 
+    (overridePost Q2 Q) ->
+  @semax_aux CS Espec Delta P (Clight.Sset i e) 
+    (overridePost Q1 Q) ->
+  @semax_aux CS Espec Delta P (Clight.Sset i e) 
+    (normal_ret_assert (Q1 && Q2)).
+Proof.
+  intros.
+  destruct Q as [Qn Qb Qc Qr]. unfold_der.
+  apply semax_aux_set_inv in H0.
+  apply semax_aux_set_inv in H. unfold_der.
+  eapply semax_aux_conseq;
+    [..|apply semax_aux_set_ptr_compare_load_cast_load_backward
+       with (P0:= Q1 && Q2)];
+  unfold normal_ret_assert;unfold_der;try (intros; solve_andp).  pose proof andp_ENTAILL _ _ _ _ _ H0 H.
+  rewrite andp_dup in H1.
+  eapply ENTAIL_trans;[apply H1|]. clear H1.
+  rewrite !distrib_orp_andp. repeat apply orp_ENTAIL.
+  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
+    repeat apply orp_left; rewrite andp_assoc.
+    + rewrite subst_andp. rewrite <- later_andp.
+      apply later_ENTAIL. solve_andp.
+    + Intros cmp e1 e2 ty sh1 sh2.
+      rewrite <- later_andp. apply later_ENTAIL.
+      intros r.
+      unfold local. unfold lift1. simpl. Intros.
+      assert_PROP ((tc_val (typeof e) (eval_expr e r) /\ eval_expr e r <> Vundef)).
+      { eapply derives_trans;[|apply tc_expr_NoVundef];try eassumption.
+        solve_andp. }
+      admit.
+    + Intros sh t2 v2.
+      rewrite <- later_andp. apply later_ENTAIL.
+      intros r.
+      unfold local. unfold lift1. simpl. Intros.
+      assert_PROP ((tc_val (typeof e) (eval_expr e r) /\ eval_expr e r <> Vundef)).
+      { eapply derives_trans;[|apply tc_expr_NoVundef];try eassumption.
+        solve_andp. }
+      unfold tc_temp_id.
+      unfold typecheck_temp_id. unfold typeof_temp in H1.
+      destruct (PTree.get i (temp_types Delta)).
+      2:{ inv H1. }
+      inv H1. rewrite denote_tc_assert_andp.
+      rewrite denote_tc_assert_bool.
+      unfold implicit_deref. admit.
+    + Intros sh e1 t1 v2.
+      unfold tc_temp_id.
+      unfold tc_lvalue.
+      unfold typecheck_temp_id. unfold typeof_temp in H2.
+      admit.
+  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
+    repeat apply orp_left; rewrite andp_assoc.
+    + admit.
+    + Intros cmpa e1a e2a tya sh1a sh2a.
+      Intros cmpb e1b e2b tyb sh1b sh2b.
+      rewrite H1 in H8. inv H8.
+      Exists cmpb e1b e2b tyb (Share.lub sh1a sh1b) (Share.lub sh2a sh2b). rewrite <- later_andp. apply andp_right.
+      { apply prop_right. repeat split;auto.
+        + apply share_nonidentity_lub;auto.
+        + apply share_nonidentity_lub;auto.
+      }
+      apply later_ENTAIL. rewrite subst_andp.
+      repeat apply andp_right;try solve_andp.
+      * eapply derives_trans;[|apply mapsto_conj_der_ptr_cmp];auto.
+        try solve_andp. admit. admit.
+        (* TODO: prove a conjunction rule with no readable share *)
+      * eapply derives_trans;[|apply mapsto_conj_der_ptr_cmp];auto.
+        try solve_andp. admit. admit.
+        (* TODO: prove a conjunction rule with no readable share *)
+    + admit.
+    + admit.
+  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
+    repeat apply orp_left; rewrite andp_assoc.
+    + admit.
+    + admit.
+    + Intros sh1 t1 v1. Intros sh2 t2 v2.
+      rewrite H1 in H4. inv H4. Exists (Share.lub sh1 sh2) t2 v1.
+      rewrite <- later_andp. apply andp_right.
+      { apply prop_right. repeat split;auto.
+      apply readable_share_lub. auto. }
+      apply later_ENTAIL. rewrite subst_andp.
+      eapply derives_trans.
+      2:{ apply mapsto_conj_der_mem with (v4:=v2);auto. }
+      solve_andp.
+    + admit.
+  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
+    repeat apply orp_left; rewrite andp_assoc.
+    + admit.
+    + admit.
+    + admit.
+    + Intros sh1 e1 t1 v1. Intros sh2 e2 t2 v2.
+      rewrite H2 in H6. inv H6.
+      assert (e1 = e2).
+      { destruct t2; inv H5; reflexivity. }
+      subst e1.
+      Exists (Share.lub sh1 sh2) e2 t2 v1.
+      rewrite <- later_andp. apply andp_right.
+      { apply prop_right. repeat split;auto.
+        apply readable_share_lub. auto. }
+      apply later_ENTAIL. rewrite subst_andp.
+      eapply derives_trans.
+      2:{ apply mapsto_conj_der_mem2 with (v4:=v2);auto. }
+      solve_andp.
+Admitted.
+
 
 Theorem semax_aux_conj_rule: forall  CS Espec Delta P Q c Q1 Q2 ,
   @semax_aux CS Espec Delta P c (overridePost Q1 Q) ->
@@ -777,7 +1023,12 @@ Proof.
     destruct Q as [Qn Qb Qc Qr]; unfold_der;try solve_andp;
     intros;eapply derives_trans with (Q:=FF);
       try solve_andp;try (apply FF_left).
-  - 
+  - intros.
+    eapply semax_aux_conseq;
+    [..|eapply semax_aux_conj_set with (Q1:=Q1) (Q2:=Q2);eassumption];
+    destruct Q as [Qn Qb Qc Qr]; unfold_der;try solve_andp;
+    intros;eapply derives_trans with (Q:=FF);
+      try solve_andp;try (apply FF_left).
 Admitted.
 
 
@@ -798,91 +1049,6 @@ Admitted.
 
 
 
-
-(* Lemma semax_aux_seq_inv: forall {CS: compspecs} {Espec: OracleKind} Delta P R h t,
-    @semax CS Espec Delta P (Clight.Ssequence h t) R ->
-    exists Q, @semax CS Espec Delta P h (overridePost Q R) /\
-              @semax_aux CS Espec Delta Q t R.
-Proof.
-  intros.
-  remember (Clight.Ssequence h t) as c eqn:?H.
-  induction H; try solve [inv H0].
-  + induction H; try solve [inv H0].
-    - inv H0.
-      exists Q; split;auto.
-      apply semax_aux_intro. auto.
-    - subst c. specialize (IHsemax_aux eq_refl).
-      destruct IHsemax_aux as [Q [? ?]].
-      exists Q. split.
-      { destruct R as [Rn Rb Rc Rr],  R' as [Rn' Rb' Rc' Rr'];
-        unfold overridePost in *;
-         unfold RA_normal, RA_break, RA_continue, RA_return in *.
-        apply semax_conseq with (P'0:=P') (R' := {| RA_normal := Q; RA_break := Rb'; RA_continue := Rc'; RA_return := Rr' |});auto;
-        unfold RA_normal, RA_break, RA_continue, RA_return in *;
-        try apply derives_full_refl; try apply ENTAIL_refl.
-        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H]. solve_andp. 
-        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H2]. solve_andp. 
-        * apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H3]. solve_andp. 
-        * intros. apply aux1_reduceR. apply aux2_reduceR. eapply derives_trans;[|apply H4]. solve_andp. }
-      { destruct R as [Rn Rb Rc Rr],  R' as [Rn' Rb' Rc' Rr'];
-        unfold overridePost in *;
-         unfold RA_normal, RA_break, RA_continue, RA_return in *.
-        eapply semax_aux_conseq;[..|apply H6];auto;
-        unfold RA_normal, RA_break, RA_continue, RA_return in *;
-        try apply derives_full_refl; try apply ENTAIL_refl. }
-  + subst c.
-    pose proof IHsemax eq_refl. clear IHsemax.
-    destruct H0 as [Q [? ?]].
-    exists Q.
-    split.
-    - apply (semax_conseq _ P' (overridePost Q R')); auto.
-      * clear.
-        destruct R, R'.
-        apply derives_full_refl.
-      * destruct R, R'; auto.
-      * destruct R, R'; auto.
-      * destruct R, R'; auto.
-    - eapply semax_aux_conseq;[..|apply H6].
-    
-    ; eauto.
-      apply derives_full_refl.
-      
-
-  + subst c.
-    pose proof IHsemax eq_refl. clear IHsemax.
-    destruct H0 as [Q [? ?]].
-    exists Q.
-    split.
-    - apply (AuxDefs.semax_conseq _ P' (overridePost Q R')); auto.
-      * clear.
-        destruct R, R'.
-        apply derives_full_refl.
-      * destruct R, R'; auto.
-      * destruct R, R'; auto.
-      * destruct R, R'; auto.
-    - eapply semax_conseq; eauto.
-      apply derives_full_refl.
-Qed. *)
-
-
-
-(* 
-Lemma aux_extract_exists_pre: forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
-      (c : Clight.statement) (Delta : tycontext) 
-      (R : ret_assert),
-    (forall x : A, @semax_aux CS Espec Delta (P x) c R) ->
-    semax_aux Delta (EX x : A, P x) c R.
-Admitted.
-
-Lemma aux_semax_extract_prop: forall (CS : compspecs) (Espec : OracleKind) 
-      (Delta : tycontext) (PP : Prop) (P : environ -> mpred)
-      (c : Clight.statement) (Q : ret_assert),
-    (PP -> semax_aux Delta P c Q) ->
-    semax_aux Delta (!! PP && P) c Q.
-Admitted. *)
-
-
-
 Lemma aux_extract_exists_pre': forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
       (c : Clight.statement) (Delta : tycontext) 
       (R : ret_assert),
@@ -896,14 +1062,3 @@ Lemma aux_semax_extract_prop': forall (CS : compspecs) (Espec : OracleKind)
     (PP -> semax Delta P c Q) ->
     semax Delta (!! PP && P) c Q.
 Admitted.
-
-(* Used for proving
-
-Lemma add_pre_to_semax_sem: forall (x:partial_path_statement),
-  (add_pre_to_semax
-        (EX Q : assert,
-          !! (add_pre_to_semax Q x) && Q)) 
-      x.
-
-
-*)
