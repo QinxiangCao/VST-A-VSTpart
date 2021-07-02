@@ -115,20 +115,6 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
       |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
       ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1)) *
        (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) -* P))))
-   || (EX (t2:type) (ch ch': memory_chunk) (sh: share),
-      !! ((numeric_type (typeof e1) && numeric_type t2)%bool = true /\
-          access_mode (typeof e1) = By_value ch /\
-          access_mode t2 = By_value ch' /\
-          decode_encode_val_ok ch ch' /\
-          writable_share sh) &&
-      |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
-      ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1) 
-               && `(mapsto_ sh t2) (eval_lvalue e1)) *
-       (ALL v': val,
-          `(mapsto sh t2) (eval_lvalue e1) (`v') -*
-             imp (local  ((`decode_encode_val )
-                  ((` force_val) ((`(sem_cast (typeof e2) (typeof e1))) (eval_expr e2))) (`ch) (`ch') (`v') ))
-               (P)))))
   )
   (Clight.Sassign e1 e2) (normal_ret_assert P)
 | semax_aux_set_ptr_compare_load_cast_load_backward: forall (P: environ->mpred) id e,
@@ -136,20 +122,6 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
        ((|> ( (tc_expr Delta e) &&
              (tc_temp_id id (typeof e) Delta e) &&
              subst id (eval_expr e) P)) ||
-        (EX cmp: Cop.binary_operation, EX e1: expr, EX e2: expr,
-         EX ty: type, EX sh1: share, EX sh2: share,
-          !! (e = Ebinop cmp e1 e2 ty /\
-              sepalg.nonidentity sh1 /\ sepalg.nonidentity sh2 /\
-              is_comparison cmp = true /\
-              eqb_type (typeof e1) int_or_ptr_type = false /\
-              eqb_type (typeof e2) int_or_ptr_type = false /\
-              typecheck_tid_ptr_compare Delta id = true) &&
-            ( |> ( (tc_expr Delta e1) &&
-              (tc_expr Delta e2)  &&
-          local (`(blocks_match cmp) (eval_expr e1) (eval_expr e2)) &&
-          (`(mapsto_ sh1 (typeof e1)) (eval_expr e1) * TT) &&
-          (`(mapsto_ sh2 (typeof e2)) (eval_expr e2) * TT) &&
-          subst id (eval_expr (Ebinop cmp e1 e2 ty)) P))) ||
         (EX sh: share, EX t2: type, EX v2: val,
               !! (typeof_temp Delta id = Some t2 /\
                   is_neutral_cast (typeof e) t2 = true /\
@@ -306,45 +278,18 @@ local (tc_environ Delta) && (allp_fun_id Delta && P) |--
         |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
         ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1)) *
         (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) -* RA_normal Q))))
-    || (EX (t2:type) (ch ch': memory_chunk) (sh: share),
-        !! ((numeric_type (typeof e1) && numeric_type t2)%bool = true /\
-            access_mode (typeof e1) = By_value ch /\
-            access_mode t2 = By_value ch' /\
-            decode_encode_val_ok ch ch' /\
-            writable_share sh) &&
-        |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
-        ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1) 
-                && `(mapsto_ sh t2) (eval_lvalue e1)) *
-        (ALL v': val,
-            `(mapsto sh t2) (eval_lvalue e1) (`v') -*
-              imp (local  ((`decode_encode_val )
-                    ((` force_val) ((`(sem_cast (typeof e2) (typeof e1))) (eval_expr e2))) (`ch) (`ch') (`v') ))
-                (RA_normal Q)))))
   ).
 Proof.
   intros.
   remember (Clight.Sassign e1 e2) as c eqn:?H.
   induction H;try solve [inv H0].
   + inv H0. reduce2derives. 
-    apply orp_derives.
-    - apply exp_derives; intro sh.
-      apply andp_derives; auto.
-      apply later_derives; auto.
-      apply andp_derives; auto.
-      apply sepcon_derives; auto.
-      apply wand_derives; auto. unfold_der. auto.
-    - apply exp_derives; intro t2.
-      apply exp_derives; intro ch.
-      apply exp_derives; intro ch'.
-      apply exp_derives; intro sh.
-      apply andp_derives; auto.
-      apply later_derives; auto.
-      apply andp_derives; auto.
-      apply sepcon_derives; auto.
-      apply allp_derives; intros v'.
-      apply wand_derives; auto.
-      apply imp_derives; auto.
-      unfold_der;auto.
+    apply exp_derives; intro sh.
+    apply andp_derives; auto.
+    apply later_derives; auto.
+    apply andp_derives; auto.
+    apply sepcon_derives; auto.
+    apply wand_derives; auto. unfold_der. auto.
   + subst c. specialize (IHsemax_aux eq_refl).
     eapply derives_trans with (Q:= (andp (local (tc_environ Delta)) (andp (allp_fun_id Delta) P'))).
     { repeat (apply andp_right;try solve_andp). auto. }
@@ -358,26 +303,13 @@ Proof.
       apply andp_left2. apply andp_left2.
       apply IHsemax_aux. }
     reduceR. 
-    apply orp_ENTAILL.
-    - apply exp_ENTAILL; intro sh.
-      apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply later_ENTAILL.
-      apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply sepcon_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply wand_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      auto.
-    - apply exp_ENTAILL; intro t2.
-      apply exp_ENTAILL; intro ch.
-      apply exp_ENTAILL; intro ch'.
-      apply exp_ENTAILL; intro sh.
-      apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply later_ENTAILL.
-      apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply sepcon_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply allp_ENTAILL; intro v'.
-      apply wand_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      apply imp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
-      auto.
+    apply exp_ENTAILL; intro sh.
+    apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
+    apply later_ENTAILL.
+    apply andp_ENTAILL; [reduceLL; apply ENTAIL_refl |].
+    apply sepcon_ENTAILL; [reduceLL; apply ENTAIL_refl |].
+    apply wand_ENTAILL; [reduceLL; apply ENTAIL_refl |].
+    auto.
 Qed.
 
 
@@ -387,7 +319,7 @@ Lemma semax_aux_set_inv: forall {CS: compspecs} {Espec: OracleKind} Delta P R id
     ( (|> ( (tc_expr Delta e) &&
              (tc_temp_id id (typeof e) Delta e) &&
              subst id (eval_expr e) (RA_normal R))) ||
-      (EX cmp: Cop.binary_operation, EX e1: expr, EX e2: expr,
+      (* (EX cmp: Cop.binary_operation, EX e1: expr, EX e2: expr,
          EX ty: type, EX sh1: share, EX sh2: share,
           !! (e = Ebinop cmp e1 e2 ty /\
               sepalg.nonidentity sh1 /\ sepalg.nonidentity sh2 /\
@@ -400,7 +332,7 @@ Lemma semax_aux_set_inv: forall {CS: compspecs} {Espec: OracleKind} Delta P R id
           local (`(blocks_match cmp) (eval_expr e1) (eval_expr e2)) &&
           (`(mapsto_ sh1 (typeof e1)) (eval_expr e1) * TT) &&
           (`(mapsto_ sh2 (typeof e2)) (eval_expr e2) * TT) &&
-          subst id (eval_expr (Ebinop cmp e1 e2 ty)) (RA_normal R)))) ||
+          subst id (eval_expr (Ebinop cmp e1 e2 ty)) (RA_normal R)))) || *)
       (EX sh: share, EX t2: type, EX v2: val,
               !! (typeof_temp Delta id = Some t2 /\
                   is_neutral_cast (typeof e) t2 = true /\
@@ -424,12 +356,12 @@ Proof.
   induction H; try solve [inv H0].
   + inv H0.
     reduce2derives.
-    apply orp_derives; [apply orp_derives; [apply orp_derives |] |].
+    apply orp_derives; [apply orp_derives |].
     - apply later_derives.
       apply andp_derives; auto.
       apply subst_derives. unfold normal_ret_assert.
       unfold RA_normal. auto.
-    - apply exp_derives; intros cmp.
+    (* - apply exp_derives; intros cmp.
       apply exp_derives; intros e1.
       apply exp_derives; intros e2.
       apply exp_derives; intros ty.
@@ -439,7 +371,7 @@ Proof.
       apply later_derives; auto.
       apply andp_derives; auto.
       apply subst_derives. unfold normal_ret_assert.
-      unfold RA_normal. auto.
+      unfold RA_normal. auto. *)
     - apply exp_derives; intros sh.
       apply exp_derives; intros t2.
       apply exp_derives; intros v2.
@@ -471,7 +403,7 @@ Proof.
       apply andp_left2. apply andp_left2.
       apply IHsemax_aux. }
       reduceR.
-    apply orp_ENTAILL; [apply orp_ENTAILL; [apply orp_ENTAILL |] |].
+    apply orp_ENTAILL; [apply orp_ENTAILL |].
     - apply later_ENTAILL.
       unfold tc_temp_id, typecheck_temp_id.
       destruct ((temp_types Delta) ! id) eqn:?H; [| normalize].
@@ -485,7 +417,7 @@ Proof.
         intros _.
         eapply expr2.neutral_cast_subsumption'; eauto.
       * auto.
-    - apply exp_ENTAILL; intro cmp.
+    (* - apply exp_ENTAILL; intro cmp.
       apply exp_ENTAILL; intro e1.
       apply exp_ENTAILL; intro e2.
       apply exp_ENTAILL; intro ty.
@@ -505,7 +437,7 @@ Proof.
         unfold_lift.
         replace (sem_binary_operation' cmp) with (sem_cmp (expr.op_to_cmp cmp)); [| destruct cmp; inv H7; auto].
         apply binop_lemmas2.tc_val'_sem_cmp; auto.
-      * auto.
+      * auto. *)
     - apply exp_ENTAILL; intro sh.
       apply exp_ENTAILL; intro t2.
       apply exp_ENTAILL; intro v2.
@@ -839,67 +771,24 @@ Proof.
   pose proof andp_ENTAILL _ _ _ _ _ H0 H.
   rewrite andp_dup in H1.
   eapply ENTAIL_trans;[apply H1|]. clear H1.
-  rewrite !distrib_orp_andp. repeat apply orp_ENTAIL.
-  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
-    repeat apply orp_left; rewrite andp_assoc.
-    + Intros sh1. Intros sh2.
-      Exists (Share.lub sh1 sh2).
-      apply andp_right. { apply prop_right. apply share_lub_writable;auto. }
-      rewrite <- later_andp.
-      apply later_ENTAIL.
-      repeat apply andp_right; try solve_andp.
-      intros r.
-      assert_PROP (tc_val (typeof e)
-      ((` force_val) ((` (sem_cast (typeof e0) (typeof e))) (eval_expr e0)) r)).
-      { unfold tc_environ. simpl. unfold local.
-        unfold lift1. Intros.
-        eapply derives_trans;[| 
-          apply (typecheck_expr_sound _ _ (Ecast e0 (typeof e)) H3)].
-        solve_andp. }
-      eapply derives_trans.
-      2:{ eapply (mapsto_join_andp_write_det_logic _ _ (typeof e) ((eval_lvalue e) r) (Q1 r) (Q2 r) ((` force_val) ((` (sem_cast (typeof e0) (typeof e))) (eval_expr e0)) r));auto. } simpl.
-      solve_andp.
-    + admit.
-  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
-    repeat apply orp_left; rewrite andp_assoc.
-    + admit.
-    + Intros t1 ch1 ch1' sh1. Intros t2 ch2 ch2' sh2.
-      rewrite H2 in H7. inv H7. rewrite <- later_andp.
-      Exists t1 ch2 ch1' (Share.lub sh1 sh2).
-      apply andp_right.
-      { apply prop_right.
-        pose proof share_lub_writable _ _ H5 H10.
-        destruct H7.
-        repeat split;auto. }
-(* 
-        rewrite andb_comm in H1.
-        destruct t1; try  solve [inv H1];simpl in H3.
-        * admit.
-        * inv H3. rewrite andb_comm in H6. destruct t2; try  solve [inv H6];simpl in H8.
-          { apply decode_encode_val_ok_symm in H4.
-            pose proof decode_encode_val_ok_trans _ _ _ H4 H9.
-            destruct ch2'; try solve [inv H3].
-            { destruct i; destruct s0; try solve [inv H8]. }
-            { destruct i; destruct s0; try solve [inv H8]. }
-          }  *)
-      apply later_ENTAIL.
-      admit.
-Admitted.
-
-
-Lemma read_contra1: forall (CS:compspecs) ty t1 t2 v1 v2 cmp
-  (Hcmp: is_comparison cmp = true),
- eqb_type t1 int_or_ptr_type = false ->
- eqb_type t2 int_or_ptr_type = false ->
- tc_val ty
-       (force_val
-          (sem_binary_operation' cmp t1 t2 
-             v1 v2)) ->
- force_val
-        (sem_binary_operation' cmp t1 t2
-           v1 v2) <> Vundef -> False.
-Proof.
-Admitted.
+  Intros sh1. Intros sh2.
+  Exists (Share.lub sh1 sh2).
+  apply andp_right. { apply prop_right. apply share_lub_writable;auto. }
+  rewrite <- later_andp.
+  apply later_ENTAIL.
+  repeat apply andp_right; try solve_andp.
+  intros r.
+  assert_PROP (tc_val (typeof e)
+  ((` force_val) ((` (sem_cast (typeof e0) (typeof e))) (eval_expr e0)) r)).
+  { unfold tc_environ. simpl. unfold local.
+    unfold lift1. Intros.
+    eapply derives_trans;[| 
+      apply (typecheck_expr_sound _ _ (Ecast e0 (typeof e)) H3)].
+    solve_andp. }
+  eapply derives_trans.
+  2:{ eapply (mapsto_join_andp_write_det_logic _ _ (typeof e) ((eval_lvalue e) r) (Q1 r) (Q2 r) ((` force_val) ((` (sem_cast (typeof e0) (typeof e))) (eval_expr e0)) r));auto. } simpl.
+  solve_andp.
+Qed.
 
 Lemma share_nonidentity_lub: forall sh1 sh2,
   sepalg.nonidentity sh1 -> sepalg.nonidentity sh2 ->
@@ -918,30 +807,6 @@ readable_share sh1 -> readable_share sh2 ->
 Proof.
   intros.
   apply mapsto__join_andp_det;auto.
-Qed.
-
-Lemma mapsto_conj_der_ptr_cmp: forall {CS:compspecs} Delta sh1 sh2 t e,
-(* readable_share sh1 -> readable_share sh2 -> *)
-ENTAIL Delta,
-((` (mapsto_ sh1 t)) (eval_expr e)  * TT) &&
-((` (mapsto_ sh2 t)) (eval_expr e)  * TT)
-|-- (` (mapsto_ (Share.lub sh1 sh2) t)) (eval_expr e) * TT.
-Proof.
-  intros.
-  unfold mapsto_.
-  (* pose proof mapsto__join_andp_det_logic. *)
-  unfold liftx. simpl. intros r. unfold lift.
-  assert (local (tc_environ Delta) r && (FF * TT && (FF * TT))
-  |-- FF * TT).
-  { rewrite FF_sepcon. rewrite FF_andp. apply andp_left2. auto. }
-  unfold mapsto. destruct (access_mode t);auto.
-  destruct (type_is_volatile t);auto.
-  destruct (eval_expr e r);auto.
-  if_tac; if_tac.
-  + admit.
-  + 
-  eapply derives_trans;[|apply H1];auto.
-  solve_andp.
 Qed.
 
 Lemma mapsto_join_andp_det_logic: forall  sh1 sh2 t p v1 v2,
@@ -1026,6 +891,73 @@ Proof.
   solve_andp.
 Qed.
 
+Print expr.
+
+
+Lemma eval_lvalue_expr_contra: forall {CS:compspecs} Delta e,
+  access_mode (typeof e) <> By_reference ->
+  tc_expr Delta e && tc_lvalue Delta e |-- FF.
+Proof.
+  intros. rename H into Ht. induction e;
+  unfold tc_expr; unfold typecheck_expr; unfold tc_lvalue; unfold typecheck_lvalue;
+  simpl; intros r; unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+  + apply derives_extract_prop. intros. inv H.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    destruct (get_var_type Delta i ) eqn:E1;simpl.
+    2:{ apply derives_extract_prop. intros. inv H. }
+    rewrite denote_tc_assert_bool.
+    simpl in Ht. contradiction.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    simpl in Ht. contradiction.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    simpl in Ht. contradiction.
+Qed.
+
+Lemma eval_cast_expr_contra: forall {CS:compspecs} Delta e1 t1,
+  access_mode (typeof e1) <> By_reference ->
+  tc_expr Delta (Ecast e1 t1) && tc_lvalue Delta e1 |-- FF .
+Proof.
+  intros. rename H into Ht. induction e1;
+  unfold tc_expr; unfold typecheck_expr; unfold tc_lvalue; unfold typecheck_lvalue;
+  simpl; intros r; unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+  + apply derives_extract_prop. intros. inv H.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    destruct (get_var_type Delta i ) eqn:E1;simpl.
+    2:{ apply derives_extract_prop. intros. inv H. }
+    rewrite denote_tc_assert_bool.
+    simpl in Ht. contradiction.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    simpl in Ht. contradiction.
+  + destruct (access_mode t) eqn:E;simpl;
+    unfold liftx; simpl; unfold lift; try solve [Intros; inv H].
+    simpl in Ht. contradiction.
+Qed.
+
+Lemma type_is_by_value_sem: forall e, 
+  type_is_by_value (typeof e) = true ->
+  access_mode (typeof e) <> By_reference.
+Proof.
+  intros. intros C.
+  destruct (typeof e); simpl in H, C; try congruence.
+  + destruct i, s; try congruence.
+  + destruct f; try congruence.
+Qed.
+
+Lemma eval_cast_lvalue_contra: forall {CS:compspecs} Delta e1 t1,
+  tc_lvalue Delta (Ecast e1 t1) && tc_lvalue Delta e1 |-- FF .
+Proof.
+  intros. induction e1;
+  unfold tc_expr; unfold typecheck_expr; unfold tc_lvalue; unfold typecheck_lvalue;
+  simpl; intros r; unfold liftx; simpl; unfold lift; try solve [Intros; inv H];
+  try solve [apply derives_extract_prop; intros C; inv C].
+Qed.
+
+  
 Lemma semax_aux_conj_set: forall CS Espec Delta P Q Q1 Q2 i e,
   @semax_aux CS Espec Delta P (Clight.Sset i e) 
     (overridePost Q2 Q) ->
@@ -1049,58 +981,42 @@ Proof.
     repeat apply orp_left; rewrite andp_assoc.
     + rewrite subst_andp. rewrite <- later_andp.
       apply later_ENTAIL. solve_andp.
-    + Intros cmp e1 e2 ty sh1 sh2.
-      rewrite <- later_andp. apply later_ENTAIL.
-      intros r.
-      unfold local. unfold lift1. simpl. Intros.
-      assert_PROP ((tc_val (typeof e) (eval_expr e r) /\ eval_expr e r <> Vundef)).
-      { eapply derives_trans;[|apply tc_expr_NoVundef];try eassumption.
-        solve_andp. }
-      admit.
     + Intros sh t2 v2.
+      pose proof is_neutral_cast_by_value _ _ H2.
+      apply type_is_by_value_sem in H4.
       rewrite <- later_andp. apply later_ENTAIL.
-      intros r.
-      unfold local. unfold lift1. simpl. Intros.
-      assert_PROP ((tc_val (typeof e) (eval_expr e r) /\ eval_expr e r <> Vundef)).
-      { eapply derives_trans;[|apply tc_expr_NoVundef];try eassumption.
-        solve_andp. }
-      unfold tc_temp_id.
-      unfold typecheck_temp_id. unfold typeof_temp in H1.
-      destruct (PTree.get i (temp_types Delta)).
-      2:{ inv H1. }
-      inv H1. rewrite denote_tc_assert_andp.
-      rewrite denote_tc_assert_bool.
-      unfold implicit_deref. admit.
-    + Intros sh e1 t1 v2.
-      unfold tc_temp_id.
-      unfold tc_lvalue.
-      unfold typecheck_temp_id. unfold typeof_temp in H2.
-      admit.
+      eapply derives_trans with (Q:= tc_expr Delta e && tc_lvalue Delta e); try solve_andp.
+      eapply derives_trans with (Q:= FF).
+      2:{ apply FF_left. }
+      apply eval_lvalue_expr_contra; auto.
+    + Intros sh e1 t1 v2. 
+      rewrite <- later_andp. apply later_ENTAIL.
+      assert_PROP (access_mode (typeof e1) <> By_reference).
+      { destruct (typeof e1) eqn:E0; simpl; simpl in H3; intros r; try solve [apply prop_right;intros C;inv C].
+        + destruct i0, s; try solve [apply prop_right;intros C;inv C].
+        + destruct f; try try solve [apply prop_right;intros C;inv C].
+        + unfold mapsto. simpl. unfold liftx. simpl.  unfold lift. unfold local.
+          unfold lift1. simpl. rewrite FF_sepcon. eapply derives_trans with (Q:=FF); try solve_andp.
+          apply FF_left.
+        + unfold mapsto. simpl. unfold liftx. simpl.  unfold lift. unfold local.
+          unfold lift1. simpl. rewrite FF_sepcon. eapply derives_trans with (Q:=FF); try solve_andp.
+          apply FF_left. }
+      subst e. 
+      eapply derives_trans with (Q:= tc_expr Delta (Ecast e1 t1) && tc_lvalue Delta e1); try solve_andp.
+      eapply derives_trans with (Q:= FF);try apply FF_left.
+      apply eval_cast_expr_contra;auto.
   - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
     repeat apply orp_left; rewrite andp_assoc.
-    + admit.
-    + Intros cmpa e1a e2a tya sh1a sh2a.
-      Intros cmpb e1b e2b tyb sh1b sh2b.
-      rewrite H1 in H8. inv H8.
-      Exists cmpb e1b e2b tyb (Share.lub sh1a sh1b) (Share.lub sh2a sh2b). rewrite <- later_andp. apply andp_right.
-      { apply prop_right. repeat split;auto.
-        + apply share_nonidentity_lub;auto.
-        + apply share_nonidentity_lub;auto.
-      }
-      apply later_ENTAIL. rewrite subst_andp.
-      repeat apply andp_right;try solve_andp.
-      * eapply derives_trans;[|apply mapsto_conj_der_ptr_cmp];auto.
-        try solve_andp. admit. admit.
-        (* TODO: prove a conjunction rule with no readable share *)
-      * eapply derives_trans;[|apply mapsto_conj_der_ptr_cmp];auto.
-        try solve_andp. admit. admit.
-        (* TODO: prove a conjunction rule with no readable share *)
-    + admit.
-    + admit.
-  - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
-    repeat apply orp_left; rewrite andp_assoc.
-    + admit.
-    + admit.
+    + Intros sh t1 v1. Exists sh t1 v1.
+      apply andp_right.
+      { apply prop_right. auto. }
+      pose proof is_neutral_cast_by_value _ _ H2.
+      apply type_is_by_value_sem in H4.
+      rewrite <- later_andp. apply later_ENTAIL.
+      eapply derives_trans with (Q:= tc_expr Delta e && tc_lvalue Delta e); try solve_andp.
+      eapply derives_trans with (Q:=FF).
+      2:{ apply FF_left. }
+      apply eval_lvalue_expr_contra; auto.
     + Intros sh1 t1 v1. Intros sh2 t2 v2.
       rewrite H1 in H4. inv H4. Exists (Share.lub sh1 sh2) t2 v1.
       rewrite <- later_andp. apply andp_right.
@@ -1110,12 +1026,40 @@ Proof.
       eapply derives_trans.
       2:{ apply mapsto_conj_der_mem with (v4:=v2);auto. }
       solve_andp.
-    + admit.
+    + Intros sh1 t1 v1. Intros sh2 e2 t2 v2. Exists sh1 t1 v1.
+      rewrite <- later_andp. apply andp_right.
+      { apply prop_right. repeat split;auto. }
+      apply later_ENTAIL.
+      eapply derives_trans with (Q:= tc_lvalue Delta e && tc_lvalue Delta e2); try solve_andp.
+      subst e. eapply derives_trans with (Q:=FF); try apply FF_left.
+      apply eval_cast_lvalue_contra.
   - rewrite <- andp_assoc. rewrite !distrib_orp_andp2.
     repeat apply orp_left; rewrite andp_assoc.
-    + admit.
-    + admit.
-    + admit.
+    + Intros sh e2 t2 v2. Exists sh e2 t2 v2. 
+      rewrite <- later_andp.
+      apply andp_right. { apply prop_right;auto. }
+      apply later_ENTAIL.
+      assert_PROP (access_mode (typeof e2) <> By_reference).
+      { destruct (typeof e2) eqn:E0; simpl; simpl in H3; intros r; try solve [apply prop_right;intros C;inv C].
+        + destruct i0, s; try solve [apply prop_right;intros C;inv C].
+        + destruct f; try try solve [apply prop_right;intros C;inv C].
+        + unfold mapsto. simpl. unfold liftx. simpl.  unfold lift. unfold local.
+          unfold lift1. simpl. rewrite FF_sepcon. eapply derives_trans with (Q:=FF); try solve_andp.
+          apply FF_left.
+        + unfold mapsto. simpl. unfold liftx. simpl.  unfold lift. unfold local.
+          unfold lift1. simpl. rewrite FF_sepcon. eapply derives_trans with (Q:=FF); try solve_andp.
+          apply FF_left. }
+      subst e. 
+      eapply derives_trans with (Q:= tc_expr Delta (Ecast e2 t2) && tc_lvalue Delta e2); try solve_andp.
+      eapply derives_trans with (Q:= FF);try apply FF_left.
+      apply eval_cast_expr_contra;auto.
+    + Intros sh1 e1 t1 v1. Intros sh2 t2 v2. Exists sh1 e1 t1 v1.
+      rewrite <- later_andp. apply andp_right.
+      { apply prop_right. repeat split;auto. }
+      apply later_ENTAIL.
+      eapply derives_trans with (Q:= tc_lvalue Delta e && tc_lvalue Delta e1); try solve_andp.
+      subst e. eapply derives_trans with (Q:=FF); try apply FF_left.
+      apply eval_cast_lvalue_contra.
     + Intros sh1 e1 t1 v1. Intros sh2 e2 t2 v2.
       rewrite H2 in H6. inv H6.
       assert (e1 = e2).
@@ -1129,8 +1073,7 @@ Proof.
       eapply derives_trans.
       2:{ apply mapsto_conj_der_mem2 with (v4:=v2);auto. }
       solve_andp.
-Admitted.
-
+Qed.
 
 Theorem semax_aux_conj_rule: forall  CS Espec Delta P Q c Q1 Q2 ,
   @semax_aux CS Espec Delta P c (overridePost Q1 Q) ->
@@ -1153,6 +1096,17 @@ Proof.
     destruct Q as [Qn Qb Qc Qr]; unfold_der;try solve_andp;
     intros;eapply derives_trans with (Q:=FF);
       try solve_andp;try (apply FF_left).
+  - admit. (* Scall *)
+  - admit. (* Sbuiltin *)
+  - admit. (* Ssequence *)
+  - admit. (* Sifthenelse *)
+  - admit. (* Sloop *)
+  - admit. (* Sbreak *)
+  - admit. (* Scontinue *)
+  - admit. (* Sreturn *)
+  - admit. (* Sswitch *)
+  - admit. (* Slabel *)
+  - admit. (* Sgoto *)
 Admitted.
 
 
