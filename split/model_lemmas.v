@@ -116,7 +116,7 @@ match res with
 | _ => True
 end.
 
-Definition share_of res:= 
+Definition resourece_share res:= 
 match res with
 | YES sh _ _ _ | NO sh _ => sh
 | _ => Share.top
@@ -124,9 +124,9 @@ end.
 
 
 Lemma join_rem_nsh rall sh1 sh2 
-(nsh:  ~ readable_share (share_of rall))
-(JS1:join_sub sh1 (share_of rall)) (JS2:join_sub sh2 (share_of rall)) :
-~ readable_share (Share.glb (share_of rall) (Share.comp (Share.lub sh1 sh2))).
+(nsh:  ~ readable_share (resourece_share rall))
+(JS1:join_sub sh1 (resourece_share rall)) (JS2:join_sub sh2 (resourece_share rall)) :
+~ readable_share (Share.glb (resourece_share rall) (Share.comp (Share.lub sh1 sh2))).
 Proof.
 intros.
 intros C. apply nsh. destruct rall. 
@@ -183,8 +183,8 @@ Qed.
 
 
 Definition join_rem_of sh1 sh2 rall
-(JS1:join_sub sh1 (share_of rall))
-(JS2:join_sub sh2 (share_of rall)) :=
+(JS1:join_sub sh1 (resourece_share rall))
+(JS2:join_sub sh2 (resourece_share rall)) :=
 match rall with
 | YES sh rsh k p =>
     let sh' := Share.glb sh (Share.comp (Share.lub sh1 sh2)) in
@@ -193,9 +193,9 @@ match rall with
     | right nsh' => NO sh' nsh'
     end
 | NO sh nsh =>
-    let sh' := Share.glb (share_of rall) 
+    let sh' := Share.glb (resourece_share rall) 
         (Share.comp (Share.lub sh1 sh2)) in
-    match (dec_readable (share_of rall)) with
+    match (dec_readable (resourece_share rall)) with
     | left rsh' => NO Share.bot bot_unreadable
     | right nsh' =>
         NO sh' (join_rem_nsh rall sh1 sh2 nsh' JS1 JS2)
@@ -206,6 +206,102 @@ end.
 
 Local Open Scope pred_derives.
 
+
+Definition identity_resource_of res :=
+  match res with
+  | PURE k p => PURE k p
+  | NO _ _ | YES _ _ _ _ => NO Share.bot bot_unreadable
+  end.
+
+Lemma identity_resource_of_sem res: join res (identity_resource_of res) res.
+Proof.
+  unfold identity_resource_of.
+  destruct res; constructor;apply join_bot_eq .
+Qed.
+
+Lemma identity_resource_at_approx:
+  forall phi l,
+      resource_fmap (approx (level phi)) (approx (level phi)) (identity_resource_of (phi @ l)) = (identity_resource_of (phi @ l)).
+Proof.
+  intros. symmetry. rewrite rmap_level_eq. unfold resource_at.
+  case_eq (unsquash phi); intros.
+  simpl.
+  set (phi' := (squash (n, (resource_fmap (approx n) (approx n) oo fst r, snd r)))).
+  pose proof I.
+  generalize (unsquash_inj phi phi'); intro.
+  spec H1.
+  replace (unsquash phi) with (unsquash (squash (unsquash phi))).
+  2: rewrite squash_unsquash; auto.
+  rewrite H.
+  unfold phi'.
+  repeat rewrite unsquash_squash.
+  simpl.
+  f_equal.
+  unfold rmap_fmap, compose; simpl.
+  f_equal.
+  extensionality y.
+  rewrite resource_fmap_fmap.
+  rewrite approx_oo_approx; auto.
+  unfold phi' in *; clear phi'.
+  subst.
+  rewrite unsquash_squash in H.
+  injection H; clear H; intro.
+  pattern r at 1. rewrite <- H.
+  unfold rmap_fmap, compose.
+  simpl; rewrite resource_fmap_fmap.
+  rewrite approx_oo_approx; auto.
+  destruct (fst r l);simpl;reflexivity.
+Qed.
+
+
+Lemma join_rem_resource_at_approx:
+  forall (sh1 sh2:Share.t) (phi:rmap) (l:AV.address) 
+    (JS1:join_sub sh1 (resourece_share (phi @ l)))
+    (JS2:join_sub sh2 (resourece_share (phi @ l))),
+      resource_fmap (approx (level phi)) (approx (level phi)) 
+        (join_rem_of sh1 sh2 (phi @ l) JS1 JS2) = (join_rem_of sh1 sh2 (phi @ l) JS1 JS2).
+Proof.
+  intros. symmetry. rewrite rmap_level_eq. unfold resource_at in *.
+  destruct (unsquash phi) eqn:H; intros.
+  simpl.
+  set (phi' := (squash (n, (resource_fmap (approx n) (approx n) oo fst r, snd r)))).
+  pose proof I.
+  generalize (unsquash_inj phi phi'); intro.
+  spec H1.
+  replace (unsquash phi) with (unsquash (squash (unsquash phi))).
+  2: rewrite squash_unsquash; auto.
+  rewrite H.
+  unfold phi'.
+  repeat rewrite unsquash_squash.
+  simpl.
+  f_equal.
+  unfold rmap_fmap, compose; simpl.
+  f_equal.
+  extensionality y.
+  rewrite resource_fmap_fmap.
+  rewrite approx_oo_approx; auto.
+  unfold phi' in *; clear phi'.
+  subst.
+  rewrite unsquash_squash in H.
+  injection H; clear H; intro.
+(*   
+  unfold join_rem_of. destruct dec_readable. destruct (fst r l).
+  { destruct (dec_readable (Share.glb sh (Share.comp (Share.lub sh1 sh2))) ).  }
+  replace ((join_rem_nsh (fst r l) sh1 sh2 nsh' JS1 JS2)) with
+  (~ readable_share ( (Share.glb (resourece_share (fst r l))
+  (Share.comp (Share.lub sh1 sh2))))).
+  
+  rewrite proof_irr. destruct (fst r l);simpl.
+  
+  simpl in JS1. simpl in JS2.
+
+  pattern r at 1. rewrite <- H.
+  unfold rmap_fmap, compose.
+  simpl; rewrite resource_fmap_fmap.
+  rewrite approx_oo_approx; auto.
+  destruct (fst r l);simpl;reflexivity.
+Qed. *)
+Admitted.
 
 Notation "'ALL' x .. y , P " :=
   (allp (fun x => .. (allp (fun y => P%pred)) ..)) (at level 65, x binder, y binder, right associativity) : pred.
@@ -368,17 +464,6 @@ rewrite H2.
 auto.
 Qed.
 
-Definition identity_resource_of res :=
-  match res with
-  | PURE k p => PURE k p
-  | NO _ _ | YES _ _ _ _ => NO Share.bot bot_unreadable
-  end.
-
-Lemma identity_resource_of_sem res: join res (identity_resource_of res) res.
-Proof.
-  unfold identity_resource_of.
-  destruct res; constructor;apply join_bot_eq .
-Qed.
 
 
 Lemma cut_resource_map_preserve_necR_aux {sh lbase len bm}:
@@ -474,40 +559,6 @@ Proof.
     }
 Qed.
 
-
-Lemma identity_resource_at_approx:
-  forall phi l,
-      resource_fmap (approx (level phi)) (approx (level phi)) (identity_resource_of (phi @ l)) = (identity_resource_of (phi @ l)).
-Proof.
-  intros. symmetry. rewrite rmap_level_eq. unfold resource_at.
-  case_eq (unsquash phi); intros.
-  simpl.
-  set (phi' := (squash (n, (resource_fmap (approx n) (approx n) oo fst r, snd r)))).
-  pose proof I.
-  generalize (unsquash_inj phi phi'); intro.
-  spec H1.
-  replace (unsquash phi) with (unsquash (squash (unsquash phi))).
-  2: rewrite squash_unsquash; auto.
-  rewrite H.
-  unfold phi'.
-  repeat rewrite unsquash_squash.
-  simpl.
-  f_equal.
-  unfold rmap_fmap, compose; simpl.
-  f_equal.
-  extensionality y.
-  rewrite resource_fmap_fmap.
-  rewrite approx_oo_approx; auto.
-  unfold phi' in *; clear phi'.
-  subst.
-  rewrite unsquash_squash in H.
-  injection H; clear H; intro.
-  pattern r at 1; rewrite <- H.
-  unfold rmap_fmap, compose.
-  simpl; rewrite resource_fmap_fmap.
-  rewrite approx_oo_approx; auto.
-  destruct (fst r l);simpl;reflexivity.
-Qed.
 
 Lemma two_share_join: forall sh1 sh2,
 join sh1 (Share.glb (Share.comp sh1) sh2) (Share.lub sh1 sh2).
@@ -853,7 +904,7 @@ Proof.
   inversion H0' as [r_mapsto2 ? ? Hl0 [Hm2 Hg2] HJ2];subst.
   assert (rsh:readable_share (Share.lub sh1 sh2)).
   { apply readable_share_lub. auto. }
-  assert (JS1: forall l, adr_range lbase (Z.of_nat (Datatypes.length b1)) l -> join_sub sh1 (share_of (r @ l))).
+  assert (JS1: forall l, adr_range lbase (Z.of_nat (Datatypes.length b1)) l -> join_sub sh1 (resourece_share (r @ l))).
   { intros. pose proof resource_at_join _ _ _ l HJ1 as Hl1.
     pose proof Hm1 l as Hml1. hnf in Hml1.
     if_tac in Hml1;try tauto.
@@ -862,7 +913,7 @@ Proof.
       { exists sh3. auto. }
       { exists sh3. auto. }
   }
-  assert (JS2: forall l, adr_range lbase (Z.of_nat (Datatypes.length b1)) l -> join_sub sh2 (share_of (r @ l))).
+  assert (JS2: forall l, adr_range lbase (Z.of_nat (Datatypes.length b1)) l -> join_sub sh2 (resourece_share (r @ l))).
   { intros. pose proof resource_at_join _ _ _ l HJ2 as Hl3.
     pose proof Hm2 l as Hml2. hnf in Hml2.
     if_tac in Hml2;try tauto.
@@ -912,11 +963,11 @@ Proof.
           hnf in Hml1. hnf in Hml2.
           simpl. unfold compose. if_tac; simpl.
           * simpl. 
-            assert (join_sub sh1 (share_of (r@l))).
+            assert (join_sub sh1 (resourece_share (r@l))).
             { apply JS1. auto. }
             pose proof proof_irr (JS1 l H1) H2. rewrite H3. clear H3.
             clear JS1.
-            assert (join_sub sh2 (share_of (r@l))).
+            assert (join_sub sh2 (resourece_share (r@l))).
             { apply JS2. auto. }
             pose proof proof_irr (JS2 l H1) H3. rewrite H4. clear H4.
             clear JS2. unfold join_rem_of.
@@ -1031,6 +1082,260 @@ f_equal. eapply list_nth_eq with (d:=Undef).
   apply H1. hnf. split;auto. rewrite E1a in H2.
   unfold size_chunk_nat in H2. rewrite <- (Nat2Z.id l) in H2.
   apply Z2Nat.inj_lt in H2;try omega. destruct m;simpl;omega.
+Qed.
+
+Lemma address_mapsto_nonlock_join: forall sh1 sh2 r1_maps r1_rem r v1 r2_maps r2_rem m lbase,
+readable_share sh1 -> ~ readable_share sh2 ->
+join r1_maps r1_rem r -> 
+join r2_maps r2_rem r -> 
+address_mapsto m v1 sh1 lbase r1_maps ->
+nonlock_permission_bytes sh2 lbase (size_chunk m) r2_maps ->
+exists r_maps r_rem, join r_maps r_rem r /\
+address_mapsto m v1 (Share.lub sh1 sh2) lbase r_maps.
+Proof.
+  intros.
+  rename H1 into HJ1. rename H2 into HJ2.
+  destruct H3 as [bm1 [[[E1a [E1b E1c]] E2] E3]].
+  destruct H4.
+  assert (rsh:readable_share (Share.lub sh1 sh2)).
+  { rewrite Share.lub_commute. apply readable_share_lub. auto. }
+  assert (JS1: forall l, adr_range lbase (size_chunk m) l -> join_sub sh1 (resourece_share (r @ l))).
+  { intros. pose proof resource_at_join _ _ _ l HJ1 as Hl1.
+    pose proof E2 l as Hml1. hnf in Hml1.
+    if_tac in Hml1;try tauto.
+    - destruct Hml1. rewrite H5 in Hl1.
+      inv Hl1;simpl in *;auto.
+      { exists sh3. auto. }
+      { exists sh3. auto. }
+  }
+  assert (JS2: forall l, adr_range lbase (size_chunk m) l -> join_sub sh2 (resourece_share (r @ l))).
+  { intros. pose proof resource_at_join _ _ _ l HJ2 as Hl3.
+    pose proof H1 l as Hml2. hnf in Hml2.
+    if_tac in Hml2;try tauto. destruct Hml2. hnf in H5.
+    inv Hl3;simpl in *;auto;
+    rewrite <- H8 in H5; inv H5; exists sh3; auto.
+  }
+  exists ((squash (level r, (
+    (fun l => if (adr_range_dec lbase (size_chunk m) l)
+              then YES (Share.lub sh1 sh2) rsh (VAL (nth (Z.to_nat (snd l - snd lbase)) bm1 Undef)) NoneP
+              else match (r @ l) with
+              | PURE k p => (r @ l)
+              | _ => (NO Share.bot bot_unreadable) end),
+    ghost_of r1_maps)))).
+  exists (squash (level r, (
+    (fun l => match (adr_range_dec lbase (size_chunk m) l) with
+              | left i => join_rem_of sh1 sh2 (r @ l) (JS1 l i) (JS2 l i)
+              | right _ => (r @ l) end),
+    ghost_of r1_rem))).
+  split.
+  + apply join_unsquash. rewrite unsquash_squash. split;[|split].
+    - simpl. rewrite unsquash_squash. simpl. rewrite rmap_level_eq. auto.
+    - simpl. rewrite unsquash_squash. simpl. unfold compose. unfold join.
+      unfold Join_pi. intros l.
+      pose proof resource_at_join _ _ _ l HJ1 as Hl1.
+      pose proof resource_at_join _ _ _ l HJ2 as Hl2.
+      pose proof E2 l as Hml1. pose proof H1 l as Hml2.
+      hnf in Hml1, Hml2. hnf. if_tac;simpl.
+      { simpl. 
+        assert (join_sub sh1 (resourece_share (r@l))).
+        { apply JS1. auto. }
+        pose proof proof_irr (JS1 l H3) H4. rewrite H5. clear H5.
+        clear JS1.
+        assert (join_sub sh2 (resourece_share (r@l))).
+        { apply JS2. auto. }
+        pose proof proof_irr (JS2 l H3) H5. rewrite H6. clear H6.
+        clear JS2. unfold join_rem_of.
+        destruct (r@l) eqn:E;simpl.
+        + destruct (dec_readable);try contradiction. simpl.
+          destruct Hml1. rewrite H6 in Hl1. inv Hl1.
+        + destruct Hml1 as [rsha Hml1], Hml2 as [Hml2a Hml2b].
+          hnf in Hml2a.
+          rewrite Hml1 in Hl1. inv Hl1.
+          { inv Hl2;
+              rewrite <- H7 in Hml2a; simpl in Hml2a; inv Hml2a;
+              destruct (dec_readable);simpl;
+              unfold "@" in E; rewrite E; constructor;
+                eapply share_resource_join_aux;eassumption. }
+          { inv Hl2;
+            rewrite <- H7 in Hml2a; simpl in Hml2a; inv Hml2a;
+            destruct (dec_readable);simpl;
+            unfold "@" in E; rewrite E; constructor;
+            eapply share_resource_join_aux;eassumption. }
+        + destruct Hml1. hnf in H6. rewrite H6 in Hl1. inv Hl1.
+      }
+      { replace (fst (snd (unsquash r)) l) with (r@l) by reflexivity.
+        destruct (r @ l) eqn:E.
+        - simpl. constructor. apply bot_join_eq.
+        - rewrite <- E. rewrite resource_at_approx. simpl.
+          rewrite E. constructor. apply bot_join_eq.
+        - rewrite <- E. rewrite resource_at_approx. simpl.
+          rewrite E. constructor.
+      }
+    - simpl. rewrite unsquash_squash. simpl.
+      replace (level r) with (level r1_maps).
+      2:{ apply join_level in HJ1. tauto. }
+      rewrite ghost_of_approx.
+      replace (level r1_maps) with (level r1_rem).
+      2:{ apply join_level in HJ1. omega. }
+      rewrite ghost_of_approx. apply ghost_of_join. auto.
+  + hnf. exists bm1. split;[split|].
+    - simpl. auto.
+    - intros l. hnf. specialize (E2 l). specialize (H1 l).
+      hnf in E2. hnf in H1. if_tac.
+      { exists rsh. simpl. unfold resource_at.
+        rewrite unsquash_squash. simpl. unfold compose.
+        if_tac;try tauto. }
+      { simpl. unfold resource_at.
+        rewrite unsquash_squash. simpl. unfold compose.
+        if_tac;try tauto.
+        destruct (fst (snd (unsquash r)) l);simpl;
+        try apply NO_identity. apply PURE_identity. }
+    - simpl. unfold ghost_of. rewrite unsquash_squash. simpl.
+      replace (level r) with (level r1_maps).
+      2:{ apply join_level in HJ1. omega.  }
+      rewrite ghost_of_approx. auto.
+Qed.
+
+
+Lemma unreadable_share_lub: forall sh1 sh2, 
+   ~ readable_share sh1 -> ~ readable_share sh2 ->
+   ~ (readable_share (Share.lub sh1 sh2)).
+Proof.
+  intros.
+  intros C. unfold readable_share in *.
+  unfold nonempty_share in *. unfold nonidentity in *.
+  apply not_not_share_identity in H.
+  apply not_not_share_identity in H0.
+  apply C. apply identity_share_bot in H. 
+  apply identity_share_bot in H0.
+  rewrite Share.distrib1. rewrite H. rewrite H0.
+  rewrite Share.lub_bot. apply bot_identity.
+Qed.
+
+
+Lemma address_nonlock_join: forall sh1 sh2 r1_maps r1_rem r r2_maps r2_rem m lbase,
+~ readable_share sh1 -> ~ readable_share sh2 ->
+join r1_maps r1_rem r -> 
+join r2_maps r2_rem r -> 
+nonlock_permission_bytes sh1 lbase (size_chunk m) r1_maps ->
+nonlock_permission_bytes sh2 lbase (size_chunk m) r2_maps ->
+exists r_maps r_rem, join r_maps r_rem r /\
+nonlock_permission_bytes (Share.lub sh1 sh2) lbase (size_chunk m) r_maps.
+Proof.
+  intros.
+  rename H1 into HJ1. rename H2 into HJ2.
+  destruct H3.
+  destruct H4.
+  assert (rsh: ~ readable_share (Share.lub sh1 sh2)).
+  { apply unreadable_share_lub; auto. }
+  assert (JS1: forall l, adr_range lbase (size_chunk m) l -> join_sub sh1 (resourece_share (r @ l))).
+  { intros. pose proof resource_at_join _ _ _ l HJ1 as Hl1.
+    pose proof H1 l as Hml1. hnf in Hml1.
+    if_tac in Hml1;try tauto. destruct Hml1. hnf in H7.
+    inv Hl1;simpl in *;auto;
+    rewrite <- H10 in H7; inv H7; exists sh3; auto.
+  }
+  assert (JS2: forall l, adr_range lbase (size_chunk m) l -> join_sub sh2 (resourece_share (r @ l))).
+  { intros. pose proof resource_at_join _ _ _ l HJ2 as Hl1.
+    pose proof H3 l as Hml1. hnf in Hml1.
+    if_tac in Hml1;try tauto. destruct Hml1. hnf in H7.
+    inv Hl1;simpl in *;auto;
+    rewrite <- H10 in H7; inv H7; exists sh3; auto.
+  }
+  exists ((squash (level r, (
+    (fun l => if (adr_range_dec lbase (size_chunk m) l)
+              then NO (Share.lub sh1 sh2) rsh
+              else match (r @ l) with
+              | PURE k p => (r @ l)
+              | _ => (NO Share.bot bot_unreadable) end),
+    ghost_of r1_maps)))).
+  exists (squash (level r, (
+    (fun l => match (adr_range_dec lbase (size_chunk m) l) with
+              | left i => join_rem_of sh1 sh2 (r @ l) (JS1 l i) (JS2 l i)
+              | right _ => (r @ l) end),
+    ghost_of r1_rem))).
+  split.
+  + apply join_unsquash. rewrite unsquash_squash. split;[|split].
+    - simpl. rewrite unsquash_squash. simpl. rewrite rmap_level_eq. auto.
+    - simpl. rewrite unsquash_squash. simpl. unfold compose. unfold join.
+      unfold Join_pi. intros l.
+      pose proof resource_at_join _ _ _ l HJ1 as Hl1.
+      pose proof resource_at_join _ _ _ l HJ2 as Hl2.
+      pose proof H1 l as Hml1. pose proof H3 l as Hml2.
+      hnf in Hml1, Hml2. hnf. if_tac;simpl.
+      { simpl.
+        assert (join_sub sh1 (resourece_share (r@l))).
+        { apply JS1. auto. }
+        pose proof proof_irr (JS1 l H5) H6. rewrite H7. clear H7.
+        clear JS1.
+        assert (join_sub sh2 (resourece_share (r@l))).
+        { apply JS2. auto. }
+        pose proof proof_irr (JS2 l H5) H7. rewrite H8. clear H8.
+        clear JS2. unfold join_rem_of.
+        destruct (r@l) eqn:E;simpl.
+        + destruct (dec_readable);try contradiction. simpl.
+          unfold "@" in E; rewrite E. constructor.
+          destruct H6. destruct H7.
+          eapply share_resource_join_aux;eassumption.
+        + destruct (dec_readable);simpl.
+          
+        
+        
+        Print readable_share.
+          { unfold "@" in E; rewrite E. Print core.
+          unfold "@" in E; rewrite E.
+          eapply share_resource_join_aux;eassumption.  simpl.
+          unfold "@" in E; rewrite E. constructor.
+          destruct H6. destruct H7.
+          eapply share_resource_join_aux;eassumption.simpl.
+          - destruct H6. apply j. exists x. unfold join_rem_nsh. simpl.
+          destruct Hml1. rewrite H6 in Hl1. inv Hl1.
+        + destruct Hml1 as [rsha Hml1], Hml2 as [Hml2a Hml2b].
+          hnf in Hml2a.
+          rewrite Hml1 in Hl1. inv Hl1.
+          { inv Hl2;
+              rewrite <- H7 in Hml2a; simpl in Hml2a; inv Hml2a;
+              destruct (dec_readable);simpl;
+              unfold "@" in E; rewrite E; constructor;
+                eapply share_resource_join_aux;eassumption. }
+          { inv Hl2;
+            rewrite <- H7 in Hml2a; simpl in Hml2a; inv Hml2a;
+            destruct (dec_readable);simpl;
+            unfold "@" in E; rewrite E; constructor;
+            eapply share_resource_join_aux;eassumption. }
+        + destruct Hml1. hnf in H6. rewrite H6 in Hl1. inv Hl1.
+      }
+      { replace (fst (snd (unsquash r)) l) with (r@l) by reflexivity.
+        destruct (r @ l) eqn:E.
+        - simpl. constructor. apply bot_join_eq.
+        - rewrite <- E. rewrite resource_at_approx. simpl.
+          rewrite E. constructor. apply bot_join_eq.
+        - rewrite <- E. rewrite resource_at_approx. simpl.
+          rewrite E. constructor.
+      }
+    - simpl. rewrite unsquash_squash. simpl.
+      replace (level r) with (level r1_maps).
+      2:{ apply join_level in HJ1. tauto. }
+      rewrite ghost_of_approx.
+      replace (level r1_maps) with (level r1_rem).
+      2:{ apply join_level in HJ1. omega. }
+      rewrite ghost_of_approx. apply ghost_of_join. auto.
+  + hnf. exists bm1. split;[split|].
+    - simpl. auto.
+    - intros l. hnf. specialize (E2 l). specialize (H1 l).
+      hnf in E2. hnf in H1. if_tac.
+      { exists rsh. simpl. unfold resource_at.
+        rewrite unsquash_squash. simpl. unfold compose.
+        if_tac;try tauto. }
+      { simpl. unfold resource_at.
+        rewrite unsquash_squash. simpl. unfold compose.
+        if_tac;try tauto.
+        destruct (fst (snd (unsquash r)) l);simpl;
+        try apply NO_identity. apply PURE_identity. }
+    - simpl. unfold ghost_of. rewrite unsquash_squash. simpl.
+      replace (level r) with (level r1_maps).
+      2:{ apply join_level in HJ1. omega.  }
+      rewrite ghost_of_approx. auto.
 Qed.
 
 
@@ -1246,6 +1551,42 @@ Proof.
     { exfalso. destruct Eb1. apply tc_val_Vundef in H1. auto. }
     destruct Eb1 as [_ [v1 Ec1]].
     destruct Eb2 as [[Eb2 Ec2] Ed2].
+    if_tac. 2:{ exfalso. apply H1. rewrite Share.lub_commute. apply readable_share_lub. auto. }
+    pose proof address_mapsto_nonlock_join _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ed2.
+    destruct H2 as [r_maps [r_rem [HJ H2]]].
+    exists r_maps, r_rem.
+    split;auto. split;auto. right. split;try reflexivity.
+    exists v1. auto.
+  }
+  { hnf. intros r.
+    intros E0.
+    destruct E0 as [Ea Eb].
+    destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+    destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+    destruct Eb1 as [[Eb1 Ec1] Ed1].
+    destruct Eb2 as [Eb2 | Eb2].
+    { exfalso. destruct Eb2. apply tc_val_Vundef in H1. auto. }
+    destruct Eb2 as [_ [v2 Ec2]].
+    if_tac. 2:{ exfalso. apply H1. apply readable_share_lub. auto. }
+    pose proof address_mapsto_nonlock_join _ _ _ _ _ _ _ _ _ _ H0 H Ea2 Ea1 Ec2 Ed1.
+    destruct H2 as [r_maps [r_rem [HJ H2]]].
+    exists r_maps, r_rem.
+    split;auto. split;auto. right. split;try reflexivity.
+    exists v2. rewrite Share.lub_commute. auto.
+  }
+  { hnf. intros r.
+    intros E0.
+    destruct E0 as [Ea Eb].
+    destruct Ea as [r1_maps [r1_rem [Ea1 [Eb1 _]]]].
+    destruct Eb as [r2_maps [r2_rem [Ea2 [Eb2 _]]]].
+    destruct Eb1 as [[Eb1 Ec1] Ed1].
+    destruct Eb2 as [[Eb2 Ec2] Ed2].
+    if_tac. { exfalso. eapply unreadable_share_lub. apply H. apply H0. auto. }
+
+
+
+  }
+    hnf in Ed2.
     { if_tac.
       (* pose proof address_mapsto_join
           _ _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
