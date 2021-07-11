@@ -2153,6 +2153,37 @@ Proof.
     unfold FF. apply aux_semax_extract_prop. intros. destruct H1.
 Qed.
 
+
+(* Theorem semax_conj_rule: forall  CS Espec Delta P c Q1 Q2 ,
+  @semax CS Espec Delta P c Q1 ->
+  @semax CS Espec Delta P c Q2 ->
+  @semax CS Espec Delta P c (ret_assert_andp Q1 Q2).
+Proof.
+  intros.
+  inv H. inv H0.
+  assert (semax_aux Delta P c R').
+  { eapply semax_aux_pre';[|apply H6]. auto. }
+  assert (semax_aux Delta P c R'0).
+  { eapply semax_aux_pre';[|apply H11]. auto. }
+  pose proof semax_aux_conj_rule _ _ _ _ _ _ _ H0 H12.
+  destruct R' as [R1n R1b R1c R1r], R'0 as [R2n R2b R2c R2r],
+  Q1 as [Q1n Q1b Q1c Q1r], Q2 as [Q2n Q2b Q2c Q2r];
+  unfold ret_assert_andp in *; unfold_der.
+  eapply semax_conseq_intro;[..|apply H13];unfold_der.
+  - solve_andp.
+  - eapply derives_trans with 
+      (Q:= (|==> |> FF || Q1n) && (|==> |> FF || Q2n)).
+    { apply andp_right.
+      - eapply derives_trans;[|apply H2]. solve_andp.
+      - eapply derives_trans;[|apply H7]. solve_andp. }
+    {  apply bupd_mono.
+
+
+     }
+  
+  Search bupd andp.   *)
+
+
 Theorem semax_aux_derives: forall CS Espec Delta P c Q,
   @semax_aux CS Espec Delta P c Q -> @SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q.
 Proof.
@@ -2199,8 +2230,49 @@ Proof.
 Qed.
 
 
+Lemma semax_aux_seq_skip:
+   forall CS Espec (Delta : tycontext) (P : environ -> mpred)
+         (s : Clight.statement) (Q : ret_assert),
+    @semax_aux CS Espec Delta P s Q <->
+    @semax_aux CS Espec Delta P (Clight.Ssequence s Clight.Sskip) Q.
+Proof.
+  intros. destruct Q as [Qn Qb Qc Qr];unfold_der.
+  split;intro.
+  - eapply semax_aux_seq with (Q:=Qn).
+    { simpl. auto. }
+    { eapply semax_aux_simple_inv;[..|apply semax_aux_skip];auto. }
+  - apply semax_aux_seq_inv in H.
+    destruct H as [R [E1 E2]].
+    apply semax_aux_skip_inv in E2.
+    unfold_der. eapply semax_aux_conseq;[..|apply E1];
+    try (intros; solve_andp).
+    unfold_der. eapply derives_trans;[|apply E2].
+    solve_andp.
+Qed.
 
-Lemma aux_extract_exists_pre': forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
+
+Lemma semax_aux_skip_seq:
+  forall CS Espec (Delta : tycontext) (P : environ -> mpred)
+      (s : Clight.statement) (Q : ret_assert),
+    @semax_aux CS Espec Delta P s Q <->
+    @semax_aux CS Espec Delta P (Clight.Ssequence Clight.Sskip s) Q.
+Proof.
+intros. destruct Q as [Qn Qb Qc Qr];unfold_der.
+split;intro.
+- eapply semax_aux_seq with (Q:=P).
+  { eapply semax_aux_simple_inv;[..|apply semax_aux_skip];auto. }
+  { simpl. auto. }
+- apply semax_aux_seq_inv in H.
+  destruct H as [R [E1 E2]].
+  apply semax_aux_skip_inv in E1.
+  unfold_der. eapply semax_aux_conseq;[..|apply E2];
+  try (intros; solve_andp).
+  unfold_der. eapply derives_trans;[|apply E1].
+  solve_andp.
+Qed.
+      
+
+(* Lemma aux_extract_exists_pre': forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
       (c : Clight.statement) (Delta : tycontext) 
       (R : ret_assert),
     (forall x : A, @semax CS Espec Delta (P x) c R) ->
@@ -2215,4 +2287,4 @@ Lemma aux_semax_extract_prop': forall (CS : compspecs) (Espec : OracleKind)
       (c : Clight.statement) (Q : ret_assert),
     (PP -> semax Delta P c Q) ->
     semax Delta (!! PP && P) c Q.
-Admitted.
+Admitted. *)
