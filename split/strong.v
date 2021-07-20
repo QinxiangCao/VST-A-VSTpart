@@ -12,7 +12,7 @@ Require Export VST.floyd.val_lemmas.
 Require Export VST.floyd.assert_lemmas.
 Require Import VST.veric.semax_lemmas.
 Require VST.floyd.SeparationLogicAsLogicSoundness.
-Require VST.floyd.SeparationLogicFacts.
+Require Import VST.floyd.SeparationLogicFacts.
 Require Import VST.floyd.SeparationLogicAsLogic.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_Sound.DeepEmbedded.
 Require Import VST.floyd.proofauto.
@@ -21,7 +21,7 @@ Local Open Scope logic.
 Require Import Split.vst_ext.
 Require Import Split.model_lemmas.
 
-Definition obox (Delta: tycontext) (i: ident) (P: environ -> mpred): environ -> mpred :=
+(* Definition obox (Delta: tycontext) (i: ident) (P: environ -> mpred): environ -> mpred :=
   ALL v: _,
     match ((temp_types Delta) ! i) with
     | Some t => !! (tc_val' t v) --> subst i (`v) P
@@ -32,7 +32,7 @@ Definition oboxopt Delta ret P :=
   match ret with
   | Some id => obox Delta id P
   | _ => P
-  end.
+  end. *)
 
 Definition decode_encode_val_ok (chunk1 chunk2: memory_chunk) : Prop :=
   match chunk1, chunk2 with
@@ -150,7 +150,20 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
     @semax_aux CS Espec Delta P' c R' -> @semax_aux CS Espec Delta P c R
 
 | semax_aux_builtin: forall P opt ext tl el, @semax_aux CS Espec Delta FF (Clight.Sbuiltin opt ext tl el) P
-| semax_aux_call: forall P ret a bl, @semax_aux CS Espec Delta FF (Clight.Scall ret a bl) P
+(* | semax_aux_call: forall P ret a bl, @semax_aux CS Espec Delta FF (Clight.Scall ret a bl) P *)
+| semax_aux_call: forall ret a bl R,
+    @semax_aux CS Espec Delta
+        (EX argsig: _, EX retsig: _, EX cc: _,
+        EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, EX ts: _, EX x: _,
+        !! (Cop.classify_fun (typeof a) =
+            Cop.fun_case_f (type_of_params argsig) retsig cc /\
+            (retsig = Tvoid -> ret = None) /\
+            tc_fn_return Delta ret retsig) &&
+        (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
+        `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+        |>((`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
+        (Clight.Scall ret a bl)
+        (normal_ret_assert R)
 | semax_aux_label: forall (P:environ -> mpred) (c:Clight.statement) (Q:ret_assert) l,
   @semax_aux CS Espec Delta P c Q ->
   @semax_aux CS Espec Delta P (Clight.Slabel l c) Q
@@ -599,6 +612,15 @@ Proof.
   - intros. eapply derives_trans;[|apply H2]. solve_andp.
 Qed.
 
+
+Lemma derives_aux_refl : forall (Delta : tycontext) 
+  (P : environ -> mpred),
+       ENTAIL Delta, allp_fun_id Delta && P |--  P.
+Proof.
+  intros. solve_andp.
+Qed.
+
+
 Lemma semax_aux_noreturn_inv:
 forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
 (Pre : environ -> mpred) (s : Clight.statement) 
@@ -655,7 +677,13 @@ Proof.
     - intros. solve_andp.
     - apply IHsemax_aux; auto.
   + constructor.
-  + constructor.
+  + eapply semax_aux_conseq;[..|apply semax_aux_call].
+    - apply derives_aux_refl.
+    - rewrite H0. solve_andp.
+    - rewrite H1. solve_andp.
+    - rewrite H2. solve_andp.
+    - intros. unfold normal_ret_assert. unfold_der.
+      repeat apply andp_left2. apply FF_left.
   + constructor. auto.
   + constructor.
   + constructor.
@@ -718,7 +746,13 @@ Proof.
     - intros. rewrite <- H8; apply H4.
     - apply IHsemax_aux; auto.
   + constructor.
-  + constructor.
+  + eapply semax_aux_conseq;[..|apply semax_aux_call].
+    - apply derives_aux_refl.
+    - rewrite H0. solve_andp.
+    - rewrite H1. solve_andp.
+    - unfold normal_ret_assert. unfold_der.
+      repeat apply andp_left2. apply FF_left.
+    - intros. rewrite H2. solve_andp.
   + constructor. auto.
   + constructor.
   + constructor.
@@ -779,7 +813,13 @@ Proof.
     - intros. rewrite <- H7; apply H4.
     - apply IHsemax_aux; auto.
   + constructor.
-  + constructor.
+  + eapply semax_aux_conseq;[..|apply semax_aux_call].
+    - apply derives_aux_refl.
+    - rewrite H0. solve_andp.
+    - intros. unfold normal_ret_assert. unfold_der.
+      repeat apply andp_left2. apply FF_left.
+    - rewrite H2. solve_andp.
+    - rewrite H1. intros. solve_andp.
   + constructor. auto.
   + constructor.
   + constructor.
@@ -1018,6 +1058,112 @@ Proof.
   { intros. unfold RA_return. repeat apply andp_left2. apply FF_left. }
   apply semax_aux_skip.
 Qed.
+
+Lemma oboxopt_ENTAIL: forall (Delta : tycontext) (ret : option ident) 
+         (retsig : type) (P Q : environ -> mpred),
+       tc_fn_return Delta ret retsig ->
+       ENTAIL Delta,  P |-- Q ->
+       ENTAIL Delta, oboxopt Delta ret P
+       |-- oboxopt Delta ret Q.
+Proof.
+  intros.
+  apply oboxopt_left2; auto.
+  eapply tc_fn_return_temp_guard_opt; eauto.
+Qed.
+
+Lemma semax_aux_call_inv: forall {CS: compspecs} {Espec: OracleKind} 
+  Delta ret a bl Pre Post,
+  @semax_aux CS Espec Delta Pre (Clight.Scall ret a bl) Post ->
+  local (tc_environ Delta) && (allp_fun_id Delta && Pre) |-- 
+    (EX argsig: _, EX retsig: _, EX cc: _,
+    EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, EX ts: _, EX x: _,
+    !! (Cop.classify_fun (typeof a) =
+        Cop.fun_case_f (type_of_params argsig) retsig cc /\
+        (retsig = Tvoid -> ret = None) /\
+        tc_fn_return Delta ret retsig) &&
+    ((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
+    `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+    |>((`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
+Proof.
+  intros. 
+  remember (Clight.Scall ret a bl) as c1.
+  induction H; try inversion Heqc1.
+  - subst. 
+    eapply derives_trans with (Q:=
+      local (tc_environ Delta) && (allp_fun_id Delta && P')
+    ).
+    { rewrite (add_andp _ _ H). solve_andp. }
+    eapply derives_trans.
+    { apply andp_right.
+      + rewrite <- andp_assoc. apply andp_left1.
+        apply derives_refl.
+      + apply IHsemax_aux;auto. }
+    clear IHsemax_aux.
+    clear P H.
+    reduceR. rewrite andp_assoc.
+    apply exp_ENTAILL; intro argsig.
+    apply exp_ENTAILL; intro retsig.
+    apply exp_ENTAILL; intro cc.
+    apply exp_ENTAILL; intro A.
+    apply exp_ENTAILL; intro P.
+    apply exp_ENTAILL; intro Q.
+    apply exp_ENTAILL; intro NEP.
+    apply exp_ENTAILL; intro NEQ.
+    apply exp_ENTAILL; intro ts.
+    apply exp_ENTAILL; intro x.
+    normalize.
+    apply andp_right. { apply prop_right. auto. }
+    apply andp_ENTAILL; [reduceLL;solve_andp|].
+    apply later_ENTAILL.
+    apply sepcon_ENTAILL; [reduceLL; solve_andp |].
+    eapply oboxopt_ENTAILL; eauto.
+    apply wand_ENTAILL; [reduceL; solve_andp |].
+    auto.
+  - solve_andp.
+Qed.
+
+Lemma func_ptr_unique: forall phi1 phi2 v,
+  (predicates_hered.derives ((func_ptr phi1 v) && (func_ptr phi2 v)) (!! (phi1 = phi2)))%pred.
+Admitted.
+
+Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
+  @semax_aux CS Espec Delta P 
+    (Clight.Scall ret a bl) (overridePost Q2 Q) ->
+  @semax_aux CS Espec Delta P 
+    (Clight.Scall ret a bl) (overridePost Q1 Q) ->
+  @semax_aux CS Espec Delta P 
+    (Clight.Scall ret a bl) (overridePost (Q1 && Q2) Q).
+Proof.
+  intros.
+  apply semax_aux_call_inv in H.
+  apply semax_aux_call_inv in H0.
+  pose proof andp_ENTAILL _ _ _ _ _ H0 H.
+  rewrite andp_dup in H1. clear H H0.
+  eapply semax_aux_conseq;
+  [..|apply semax_aux_call with (R:= Q1 && Q2)];
+  try (intros; 
+    try solve [repeat apply andp_left2;apply FF_left]).
+  2:{ destruct Q;unfold_der. solve_andp. }
+  eapply ENTAIL_trans;[apply H1|]. clear H1.
+  Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1 ts1 x1.
+  Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2 ts2 x2.
+  rewrite H in H2. inv H2.
+  assert_PROP (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1 = mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2).
+  { unfold liftx. simpl. intros r. unfold lift. simpl.
+    eapply derives_trans;[|apply func_ptr_unique with (v:= eval_expr a r)]. solve_andp. }
+  inv H2. apply inj_pair2 in H9. apply inj_pair2 in H10. subst.
+  Exists argsig2 retsig2 cc2 A2 P2 R2 NEP1 NEQ1 ts1 x1.
+  apply andp_right.
+  { repeat apply andp_right;try solve_andp. apply prop_right. auto. }
+  eapply derives_trans.
+  { apply andp_right. rewrite <-!andp_assoc. apply andp_left1.
+    { apply andp_right. repeat apply andp_left1. apply derives_refl.
+      apply andp_left1. apply andp_left1. apply andp_left1. apply andp_left2. apply derives_refl. }
+    { repeat apply andp_left2. apply derives_refl. }
+  }
+  rewrite andp_assoc. rewrite <- later_andp.
+  apply later_ENTAIL. hnf. intros r. unfold liftx. simpl. unfold lift. simpl. destruct Q as [Qn Qc Qb Qr];unfold_der. simpl.
+Admitted.
 
 Lemma share_lub_writable: forall sh1 sh2,
   writable_share sh1 -> writable_share sh2 ->
@@ -1553,27 +1699,6 @@ Proof.
 Qed.
 
 
-Lemma derives_aux_refl : forall (Delta : tycontext) 
-  (P : environ -> mpred),
-       ENTAIL Delta, allp_fun_id Delta && P |--  P.
-Proof.
-  intros. solve_andp.
-Qed.
-
-Lemma semax_aux_call_inv: forall {CS: compspecs} {Espec: OracleKind} 
-  Delta ret a bl Pre Post,
-  @semax_aux CS Espec Delta Pre (Clight.Scall ret a bl) Post ->
-  local (tc_environ Delta) && (allp_fun_id Delta && Pre) |-- FF.
-Proof.
-  intros. 
-  remember (Clight.Scall ret a bl) as c1.
-  induction H; try inversion Heqc1.
-  - subst. specialize (IHsemax_aux eq_refl).
-    eapply derives_trans.
-    2:{ apply IHsemax_aux. }
-    rewrite (add_andp _ _ H). solve_andp.
-  - solve_andp.
-Qed.
 
 
 Lemma semax_aux_builtin_inv: forall {CS: compspecs} {Espec: OracleKind} 
@@ -1694,10 +1819,11 @@ intros.
     - reduceL. apply FF_left.
     - intros; reduceL. apply FF_left.
   + pose proof (fun x => semax_aux_call_inv _ _ _ _ _ _ (H x)).
-    eapply semax_aux_conseq; [| intros; apply derives_aux_refl .. | apply semax_aux_call].
+    (* eapply semax_aux_conseq; [| intros; apply derives_aux_refl .. | apply semax_aux_call].
     rewrite !exp_andp2.
     apply exp_left; intros x; specialize (H0 x).
-    auto.
+    auto. *)
+    admit.
   + pose proof (fun x => semax_aux_builtin_inv _ _ _ _ _ _ _ (H x)).
     eapply semax_aux_conseq; [| intros; apply derives_aux_refl .. | apply semax_aux_builtin].
     rewrite !exp_andp2.
@@ -1849,7 +1975,8 @@ intros.
     rewrite !exp_andp2.
     apply exp_left; intros x; specialize (H0 x).
     auto.
-Qed.
+(* Qed. *)
+Admitted.
 
 Lemma aux_semax_extract_prop: forall (CS : compspecs) (Espec : OracleKind) 
       (Delta : tycontext) (PP : Prop) (P : environ -> mpred)
@@ -2058,9 +2185,10 @@ Proof.
     [..|eapply semax_aux_conj_set_ret with (Q1:=Q1) (Q2:=Q2);eassumption]; try solve_andp.
     intros. solve_andp.
   - intros. apply semax_aux_call_inv in H0.
-    eapply semax_aux_pre';[apply H0|].
+    (* eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
-      unfold FF. apply aux_semax_extract_prop. intros. destruct H1.
+      unfold FF. apply aux_semax_extract_prop. intros. destruct H1. *)
+      admit.
   - intros. apply semax_aux_builtin_inv in H0.
     eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
@@ -2151,8 +2279,8 @@ Proof.
     eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
     unfold FF. apply aux_semax_extract_prop. intros. destruct H1.
-Qed.
-
+(* Qed. *)
+Admitted.
 
 (* Theorem semax_conj_rule: forall  CS Espec Delta P c Q1 Q2 ,
   @semax CS Espec Delta P c Q1 ->
@@ -2211,13 +2339,15 @@ Proof.
   - eapply AuxDefs.semax_conseq;[..|apply IHsemax_aux];
     try solve [intros;apply aux1_reduceR; eapply derives_trans;[|apply bupd_intro];auto].
   - constructor.
-  - rewrite <- (FF_andp TT).
-    unfold FF. apply semax_extract_prop. intros. destruct H.
+  - admit.
+   (* rewrite <- (FF_andp TT).
+    unfold FF. apply semax_extract_prop. intros. destruct H. *)
   - constructor. auto.
   - constructor.
   - rewrite <- (FF_andp TT).
     unfold FF. apply semax_extract_prop. intros. destruct H.
-Qed.
+Admitted.
+(* Qed. *)
 
 Theorem semax_derives: forall CS Espec Delta P c Q,
   @semax CS Espec Delta P c Q -> @SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q.

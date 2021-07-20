@@ -1,6 +1,9 @@
-Require Import Split.soundness.
+Require Split.soundness.
 
-Print Assumptions soundness.
+Print Assumptions Split.soundness.soundness.
+
+Print FileDependGraph Split Split.soundness.
+
 (**
 Axioms:
 Rdefinitions.up : Rdefinitions.R -> BinNums.Z

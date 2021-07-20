@@ -137,6 +137,38 @@ Proof.
   }
 Qed.
 
+
+Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
+  match ass with 
+  | Binded_assert X HX ass' =>
+      forall x:X, path_ass_to_semax (ass' x) path
+  | Given_assert X HX ass' =>
+      forall x:X, path_ass_to_semax (ass' x) path
+  | Basic_assert pre post =>
+      @semax_aux CS Espec Delta pre (path_to_statement path)
+      {| RA_normal := post;
+        RA_break := FALSE;
+        RA_continue := FALSE;
+        RA_return := fun _ => FALSE|}
+  end.
+(* | path_to_semax_given: forall X (HX:Non_empty_Type X)
+    (path_ass path_ass': X -> split_assert) path,
+    extract_exp_from_path X path_ass path_ass' ->
+    (forall x:X, path_to_semax (path_ass' x, path)) ->
+    path_to_semax (Given_assert X HX path_ass', path)
+| path_to_semax_basic: forall pre path post ,
+    @semax_aux CS Espec Delta pre (path_to_statement path)
+    {| RA_normal := post;
+       RA_break := FALSE;
+       RA_continue := FALSE;
+       RA_return := fun _ => FALSE|} ->
+    path_to_semax (Basic_assert pre post, path)
+| path_to_semax_binded: forall X (HX:Non_empty_Type X)  ass' path, 
+    (forall x:X, path_to_semax (ass' x, path)) ->
+    path_to_semax (Binded_assert X HX ass', path)
+. *)
+
+
 Inductive extract_exp_from_path (X:Type): 
   (X -> split_assert) -> (X -> split_assert) -> Prop :=
 (* extract the first EX out from pre condition *)
@@ -152,6 +184,7 @@ Inductive extract_exp_from_path (X:Type):
       (fun x:X => (Given_assert Y HY (fun y:Y => ass y x)))
       (fun x:X => (Given_assert Y HY (fun y:Y => ass_extracted y x))).
 
+      Print split_assert.
 
 Inductive path_to_semax : path_statement -> Prop :=
 | path_to_semax_given: forall X (HX:Non_empty_Type X)

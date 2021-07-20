@@ -13,6 +13,21 @@ Require Import VST.veric.slice.
 
 Require Import VST.veric.mpred.
 Require Import VST.veric.mapsto_memory_block.
+(* Import predicates_hered.
+Lemma func_ptr_unique: forall phi1 phi2 v,
+  (predicates_hered.derives ((func_ptr phi1 v) && (func_ptr phi2 v)) (!! (phi1 = phi2)))%pred.
+Proof.
+  intros. unfold func_ptr. unfold func_ptr_si.
+  rewrite !ex_and. apply predicates_hered.exp_left.
+  intros x. rewrite andp_assoc. apply prop_andp_left. intros.
+  rewrite !ex_and. apply exp_left. intros gs.
+  rewrite andp_comm. rewrite !ex_and. apply exp_left. intros x1.
+  rewrite !andp_assoc. apply prop_andp_left. intros.
+  rewrite ex_and. apply exp_left. intros gs1.
+  rewrite H in H0. inv H0.
+Admitted.
+Export predicates_hered. *)
+
 
 
 Lemma join_necR_aux: forall n x y z x' y' z',
