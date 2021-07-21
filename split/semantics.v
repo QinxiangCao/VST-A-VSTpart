@@ -151,7 +151,29 @@ Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
         RA_continue := FALSE;
         RA_return := fun _ => FALSE|}
   end.
-(* | path_to_semax_given: forall X (HX:Non_empty_Type X)
+
+
+(* Inductive extract_exp_from_path (X:Type): 
+  (X -> split_assert) -> (X -> split_assert) -> Prop :=
+(* extract the first EX out from pre condition *)
+| extract_exp_from_path_basic: forall (pre' post': X -> assert),
+    extract_exp_from_path X
+      (fun x:X => Basic_assert (exp pre') (post' x))
+      (fun x:X => Basic_assert (pre' x) (post' x))
+| extract_exp_from_path_given: forall Y (HY:Non_empty_Type Y) 
+    (ass ass_extracted: Y -> X -> split_assert),
+    (forall y:Y, extract_exp_from_path X
+         (ass y) (ass_extracted y)) ->
+    extract_exp_from_path X
+      (fun x:X => (Given_assert Y HY (fun y:Y => ass y x)))
+      (fun x:X => (Given_assert Y HY (fun y:Y => ass_extracted y x))). *)
+
+Definition path_to_semax (path:path_statement) : Prop :=
+   match path with (ass, path) =>
+   path_ass_to_semax ass path end.
+
+(* Inductive path_to_semax : path_statement -> Prop :=
+| path_to_semax_given: forall X (HX:Non_empty_Type X)
     (path_ass path_ass': X -> split_assert) path,
     extract_exp_from_path X path_ass path_ass' ->
     (forall x:X, path_to_semax (path_ass' x, path)) ->
@@ -168,44 +190,22 @@ Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
     path_to_semax (Binded_assert X HX ass', path)
 . *)
 
+Fixpoint add_post_to_semax_aux (pre_ass: partial_assert) (post: assert) (path: path) : Prop :=
+  match pre_ass with
+  | Basic_partial pre => @semax_aux CS Espec Delta pre (path_to_statement path)
+  {| RA_normal := post;
+    RA_break := FALSE;
+    RA_continue := FALSE;
+    RA_return := fun _ => FALSE|}
+  | Binded_partial X HX pre' => forall x,
+      add_post_to_semax_aux (pre' x) post path
+  end.
 
-Inductive extract_exp_from_path (X:Type): 
-  (X -> split_assert) -> (X -> split_assert) -> Prop :=
-(* extract the first EX out from pre condition *)
-| extract_exp_from_path_basic: forall (pre' post': X -> assert),
-    extract_exp_from_path X
-      (fun x:X => Basic_assert (exp pre') (post' x))
-      (fun x:X => Basic_assert (pre' x) (post' x))
-| extract_exp_from_path_given: forall Y (HY:Non_empty_Type Y) 
-    (ass ass_extracted: Y -> X -> split_assert),
-    (forall y:Y, extract_exp_from_path X
-         (ass y) (ass_extracted y)) ->
-    extract_exp_from_path X
-      (fun x:X => (Given_assert Y HY (fun y:Y => ass y x)))
-      (fun x:X => (Given_assert Y HY (fun y:Y => ass_extracted y x))).
+Definition add_post_to_semax post pre_path : Prop :=
+  match pre_path with (pre, path) =>
+  add_post_to_semax_aux pre post path end.
 
-      Print split_assert.
-
-Inductive path_to_semax : path_statement -> Prop :=
-| path_to_semax_given: forall X (HX:Non_empty_Type X)
-    (path_ass path_ass': X -> split_assert) path,
-    extract_exp_from_path X path_ass path_ass' ->
-    (forall x:X, path_to_semax (path_ass' x, path)) ->
-    path_to_semax (Given_assert X HX path_ass', path)
-| path_to_semax_basic: forall pre path post ,
-    @semax_aux CS Espec Delta pre (path_to_statement path)
-    {| RA_normal := post;
-       RA_break := FALSE;
-       RA_continue := FALSE;
-       RA_return := fun _ => FALSE|} ->
-    path_to_semax (Basic_assert pre post, path)
-| path_to_semax_binded: forall X (HX:Non_empty_Type X)  ass' path, 
-    (forall x:X, path_to_semax (ass' x, path)) ->
-    path_to_semax (Binded_assert X HX ass', path)
-.
-
-Inductive add_post_to_semax (post: assert):
-  partial_path_statement -> Prop :=
+(*   
 | add_post_to_semax_basic: forall pre path,
     @semax_aux CS Espec Delta pre (path_to_statement path)
     {| RA_normal := post;
@@ -216,8 +216,25 @@ Inductive add_post_to_semax (post: assert):
 | add_post_to_semax_binded: forall X (HX:Non_empty_Type X)  pre' path,
     (forall x:X, add_post_to_semax post (pre' x, path)) ->
     add_post_to_semax post (Binded_partial X HX pre', path)
-.
+. *)
 
+Fixpoint add_return_to_semax_aux pre_ass path ret_val (post: option val -> assert) := 
+  match pre_ass with
+  | Basic_partial pre =>   @semax_aux CS Espec Delta pre (Clight.Ssequence 
+        (path_to_statement path) (Clight.Sreturn ret_val))
+      {| RA_normal := FALSE;
+      RA_break := FALSE;
+      RA_continue := FALSE;
+      RA_return := post|}
+  | Binded_partial X HX pre' => 
+      forall x, add_return_to_semax_aux (pre' x) path ret_val post
+  end.
+
+Definition add_return_to_semax post ret_post := 
+  match ret_post with (pre, path, ret_val) =>
+  add_return_to_semax_aux pre path ret_val post end.
+  
+(* 
 Inductive add_return_to_semax (post: option val -> assert):
   return_post_statement -> Prop :=
 | add_return_to_semax_basic: forall pre path ret_val,
@@ -231,7 +248,24 @@ Inductive add_return_to_semax (post: option val -> assert):
 | add_return_to_semax_binded: forall X(HX:Non_empty_Type X)  pre' path ret_val,
     (forall x:X, add_return_to_semax post (pre' x, path, ret_val)) ->
     add_return_to_semax post (Binded_partial X HX pre', path, ret_val)
-.
+. *)
+
+Fixpoint add_pre_to_semax_aux post_ass pre path :=
+  match post_ass with
+  | Basic_partial post => 
+      @semax_aux CS Espec Delta pre (path_to_statement path)
+      {| RA_normal := post;
+        RA_break := FALSE;
+        RA_continue := FALSE;
+        RA_return := fun _ => FALSE|} 
+  | Binded_partial X HX post' =>
+      forall x, add_pre_to_semax_aux (post' x) pre path
+  end.
+
+Definition add_pre_to_semax pre post_path := 
+  match post_path with (post, path) =>
+  add_pre_to_semax_aux post pre path end.
+(* 
 
 Inductive add_pre_to_semax (pre: assert):
   partial_path_statement -> Prop :=
@@ -245,17 +279,34 @@ Inductive add_pre_to_semax (pre: assert):
 | add_pre_to_semax_binded: forall X (HX:Non_empty_Type X) post' path,
     (forall x:X, add_pre_to_semax pre (post' x, path)) ->
     add_pre_to_semax pre (Binded_partial X (HX:Non_empty_Type X)  post', path)
-.
+. *)
 
-Inductive atom_to_semax (pre:assert)  (post:assert) : path -> Prop :=
+Definition atom_to_semax pre post path := 
+  @semax_aux CS Espec Delta pre (path_to_statement path)
+    {| RA_normal := post;
+       RA_break := FALSE;
+       RA_continue := FALSE;
+       RA_return := fun _ => FALSE|}.
+
+(* Inductive atom_to_semax (pre:assert)  (post:assert) : path -> Prop :=
 | atom_to_semax_intro: forall path,
     @semax_aux CS Espec Delta pre (path_to_statement path)
     {| RA_normal := post;
        RA_break := FALSE;
        RA_continue := FALSE;
        RA_return := fun _ => FALSE|} ->
-    atom_to_semax pre post path.
+    atom_to_semax pre post path. *)
 
+Definition atom_return_to_semax pre post path_ret_val := 
+  match path_ret_val with (path, ret_val) =>
+  @semax_aux CS Espec Delta pre (Clight.Ssequence 
+      (path_to_statement path) (Clight.Sreturn ret_val))
+    {| RA_normal := FALSE;
+        RA_break := FALSE;
+        RA_continue := FALSE;
+        RA_return := post|} end.
+
+(* 
 Inductive atom_return_to_semax (pre:assert)  (post: option val -> assert) :
   path * option expr -> Prop :=
 | atom_return_to_semax_intro: forall path ret_val,
@@ -265,7 +316,7 @@ Inductive atom_return_to_semax (pre:assert)  (post: option val -> assert) :
         RA_break := FALSE;
         RA_continue := FALSE;
         RA_return := post|} ->
-    atom_return_to_semax pre post (path, ret_val).
+    atom_return_to_semax pre post (path, ret_val). *)
 
 
 
@@ -290,7 +341,7 @@ Proof.
   induction H0.
   - constructor.
   - inv H. constructor.
-    * inv H3. apply inj_pair2 in H2;subst. auto.
+    * simpl. auto.
     * apply IHbind_partial_add. auto.
 Qed.
 
@@ -303,8 +354,8 @@ Proof.
   induction H0.
     - constructor.
     - inv H. constructor.
-      * inv H3. apply inj_pair2 in H2;subst. auto.
-      * apply IHbind_partial_add. auto.
+      * simpl in H3. apply H3.
+      * auto.
 Qed.
 
 Lemma add_return_to_semax_inv: forall X (HX:Non_empty_Type X) Q post post',
@@ -316,7 +367,7 @@ Proof.
   induction H0.
     - constructor.
     - inv H. constructor.
-      * inv H3. apply inj_pair2 in H2;subst. auto.
+      * simpl. auto.
       * apply IHbind_return_add. auto.
 Qed.
 
@@ -329,7 +380,7 @@ Proof.
   induction H0.
   - constructor.
   - inv H. constructor.
-    * inv H3. apply inj_pair2 in H2;subst. auto.
+    * apply H3.
     * apply IHbind_path_add. auto.
 Qed.
 
@@ -356,11 +407,22 @@ Lemma add_pre_to_semax_derives: forall P Q (x:partial_path_statement),
   add_pre_to_semax Q x.
 Proof.
   intros. destruct x as [post path].
-  induction H0.
-  + constructor. eapply semax_aux_pre';[..|apply H0].
+  induction post.
+  + simpl. eapply semax_aux_pre';[..|apply H0].
     auto.
-  + constructor. intros x.
-    apply H1.
+  + simpl in *. auto.
+Qed.
+
+Lemma add_pre_to_semax_derives_aux: forall P Q post path,
+  ENTAIL Delta, ((allp_fun_id Delta) && Q) |--  P ->
+  add_pre_to_semax_aux post P path ->
+  add_pre_to_semax_aux post Q path.
+Proof.
+  intros.
+  induction post.
+  + simpl. eapply semax_aux_pre';[..|apply H0].
+    auto.
+  + simpl in *. auto.
 Qed.
 
 Lemma add_pre_to_semax_derives_weak: forall P Q (x:partial_path_statement),
@@ -379,17 +441,17 @@ Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
   add_post_to_semax Q x ->
   add_post_to_semax P x.
 Proof.
-  intros. destruct x as [pre path].
-  induction H0.
-  + constructor.
-    eapply semax_aux_conseq with (P':=pre0)(R':={|
+  intros. destruct x as [pre path]. induction pre.
+  + simpl in H0. simpl.
+    eapply semax_aux_conseq with (P':=a)(R':={|
     RA_normal:=Q; RA_break:=FALSE; RA_continue:=FALSE;RA_return:=(fun v=>FALSE)
   |});
     unfold RA_normal, RA_break, RA_continue, RA_return;
     intros;try solve_andp.
     { eapply derives_trans;[|apply H]. solve_andp. }
     auto.
-  + constructor. auto.
+  + simpl. simpl in H0. intros.
+    specialize (H0 x). apply H1 in H0. auto.
 Qed.
 
 (* Lemma add_post_to_semax_derives: forall P Q (x:partial_path_statement),
@@ -416,8 +478,6 @@ Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
   atom_to_semax P2 Q2 a.
 Proof.
   intros.
-  constructor.
-  inv H1.
   eapply semax_aux_conseq with (P':=P1)(R':={|
     RA_normal:=Q1; RA_break:=FALSE; RA_continue:=FALSE;RA_return:=(fun v=>FALSE)
   |});
@@ -435,8 +495,6 @@ Lemma atom_return_to_semax_derives: forall P1 P2 Q1 Q2 a,
   atom_return_to_semax P2 Q2 a.
 Proof.
   intros. destruct a as [p r].
-  constructor.
-  inv H1.
   eapply semax_aux_conseq with (P':=P1)(R':={|
     RA_normal:=FALSE; RA_break:=FALSE; RA_continue:=FALSE;RA_return:=Q1
   |});
@@ -472,19 +530,15 @@ Lemma add_pre_to_semax_sem: forall (x:partial_path_statement),
 Proof.
   intros. destruct x as [post path].
   induction post.
-  - constructor.
-    apply aux_semax_extract_exists.
+  - apply aux_semax_extract_exists.
     intros Q.
     apply aux_semax_extract_prop.
-    intros. inv H. auto.
-  - constructor.
-    intros x.
-    specialize (H x).
-    eapply add_pre_to_semax_derives;[|apply H].
+    intros. auto.
+  - intros x. specialize (H x).
+    eapply add_pre_to_semax_derives_aux. 2:{ apply H. }
     Intros Q. Exists Q.
     apply andp_right.
-    + apply prop_right. inv H0. apply inj_pair2 in H3. subst.
-      auto.
+    + apply prop_right. apply H0.
     + solve_andp.
 Qed.
 
@@ -494,20 +548,17 @@ Lemma add_post_to_semax_reverse: forall post atom R,
 Proof.
   intros. destruct post as [post path].
   induction post.
-  - simpl in H. inv H.
-    apply path_to_statement_app_aux in H1.
-    apply semax_aux_seq_inv in H1.
-    destruct H1 as [Q [? ?]].
+  - simpl in H.
+    apply path_to_statement_app_aux in H.
+    apply semax_aux_seq_inv in H.
+    destruct H as [Q [? ?]].
     eapply add_post_to_semax_derives.
-    2: { constructor.
-          apply H. }
+    2: { simpl. apply H. }
     Exists Q.
     apply andp_right.
     + solve_andp.
-    + apply prop_right.
-      constructor. auto.
-  - constructor. intros.
-    apply H0. inv H. apply inj_pair2 in H3. subst. simpl. auto.
+    + apply prop_right. auto.
+  - simpl. intros. simpl in H. specialize (H x). apply H0 in H. auto.
 Qed.
 
 Lemma path_conn_to_semax_reverse_simple: forall pre a1,
@@ -516,9 +567,8 @@ Lemma path_conn_to_semax_reverse_simple: forall pre a1,
 Proof.
   intros.
   destruct pre as [a2 p2]. induction a2.
-  - inv H. constructor. auto.
-  - inv H. apply inj_pair2 in H2. subst.
-    constructor. intros. apply H0. simpl. auto.
+  - simpl in H. auto.
+  - simpl in H0, H. intros x. auto.
 Qed.
 
 
@@ -616,7 +666,7 @@ add_post_to_semax (Q1 && Q2) post.
 Proof.
   intros. destruct post as [post path].
   induction post.
-  - constructor. inv H. inv H0.
+  - simpl in *.
     eapply semax_aux_conseq.
     6: { eapply semax_aux_conj_rule with (Q1:= {|
         RA_normal := Q1;
@@ -627,17 +677,15 @@ Proof.
         RA_break := FALSE;
         RA_continue := FALSE;
         RA_return := fun _ : option val => FALSE |}).
-        + apply H2.
-        + apply H1.
+        + apply H.
+        + apply H0.
     }
     { solve_andp. }
     { solve_andp. }
     { solve_andp. }
     { solve_andp. }
     { intros. solve_andp. }
-  - constructor. intros. inv H. apply inj_pair2 in H4. subst.
-    inv H0. apply inj_pair2 in H4. subst.
-    apply H1;auto.
+  - simpl in *. auto.
 Qed.
 
 Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,
@@ -646,8 +694,6 @@ Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,
   atom_to_semax P (Q1 && Q2) atom.
 Proof.
   intros.
-  constructor.
-  inv H. inv H0.
   eapply semax_aux_conseq.
   6: { 
     eapply semax_aux_conj_rule with (Q1:= {|
@@ -659,7 +705,7 @@ Proof.
         RA_break := FALSE;
         RA_continue := FALSE;
         RA_return := fun _ : option val => FALSE |});auto.
-    apply H1. apply H. }
+    apply H. apply H0. }
   { solve_andp. }
   { solve_andp. }
   { solve_andp. }
