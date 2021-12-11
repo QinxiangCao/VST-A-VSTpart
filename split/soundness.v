@@ -69,7 +69,8 @@ Lemma split_not_empty: forall stm res, path_split stm res ->
      /\ return_atom res = []).
 Proof.
   induction 1.
-  + destruct HX as [x ?].  
+  + (* Non_empty_Type Here *)
+    destruct HX as [x ?].  
     inv H. simpl in *. subst.
     intros C; destruct C as [? [? [? [? ?]]]]; subst; simpl in *.
     inv H2. apply H1;auto.
@@ -3485,10 +3486,10 @@ Proof.
   generalize dependent P.
   generalize dependent Q.
   induction H.
-  + intros. inv H3.
+  + intros. inversion H3.
     apply inj_pair2 in H6. subst.
     pose proof bind_result_add_inv _ _ _ _ _ _ _ H2 H.
-    (* non empty type is also used here *)
+    (* Non_empty_Type non empty type is also used here *)
     destruct HX as [? ?].
     apply (H1 x); auto.
   + intros R P Hvalid c_stm Hc. inv Hc.

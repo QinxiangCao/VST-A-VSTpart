@@ -6,6 +6,132 @@ Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 
 Axiom classic: forall P,  P \/ ~ P.
 
+Module Split.
+
+Inductive statement : Type :=
+  | Sassert : assert -> statement
+  | Stopgiven: forall (A: Type) (a:A),
+    (**r Given a:A,
+            ...statement(a)
+    *)
+       (A -> statement) -> statement
+  | Sgiven: forall (A: Type) (a: A),
+    (**r {{ EX a:A, ...assert(a) }}
+         Given a:A,
+            ...statement(a)
+    *)
+    (**r requires a trivial inhaited witness to make [Split_to_Clight]
+         recursive *)
+    (**r given-assert structure, which binds the
+         quantified assertion and the Given cluase simultaneously
+    *)
+        (A -> assert * statement) -> statement
+  | Sskip : statement                   (**r do nothing *)
+  | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
+  | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
+  | Scall: option ident -> expr -> list expr -> statement (**r function call *)
+  | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
+  | Ssequence : statement -> statement -> statement  (**r sequence *)
+  | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
+  | Sloop: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
+  | Sbreak : statement                      (**r [break] statement *)
+  | Scontinue : statement                   (**r [continue] statement *)
+  | Sreturn : option expr -> statement      (**r [return] statement *)
+  (* below are unimplemented commands *)
+  | Slocal: assert -> nat -> statement -> assert -> statement
+  | Sswitch : expr -> labeled_statements -> statement  (**r [switch] statement *)
+  | Slabel : label -> statement -> statement
+  | Sgoto : label -> statement
+
+with labeled_statements : Type :=            (**r cases of a [switch] *)
+  | LSnil: labeled_statements
+  | LScons: option Z -> statement -> labeled_statements -> labeled_statements.
+                      (**r [None] is [default], [Some x] is [case x] *)
+
+
+Fixpoint Split_to_Clight (stm: Split.statement) :=
+  match stm with
+  | Ssequence s1 s2 => Clight.Ssequence (Split_to_Clight s1) (Split_to_Clight s2)
+  | Sifthenelse b s1 s2 => Clight.Sifthenelse b (Split_to_Clight s1) (Split_to_Clight s2)
+  | Sloop _ s1 s2 => Clight.Sloop (Split_to_Clight s1) (Split_to_Clight s2)
+  | Sswitch e sl => Clight.Sswitch e (Split_to_Clight_ls sl)
+  | Sgiven A a a_s => Split_to_Clight (snd (a_s a))
+  | Sassign e1 e2 => Clight.Sassign e1 e2
+  | Sset i e => Clight.Sset i e
+  | Scall r e bl => Clight.Scall r e bl
+  | Sbreak => Clight.Sbreak 
+  | Scontinue => Clight.Scontinue 
+  | Sreturn r => Clight.Sreturn r
+  | _ => Clight.Sskip
+  end
+  with Split_to_Clight_ls sl :=
+  match sl with LSnil => Clight.LSnil | LScons z s sl' => Clight.LScons z  (Split_to_Clight s)  (Split_to_Clight_ls sl')
+  end.
+
+End Split.
+
+
+(* 
+Inductive AClight_to_PClight : AClight.statement -> Split.statement -> Prop :=.
+| to_Clight_assert: forall a,
+    AClight_to_PClight (Sassert a) (SSassert a)
+| to_Clight_dummyassert: forall a,
+    AClight_to_PClight (Sdummyassert a) SSskip
+| to_Clight_given: forall (A:Type) stm stm' a,
+    (forall a, AClight_to_PClight (stm a) (stm' a)) ->
+    AClight_to_PClight (Ssequence (Sassert (exp a)) (Sgiven A stm))
+      (SSsequence (SSassert (exp a)) (SSgiven A (fun x => (a x, stm' x)))). *)
+      
+(* | to_Clight_local: forall a1 n a2 stm c_stm,
+    AClight_to_PClight  stm c_stm ->
+    AClight_to_PClight (Slocal a1 n stm a2) c_stm
+| to_Clight_skip:
+    AClight_to_PClight AClight.Sskip Clight.Sskip
+| to_Clight_assign: forall e1 e2,
+    AClight_to_PClight (AClight.Sassign e1 e2) (Clight.Sassign e1 e2)
+| to_Clight_set: forall id e,
+    AClight_to_PClight (AClight.Sset id e) (Clight.Sset id e)
+| to_Clight_builtin: forall id f tlis e,
+    AClight_to_PClight (Sbuiltin id f tlis e) (Clight.Sbuiltin id f tlis e)
+| to_Clight_call: forall id e elis,
+    AClight_to_PClight (AClight.Scall id e elis) (Clight.Scall id e elis)
+| to_Clight_sequence: forall stm1 c_stm1 stm2 c_stm2,
+    AClight_to_PClight stm1 c_stm1 ->
+    AClight_to_PClight stm2 c_stm2 ->
+    AClight_to_PClight (Ssequence stm1 stm2) (Clight.Ssequence c_stm1 c_stm2)
+| to_Clight_ifthenelse: forall e stm1 c_stm1 stm2 c_stm2,
+    AClight_to_PClight stm1 c_stm1 ->
+    AClight_to_PClight stm2 c_stm2 ->
+    AClight_to_PClight (Sifthenelse e stm1 stm2) (Clight.Sifthenelse e c_stm1 c_stm2)
+| to_Clight_loop: forall inv stm1 c_stm1 stm2 c_stm2,
+    AClight_to_PClight stm1 c_stm1 ->
+    AClight_to_PClight stm2 c_stm2 ->
+    AClight_to_PClight (Sloop inv stm1 stm2) (Clight.Sloop c_stm1 c_stm2)
+| to_Clight_break:
+    AClight_to_PClight AClight.Sbreak Clight.Sbreak
+| to_Clight_continue:
+    AClight_to_PClight AClight.Scontinue Clight.Scontinue
+| to_Clight_return: forall e,
+    AClight_to_PClight (AClight.Sreturn e) (Clight.Sreturn e)
+| to_Clight_switch: forall e ls c_ls,
+    to_Clight_seq ls c_ls ->
+    AClight_to_PClight (Sswitch e ls) (Clight.Sswitch e c_ls)
+| to_Clight_label: forall id stm c_stm,
+    AClight_to_PClight stm c_stm ->
+    AClight_to_PClight (Slabel id stm) (Clight.Slabel id c_stm)
+| to_Clight_goto: forall id,
+    AClight_to_PClight (Sgoto id) (Clight.Sgoto id)
+
+with to_PClight_seq : labeled_statements -> Clight.labeled_statements -> Prop :=
+| to_PClight_seq_nil: to_PClight_seq LSnil Clight.LSnil
+| to_PClight_seq_cons: 
+    forall z stm c_stm seq c_seq,
+      AClight_to_PClight stm c_stm ->
+      to_PClight_seq seq c_seq ->
+      to_PClight_seq (LScons z stm seq)
+        (Clight.LScons z c_stm c_seq). *)
+
+
 Inductive atom_statement : Type :=
 | Sskip : atom_statement                   (**r do nothing *)
 | Sassign : expr -> expr -> atom_statement (**r assignment [lvalue = rvalue] *)
@@ -15,15 +141,16 @@ Inductive atom_statement : Type :=
 
 Definition path:= list (expr + atom_statement) .
 
-Definition Non_empty_Type (A:Type): Prop := exists a:A, True.
+Module OldDefs.
+
 
 Inductive split_assert: Type :=
 (* the assert of a path *)
 | Basic_assert : assert -> assert -> split_assert
-| Given_assert (A:Type) (HA: Non_empty_Type A ): 
+| Given_assert (A:Type) (HA: inhabited A ): 
     (A -> split_assert) -> split_assert 
     (* the type A matches an EX in the pre-condition *)
-| Binded_assert (A:Type) (HA: Non_empty_Type A ): 
+| Binded_assert (A:Type) (HA: inhabited A ): 
     (A -> split_assert) -> split_assert
     (* the type A means a universal quantifier over the triple *).
 
@@ -33,7 +160,7 @@ Definition path_statement : Type :=
 Inductive partial_assert: Type :=
 (* the assert of a partial_path *)
 | Basic_partial : assert  -> partial_assert
-| Binded_partial (A:Type) (HA: Non_empty_Type A ) :
+| Binded_partial (A:Type) (HA: inhabited A ) :
     (A -> partial_assert) -> partial_assert.
 
 Definition partial_path_statement : Type :=
@@ -169,12 +296,195 @@ Definition add_bexp_to_path (s: partial_path_statement) (e:expr) : partial_path_
     (a, (inl e)::p)
   end.
 
+End OldDefs.
+
+(****************************************
+****************************************
+****************************************
+       New Definitions
+****************************************
+****************************************
+***************************************)
+
+Inductive split_assert: Type :=
+(* the assert of a path *)
+| Basic_assert : assert -> assert -> split_assert
+| Binded_assert (A:Type) (HA: inhabited A ): 
+    (A -> split_assert) -> split_assert
+    (* the type A means a universal quantifier over the triple *).
+
+Definition path_statement : Type :=
+  split_assert * path.
+
+Definition partial_path_statement : Type :=
+  assert * path.
+
+Definition return_post_statement : Type := 
+  assert * path * option expr.
+
+Definition return_path_atom : Type := path * option expr.
+Definition path_statements := list path_statement.
+Definition partial_path_statements := list partial_path_statement.
+Definition return_post_statements := list return_post_statement.
+Definition atom_statements := (list path)%type.
+Definition return_atom_statements := (list return_path_atom)%type.
+
+Inductive partial_results: Type :=
+| Basic_partial_results 
+    (normal_post  : partial_path_statements)
+    (continue_post: partial_path_statements)
+    (break_post   : partial_path_statements)
+    (return_post  : return_post_statements)
+| Binded_partial_results (A:Type) (HA: inhabited A) (res': A -> partial_results).
+
+
+Record split_result: Type := Pack{
+  pre   : partial_path_statements; (* no more binded pres with ex-given *)
+  paths : path_statements;
+  partial_paths: partial_results;
+  normal_atom  : atom_statements;
+  continue_atom: atom_statements;
+  break_atom   : atom_statements;
+  return_atom  : return_atom_statements;
+}.
+
+Definition FALSE := (PROP (False) LOCAL () SEP ()).
+
+Definition partial_post_conn_Q (Q:assert) (p: partial_path_statement) :=
+  match p with (P, path) => (Basic_assert P Q, path) end.
+
+Definition partial_posts_conn_Q (Q:assert) (ps: partial_path_statements) :=
+   List.map (partial_post_conn_Q Q) ps.
+
+Definition partial_return_conn_Q (Q:assert) (p: return_post_statement) :=
+match p with (P, path, r) => (Basic_assert P Q, path ++ [inl (Sreturn r)]) end.
+
+Definition partial_returns_conn_Q (Q:assert) (ps: partial_path_statements) :=
+  List.map (partial_return_conn_Q Q) ps.
+
+Fixpoint bind_partial_conn_post (Q:assert) (res: partial_results) : 
+  partial_results * list path :=
+  match res with
+  | Basic_partial_results normal_posts continue_posts break_posts return_posts => 
+        (partial_posts_conn_Q Q normal_posts ) ++
+        (partial_posts_conn_Q Q continue_posts ) ++
+        (partial_posts_conn_Q Q break_posts ) ++
+        (partial_posts_conn_Q Q return_posts )
+  | Binded_partial_results X HX res' => nil end. (Given_assert X HX (fun x:X => basic_assert_conn_bind
+                                                             a1 (a2' x)))
+  end.
+
+
+(** Define connection between partial paths *)
+Fixpoint basic_assert_conn_bind (a1:assert) (a2: partial_assert) : split_assert :=
+  match a2 with
+  | Basic_partial a2 => (Basic_assert a1 a2)
+  | Binded_partial X HX a2' => (Given_assert X HX (fun x:X => basic_assert_conn_bind
+                                                             a1 (a2' x)))
+  end.
+
+Fixpoint bind_assert_conn_basic (a2:assert) (a1: partial_assert) : split_assert :=
+  match a1 with
+  | Basic_partial a1 => (Basic_assert a1 a2)
+  | Binded_partial X HX a1' => (Given_assert X HX (fun x:X => bind_assert_conn_basic
+                                                            a2 (a1' x)))
+  end.
+
+
+Definition post_conn_bind_pre (pre:partial_path_statement) (p1: path) (a1: assert): path_statement :=
+  match pre with (a2, p2) =>
+    (basic_assert_conn_bind a1 a2, p1 ++ p2)
+  end.
+
+
+Fixpoint bind_post_conn_pre (post: partial_path_statement) (p2: path) (a2: assert): path_statement :=
+  match post with (a1, p1) =>
+                  (bind_assert_conn_basic a2 a1, p1 ++ p2)
+  end.
+
+
+Fixpoint posts_conn_pre (posts: partial_path_statements) (pre:partial_path_statement): path_statements :=
+  (* posts  + pre, posts have to be basic, pre can be binded*)
+  match posts with
+  | (Basic_partial a1, p1)::posts' =>
+    match p1, pre with
+    | [], (Binded_partial _ _ _, _) =>
+      (post_conn_bind_pre pre p1 a1)::(posts_conn_pre posts' pre)
+    | _, (Basic_partial _, _) =>
+      (post_conn_bind_pre pre p1 a1)::(posts_conn_pre posts' pre)
+    | _, _  => (posts_conn_pre posts' pre)
+    end
+  | (Binded_partial X HX a1, p1)::posts' =>
+    match pre with
+    | (Basic_partial a2, p2) =>
+      (bind_post_conn_pre (Binded_partial X HX a1, p1) p2 a2)
+        ::(posts_conn_pre posts' pre)
+    | _ => posts_conn_pre posts' pre
+    end
+  | nil => nil
+  end.
+
+Definition posts_conn_pres (posts pres: partial_path_statements) : path_statements :=
+  flat_map (posts_conn_pre posts) pres.
+
+
+
+(** Define connection between partial paths and atoms *)
+Definition post_conn_atom (post:partial_path_statement) (p2: path): partial_path_statement :=
+  match post with (a1, p1) =>
+    (a1, p1 ++ p2)
+  end.
+
+Definition post_conn_return (post:partial_path_statement) (p2: path) (r: option expr): return_post_statement :=
+  match post with (a1, p1) =>
+    (a1, p1 ++ p2, r)
+  end.
+
+Definition posts_conn_returns (posts: partial_path_statements) (rets: return_atom_statements) :
+  return_post_statements :=
+  flat_map (fun post => 
+    map (
+      fun ret_atom => post_conn_return post (fst ret_atom) (snd ret_atom)) rets
+  ) posts.
+
+Definition posts_conn_atoms (posts: partial_path_statements) (atoms: atom_statements) :
+partial_path_statements :=
+flat_map (fun post => 
+  map (post_conn_atom post) atoms
+) posts.
+
+Definition atom_conn_pre (p1:path) (pre: partial_path_statement) : partial_path_statement:=
+  match pre with (a2, p2) =>
+    (a2, p1 ++ p2)
+  end.
+
+Definition atoms_conn_pres (atoms: atom_statements) (pres: partial_path_statements) :
+partial_path_statements :=
+flat_map (fun atom => 
+  map (atom_conn_pre atom) pres
+) atoms.
+
+Definition atoms_conn_atoms (atom1: atom_statements)
+ (atom2: atom_statements) : atom_statements :=
+   flat_map (fun p1 => map (app p1) atom2) atom1.
+
+Definition atoms_conn_returns (atom1: atom_statements)
+ (atom2: return_atom_statements) : return_atom_statements :=
+   flat_map (fun p1 => 
+      map (fun ret_atom =>
+          (p1++(fst ret_atom),snd ret_atom)) atom2) atom1.
+
+Definition add_bexp_to_path (s: partial_path_statement) (e:expr) : partial_path_statement :=
+  match s with (a, p) =>
+    (a, (inl e)::p)
+  end.
+
 Inductive AClight_to_Clight : AClight.statement -> Clight.statement -> Prop :=
 | to_Clight_assert: forall a,
     AClight_to_Clight (Sassert a) Clight.Sskip
 | to_Clight_dummyassert: forall a,
     AClight_to_Clight (Sdummyassert a) Clight.Sskip
-| to_Clight_given: forall (A:Type) (HA:Non_empty_Type A) stm c_stm,
+| to_Clight_given: forall (A:Type) (HA:inhabited A) stm c_stm,
     (forall a, AClight_to_Clight (stm a) c_stm) ->
     AClight_to_Clight  (Sgiven A stm) c_stm
 | to_Clight_local: forall a1 n a2 stm c_stm,

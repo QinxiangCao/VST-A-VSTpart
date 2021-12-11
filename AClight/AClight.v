@@ -48,7 +48,6 @@ Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
   | Sgiven: forall A: Type, (A -> statement) -> statement
-  | Slocal: assert -> nat -> statement -> assert -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
@@ -60,6 +59,8 @@ Inductive statement : Type :=
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
   | Sreturn : option expr -> statement      (**r [return] statement *)
+  (* strucutres below are not implemented *)
+  | Slocal: assert -> nat -> statement -> assert -> statement
   | Sswitch : expr -> labeled_statements -> statement  (**r [switch] statement *)
   | Slabel : label -> statement -> statement
   | Sgoto : label -> statement
