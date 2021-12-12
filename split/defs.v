@@ -675,3 +675,5 @@ match a with
 | ASset id e => Clight.Sset id e
 | AScall id e elis => Clight.Scall id e elis
 end.
+
+End Split.
