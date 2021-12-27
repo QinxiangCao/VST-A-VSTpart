@@ -1,7 +1,0 @@
--Q ../../../condensed/VST/msl VST.msl
--Q ../../../condensed/VST/sepcomp VST.sepcomp  
--Q ../../../condensed/VST/veric VST.veric  
--Q ../../../condensed/VST/floyd VST.floyd 
--R ../../../condensed/VST/compcert compcert 
--Q ../split split 
--Q ../AClight AClight  

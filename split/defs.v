@@ -29,6 +29,9 @@ Require Import Split.vst_ext.
 Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 Require Import VST.veric.semax_lemmas.
 
+
+Check inj_pair2.
+
 Axiom classic: forall P,  P \/ ~ P.
 
 Module Split.
@@ -49,7 +52,7 @@ Inductive statement : Type :=
          recursive *)
     (* given-assert structure, which binds the
          quantified assertion and the Given cluase simultaneously *)
-        (A -> assert * statement) -> statement
+        (A -> assert) -> (A -> statement) -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
   | Sset : ident -> expr -> statement   (**r assignment [tempvar = rvalue] *)
@@ -79,7 +82,7 @@ Fixpoint Split_to_Clight (stm: Split.statement) :=
   | Sifthenelse b s1 s2 => Clight.Sifthenelse b (Split_to_Clight s1) (Split_to_Clight s2)
   | Sloop _ s1 s2 => Clight.Sloop (Split_to_Clight s1) (Split_to_Clight s2)
   | Sswitch e sl => Clight.Sswitch e (Split_to_Clight_ls sl)
-  | Sgiven A a a_s => Split_to_Clight (snd (a_s a))
+  | Sgiven A a ass stm => Split_to_Clight (stm a)
   | Sassign e1 e2 => Clight.Sassign e1 e2
   | Sset i e => Clight.Sset i e
   | Scall r e bl => Clight.Scall r e bl
@@ -111,6 +114,19 @@ Definition path:= list (expr + atom_statement) .
 ****************************************
 ****************************************
 ***************************************)
+
+(* 
+
+{ EX x. P(x) }
+Given x...
+
+{ Q(x) }
+
+
+
+
+*)
+
 
 Inductive path_statement : Type :=
 | path_intro (pre:assert) (path:path) (post:assert).
@@ -630,14 +646,15 @@ Fixpoint split_hint (stm: Split.statement) : split_result :=
             ...stm'(a)
     *) => 
       split_result_binded A (inhabits a) (fun a => split_hint (stm' a))
-  | Sgiven A a stm'
+  | Sgiven A a ass' stm'
     (**r {{ EX a:A, ...assert(a) }}
          Given a:A,
             ...statement(a)
     *) => 
       split_result_binded A (inhabits a) (fun a => 
-        let Ppre := exp (fun a => fst (stm' a)) in
-        let (P, stm) := stm' a in
+        let Ppre := exp ass' in
+        let P := ass' a in
+        let stm := stm' a in
         let res := split_hint stm in
           add_pre_to_result Ppre P res
       )

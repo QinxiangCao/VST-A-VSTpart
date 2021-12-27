@@ -838,24 +838,28 @@ Definition f_append_hint_new : Split.statement :=
         (EX v l1 l2,
             PROP  (l = rev l1 ++ l2)
             LOCAL (temp _w w; temp _v v)
-            SEP   (listrep sh l1 w; listrep sh l2 v))%assert,
+            SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
+    (fun w =>
     (Sgiven val Vundef (fun v => (
         (* dummy *)
         (EX l1 l2,
             PROP  (l = rev l1 ++ l2)
             LOCAL (temp _w w; temp _v v)
-            SEP   (listrep sh l1 w; listrep sh l2 v))%assert,
+            SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
+    (fun v =>
     (Sgiven (list val) nil (fun l1 => (
         (* dummy *)
         (EX l2,
             PROP  (l = rev l1 ++ l2)
             LOCAL (temp _w w; temp _v v)
-            SEP   (listrep sh l1 w; listrep sh l2 v))%assert,
+            SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
+    (fun l1 =>
     (Sgiven (list val) nil (fun l2 => (
         (* dummy *)
         (   PROP  (l = rev l1 ++ l2)
             LOCAL (temp _w w; temp _v v)
-            SEP   (listrep sh l1 w; listrep sh l2 v))%assert,
+            SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
+    (fun l2 =>
 
         (Ssequence
             (Sifthenelse (Etempvar _v (tptr (Tstruct _list noattr)))
@@ -869,20 +873,23 @@ Definition f_append_hint_new : Split.statement :=
                         PROP  (l2 = x :: l2')
                         LOCAL (temp _w w; temp _v v)
                         SEP   (data_at sh t_struct_list (x, t) v;
-                                listrep sh l1 w; listrep sh l2' t))%assert),
+                                listrep sh l1 w; listrep sh l2' t))%assert)))
+                (fun t =>
                 (Sgiven val Vundef (fun x => (
                 (* dummy *)
                 ((EX l2',
                     PROP  (l2 = x :: l2')
                     LOCAL (temp _w w; temp _v v)
                     SEP   (data_at sh t_struct_list (x, t) v;
-                            listrep sh l1 w; listrep sh l2' t))%assert),
+                            listrep sh l1 w; listrep sh l2' t))%assert)))
+                (fun x =>
                 (Sgiven (list val) nil (fun l2' => (
                 (* dummy *)
                 ((  PROP  (l2 = x :: l2')
                     LOCAL (temp _w w; temp _v v)
                     SEP   (data_at sh t_struct_list (x, t) v;
-                            listrep sh l1 w; listrep sh l2' t))%assert),
+                            listrep sh l1 w; listrep sh l2' t))%assert)))
+                (fun l2' =>
                     (Ssequence
                         (Sset _t
                             (Efield
@@ -904,10 +911,10 @@ Definition f_append_hint_new : Split.statement :=
                     (Ssequence
                         (Sset _v
                             (Etempvar _t (tptr (Tstruct _list noattr))))
-                                            Sskip)))))))))))))
+                                            Sskip))))))))))
                 (* END OF EX t x l2',  *)
                 ))
-    ))))))))))))
+    ))))))))
     (* END OF EX w v l1 l2,  *)        
     Sskip) (* c_incr *)
 (Ssequence

@@ -156,13 +156,18 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
         (EX argsig: _, EX retsig: _, EX cc: _,
         EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, EX ts: _, EX x: _,
         !! (Cop.classify_fun (typeof a) =
-            Cop.fun_case_f (type_of_params argsig) retsig cc /\
+            Cop.fun_case_f (type_of_params argsig) retsig cc /\ 
+            (* type of a must match argsig/retsig *)
             (retsig = Tvoid -> ret = None) /\
-            tc_fn_return Delta ret retsig) &&
-        (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
+            tc_fn_return Delta ret retsig) && (* return value type check *)
+        (((tc_expr Delta a) &&  (* function-expression must typecheck *)
+        (tc_exprlist Delta (snd (split argsig)) bl)))  &&
+        (* argument-expressions must typecheck *)
         `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+        (* evaluate to an actual function with specification [A]{P}{Q} *)
         |>((`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
         (Clight.Scall ret a bl)
+        (* ret = a(bl) *)
         (normal_ret_assert R)
 | semax_aux_label: forall (P:environ -> mpred) (c:Clight.statement) (Q:ret_assert) l,
   @semax_aux CS Espec Delta P c Q ->
@@ -1121,10 +1126,64 @@ Proof.
     auto.
   - solve_andp.
 Qed.
-
+(*
 Lemma func_ptr_unique: forall phi1 phi2 v,
-  (predicates_hered.derives ((func_ptr phi1 v) && (func_ptr phi2 v)) (!! (phi1 = phi2)))%pred.
-Admitted.
+  ((` (func_ptr phi1 v) && `(func_ptr phi2 v)) |-- (!! (phi1 = phi2))).
+intros. unfold func_ptr. unfold liftx. simpl. intros r.
+unfold lift. unfold func_ptr_si. 
+rewrite predicates_hered.exp_andp2. apply predicates_hered.exp_left. intros.
+rewrite !predicates_hered.exp_andp2. repeat apply predicates_hered.exp_left. intros.
+rewrite !predicates_hered.exp_andp1. apply predicates_hered.exp_left. intros.
+rewrite predicates_hered.andp_assoc.
+apply predicates_hered.prop_andp_left. intros.
+rewrite !predicates_hered.exp_andp1. apply predicates_hered.exp_left. intros.
+rewrite predicates_hered.andp_comm.
+rewrite predicates_hered.andp_assoc.
+apply predicates_hered.prop_andp_left. intros.
+rewrite H in H0. inv H0.
+rewrite (predicates_hered.andp_comm _ (func_at x2 (x,0))).
+rewrite predicates_hered.andp_assoc.
+apply predicates_hered.andp_left2.
+rewrite <- predicates_hered.andp_assoc.
+apply predicates_hered.andp_left1.
+
+unfold func_at. destruct x0, x2.
+unfold res_predicates.pureat. destruct phi1, phi2. simpl.
+
+
+
+Search res_predicates.pureat.
+Locate res_predicates.
+
+Print corable.corable.
+Locate func_at.
+hnf in H.
+
+Search func_at.
+
+unfold func_at.
+
+
+Search predicates_hered.prop predicates_hered.derives.
+
+rewrite !predicates_hered.exp_andp1. apply predicates_hered.exp_left. intros.
+rewrite predicates_hered.exp_andp1.
+
+Search andp exp.
+
+
+  Admitted.
+
+
+Print func_ptr.
+Print func_ptr_si.
+Search func_ptr.
+
+Locate tycontext.
+Print funspec.
+Locate func_ptr. 
+Locate andp.*)
+
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
   @semax_aux CS Espec Delta P 
@@ -1148,6 +1207,10 @@ Proof.
   Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1 ts1 x1.
   Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2 ts2 x2.
   rewrite H in H2. inv H2.
+unfold func_ptr. unfold func_ptr_si. simpl. unfold liftx. unfold lift. simpl.
+Intros. unfold predicates_hered.exp.
+
+
   assert_PROP (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1 = mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2).
   { unfold liftx. simpl. intros r. unfold lift. simpl.
     eapply derives_trans;[|apply func_ptr_unique with (v:= eval_expr a r)]. solve_andp. }
