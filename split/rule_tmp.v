@@ -4,6 +4,122 @@ Require Import Split.vst_ext.
 Require Import Split.defs.
 Require Import VST.veric.semax_lemmas.
 
+(* Inductive binded_split_result: Type :=
+| Basic_split : split_result -> binded_split_result
+| Binded_split(X: Type) (x: X): (X -> split_result) -> binded_split_result
+.
+
+Definition flatten_partial (X:Type) (x:X) (stm: X -> partial_assert) : partial_assert
+ := Binded_partial X (inhabits x) stm.
+
+Definition flatten_partials (X:Type) (x:X) (stm: list (X -> partial_assert)) : list partial_assert
+:= List.map (flatten_partial X x) stm.
+
+
+Fixpoint flatten_partials (X:Type) (stms:partial_path_statements): 
+  option (list ((X -> partial_assert) * path)) :=
+  match stms with
+  | nil => Some nil
+  | stm :: stms' =>
+      match stm with (ass, path) =>
+      match ass with 
+      | Binded_partial X HX ass' => 
+          match flatten_partials X stms' with
+          | Some res => Some ((ass', path):: res)
+          | None => None
+          end
+      | _ => None
+      end
+      end
+  end.
+
+Fixpoint split_pre_of (stm: Split.statement) : option partial_path_statements :=
+  match stm with
+  | Split.Ssequence s1 s2 =>
+      let res1 := split_pre_of s1 in
+      let res2 := split_pre_of s2 in
+      match res1, res2 with
+      | Some res1, Some res2 =>
+          (* if orb (all_basic (pre res2)) (* __ ;; basic *)
+            ((* basic ;; bind*)
+              (all_basic(normal_post res1)) &&
+              (all_empty_path (normal_post res1)) &&
+              (all_empty_atom (normal_atom res1))
+            ) then *)
+          Some ( res1 ) 
+           (* else None *)
+        | _, _ => None
+      end
+  | Split.Sgiven X x a_s =>
+      Binded_assert 
+  | _ => None
+  end.
+
+
+
+  | Split.Sifthenelse a s1 s2 => 
+      let res1 := path_split s1 in
+      let res2 := path_split s2 in
+      match res1, res2 with
+      | Some res1, Some res2 =>
+          Some {|
+            pre := add_exp_to_pres a (pre res1) ++ add_exp_to_pres (Cnot a) (pre res2);
+            paths := paths res1 ++ paths res2;
+            normal_post := normal_post res1 ++ normal_post res2;
+            continue_post := continue_post res1 ++ continue_post res2;
+            return_post := return_post res1 ++ return_post res2;
+            break_post := break_post res1 ++ break_post res2;
+            normal_atom := add_exp_to_atoms a (normal_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (normal_atom res2);
+            break_atom := add_exp_to_atoms a (break_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (break_atom res2);
+            return_atom := add_exp_to_return_atoms a (return_atom res1) 
+                          ++ add_exp_to_return_atoms (Cnot a) (return_atom res2);
+            continue_atom := add_exp_to_atoms a (continue_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (continue_atom res2);
+          |}
+      | _, _ => None
+      end
+  (* | Sloop _ s1 s2 => Clight.Sloop (Split_to_Clight s1) (Split_to_Clight s2) *)
+  | Split.Sgiven A a a_s =>
+    let HA := inhabits a in
+    let (P, stm) := a_s a in
+    let res := path_split stm in
+      match res with
+      | Some res => Some {|
+          pre := nil;
+          paths := List.map (fun path => Binded_assert A HA (fun a => 
+            match (path_split snd (a_s a)) with
+            | Some res => paths res
+            | None => FALSE, nil) ;
+          normal_post := nil;
+          continue_post := nil;
+          return_post := nil;
+          break_post := nil;
+          normal_atom := nil;
+          break_atom := nil;
+          return_atom := nil;
+          continue_atom := nil;
+      |}
+      | None => None
+      end
+  | Split.Sassert a =>
+      Some (Pack [(Basic_partial a, nil)] nil 
+            [(Basic_partial a, nil)] nil nil nil nil nil nil nil)
+  | Split.Sassign exp1 exp2 =>
+      Some (Pack nil nil nil nil nil nil [[inr (Sassign exp1 exp2)]] nil nil nil )
+  | Split.Sset ident exp => 
+      Some (Pack nil nil nil nil nil nil [[inr (Sset ident exp) ]] nil nil nil )
+  | Split.Scall ident e el =>
+      Some (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
+  | Split.Sbreak => Some (Pack nil nil nil nil nil nil nil nil [nil] nil)
+  | Split.Scontinue => Some (Pack nil nil nil nil nil nil nil [nil] nil nil)
+  | Split.Sreturn r => Some (Pack nil nil nil nil nil nil nil nil nil [(nil,r)])
+  | Split.Sskip => Some (Pack nil nil nil nil nil nil [nil] nil nil nil)
+  | _ => None
+  end. *)
+
+
 Inductive bind_partial_add (X:Type) (HX: Non_empty_Type X ):
 partial_path_statements -> (X -> partial_path_statements) -> Prop :=
 | bind_partial_nil: bind_partial_add X HX nil (fun _ => nil)
@@ -50,46 +166,98 @@ Inductive bind_result_add (A:Type) (HA: Non_empty_Type A ):
                       (fun a:A => Pack (pre' a) (paths' a) (normal_post' a) (break_post' a) (continue_post' a) (return_post' a) normal_atom break_atom continue_atom
                       return_atom)
 .
-
-
-
-Inductive basic_split : statement -> split_result->Prop :=
-
-| (* It is equivalent to a singleton of path : [[inr (Sset ident exp) ]] *)
-  Split_set : forall ident exp,
-  basic_split ((AClight.Sset ident exp)) 
-    (Pack nil nil nil nil nil nil [[inr (Sset ident exp) ]] nil nil nil )
-        
-| (* it is just a singleton too. Therefore only the normal_atom will be not empty *) 
-  Split_assign : forall exp1 exp2,
-  basic_split (AClight.Sassign exp1 exp2)
-    (Pack nil nil nil nil nil nil [[inr (Sassign exp1 exp2)]] nil nil nil )
-
-| (* pre and normal_post not empty*) 
-  Split_assert : forall a,
-  basic_split (Sassert a) 
-  (Pack [(Basic_partial a, nil)] nil [(Basic_partial a, nil)] nil nil nil nil nil nil nil)
-
-| Split_continue : 
-  basic_split AClight.Scontinue (Pack nil nil nil nil nil nil nil [nil] nil nil)
-
-| Split_break : 
-  basic_split AClight.Sbreak (Pack nil nil nil nil nil nil nil nil [nil] nil)
-
-| Split_Sskip : 
-  basic_split AClight.Sskip (Pack nil nil nil nil nil nil [nil] nil nil nil)
-
-| Split_Sreturn : forall val ,
-  basic_split (AClight.Sreturn val)
-  (Pack nil nil nil nil nil nil nil nil nil [(nil,val)])
- 
-| Split_func : forall ident e el,
-  basic_split (AClight.Scall (ident) e el)
-  (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
-  .
-
-
-
+(* 
+Fixpoint path_split (stm: Split.statement) : option split_result :=
+  match stm with
+  | Split.Ssequence s1 s2 =>
+      let res1 := path_split s1 in
+      let res2 := path_split s2 in
+      match res1, res2 with
+      | Some res1, Some res2 =>
+          if orb (all_basic (pre res2)) (* __ ;; basic *)
+            ((* basic ;; bind*)
+              (all_basic(normal_post res1)) &&
+              (all_empty_path (normal_post res1)) &&
+              (all_empty_atom (normal_atom res1))
+            ) then
+          Some ({|
+          pre := pre res1 ++ atoms_conn_pres (normal_atom res1) (pre res2);
+          paths := paths res1 ++ paths res2 ++ posts_conn_pres (normal_post res1) (pre res2);
+          normal_post := normal_post res2 ++ posts_conn_atoms (normal_post res1) (normal_atom res2);
+          continue_post := continue_post res1 ++ continue_post res2
+                            ++ posts_conn_atoms (normal_post res1) (continue_atom res2);
+          break_post := break_post res1 ++ break_post res2
+                            ++ posts_conn_atoms (normal_post res1) (break_atom res2);
+          return_post := return_post res1 ++ return_post res2
+                            ++ posts_conn_returns (normal_post res1) (return_atom res2);
+          normal_atom := atoms_conn_atoms (normal_atom res1) (normal_atom res2);
+          return_atom := return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2);
+          break_atom := break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2);
+          continue_atom := continue_atom res1 ++ atoms_conn_atoms (normal_atom res1) (continue_atom res2);
+          |}) else None
+        | _, _ => None
+      end
+  | Split.Sifthenelse a s1 s2 => 
+      let res1 := path_split s1 in
+      let res2 := path_split s2 in
+      match res1, res2 with
+      | Some res1, Some res2 =>
+          Some {|
+            pre := add_exp_to_pres a (pre res1) ++ add_exp_to_pres (Cnot a) (pre res2);
+            paths := paths res1 ++ paths res2;
+            normal_post := normal_post res1 ++ normal_post res2;
+            continue_post := continue_post res1 ++ continue_post res2;
+            return_post := return_post res1 ++ return_post res2;
+            break_post := break_post res1 ++ break_post res2;
+            normal_atom := add_exp_to_atoms a (normal_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (normal_atom res2);
+            break_atom := add_exp_to_atoms a (break_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (break_atom res2);
+            return_atom := add_exp_to_return_atoms a (return_atom res1) 
+                          ++ add_exp_to_return_atoms (Cnot a) (return_atom res2);
+            continue_atom := add_exp_to_atoms a (continue_atom res1) 
+                          ++ add_exp_to_atoms (Cnot a) (continue_atom res2);
+          |}
+      | _, _ => None
+      end
+  (* | Sloop _ s1 s2 => Clight.Sloop (Split_to_Clight s1) (Split_to_Clight s2) *)
+  | Split.Sgiven A a a_s =>
+    let HA := inhabits a in
+    let (P, stm) := a_s a in
+    let res := path_split stm in
+      match res with
+      | Some res => Some {|
+          pre := nil;
+          paths := List.map (fun path => Binded_assert A HA (fun a => 
+            match (path_split snd (a_s a)) with
+            | Some res => paths res
+            | None => FALSE, nil) ;
+          normal_post := nil;
+          continue_post := nil;
+          return_post := nil;
+          break_post := nil;
+          normal_atom := nil;
+          break_atom := nil;
+          return_atom := nil;
+          continue_atom := nil;
+      |}
+      | None => None
+      end
+  | Split.Sassert a =>
+      Some (Pack [(Basic_partial a, nil)] nil 
+            [(Basic_partial a, nil)] nil nil nil nil nil nil nil)
+  | Split.Sassign exp1 exp2 =>
+      Some (Pack nil nil nil nil nil nil [[inr (Sassign exp1 exp2)]] nil nil nil )
+  | Split.Sset ident exp => 
+      Some (Pack nil nil nil nil nil nil [[inr (Sset ident exp) ]] nil nil nil )
+  | Split.Scall ident e el =>
+      Some (Pack nil nil nil nil nil nil [[inr (Scall (ident) e el)]] nil nil nil)
+  | Split.Sbreak => Some (Pack nil nil nil nil nil nil nil nil [nil] nil)
+  | Split.Scontinue => Some (Pack nil nil nil nil nil nil nil [nil] nil nil)
+  | Split.Sreturn r => Some (Pack nil nil nil nil nil nil nil nil nil [(nil,r)])
+  | Split.Sskip => Some (Pack nil nil nil nil nil nil [nil] nil nil nil)
+  | _ => None
+  end. *)
 
 
 Inductive path_split: statement -> split_result -> Prop :=
@@ -310,3 +478,4 @@ Inductive path_split: statement -> split_result -> Prop :=
         |}) 
         
 .
+

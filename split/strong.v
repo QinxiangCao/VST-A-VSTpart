@@ -1209,7 +1209,7 @@ Proof.
   rewrite H in H2. inv H2.
 unfold func_ptr. unfold func_ptr_si. simpl. unfold liftx. unfold lift. simpl.
 Intros. unfold predicates_hered.exp.
-
+(* 
 
   assert_PROP (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1 = mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2).
   { unfold liftx. simpl. intros r. unfold lift. simpl.
@@ -1225,7 +1225,7 @@ Intros. unfold predicates_hered.exp.
     { repeat apply andp_left2. apply derives_refl. }
   }
   rewrite andp_assoc. rewrite <- later_andp.
-  apply later_ENTAIL. hnf. intros r. unfold liftx. simpl. unfold lift. simpl. destruct Q as [Qn Qc Qb Qr];unfold_der. simpl.
+  apply later_ENTAIL. hnf. intros r. unfold liftx. simpl. unfold lift. simpl. destruct Q as [Qn Qc Qb Qr];unfold_der. simpl. *)
 Admitted.
 
 Lemma share_lub_writable: forall sh1 sh2,
