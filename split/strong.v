@@ -1184,6 +1184,20 @@ Print funspec.
 Locate func_ptr. 
 Locate andp.*)
 
+Definition precise_funspec (f:funspec) : Prop :=
+  match f with
+  | mk_funspec fsig cc A P Q _ _ =>
+      forall (R1 R2:
+        forall ts : list Type,
+        functors.MixVariantFunctor._functor
+          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+      (ts:list Type),
+        (EX a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) &&
+        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2))
+        |-- EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a))
+  end.
+
+
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
   @semax_aux CS Espec Delta P 
@@ -1207,7 +1221,96 @@ Proof.
   Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1 ts1 x1.
   Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2 ts2 x2.
   rewrite H in H2. inv H2.
-unfold func_ptr. unfold func_ptr_si. simpl. unfold liftx. unfold lift. simpl.
+
+assert (precise_funspec (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)) by admit.
+hnf in H2. pose proof H2 P2 R2 ts2.
+
+
+  
+
+  assert precise_funspec
+
+unfold func_ptr. unfold liftx. simpl. unfold lift. intros r.
+unfold func_ptr_si. unfold func_at. simpl.
+
+
+assert (T0: forall (T:Type) (H: ageable.ageable T) B x, 
+  @predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
+    (algNatDed T) B x). reflexivity.
+
+assert (T1: forall (T:Type) (H: ageable.ageable T) x y, 
+  @predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
+      (algNatDed T) x y). reflexivity.
+
+assert (T2: forall (T:Type) (H: ageable.ageable T) x, 
+@predicates_hered.prop T H x = @prop (predicates_hered.pred T) 
+    (algNatDed T) x). reflexivity.
+
+rewrite !T0. 
+Intros b1. Intros b2.
+rewrite !T1.
+rewrite !T0.
+Intros gs1. Intros gs2.
+rewrite !T1.
+rewrite !T2.
+assert_PROP (eval_expr a r = Vptr b2 Ptrofs.zero). solve_andp.
+assert_PROP (eval_expr a r = Vptr b1 Ptrofs.zero). solve_andp.
+rewrite H2 in H5. inv H5.
+(* destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
+destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2]. *)
+
+Print tycontext.
+Locate tycontext.
+Print compcert_rmaps.RML.R.SomeP.
+
+
+assert (gs1 = gs2) by admit.
+subst gs2. destruct gs1 as [gsig gcc gA gP gQ gNP gNQ].
+destruct gsig as [gargsig gretsig].
+
+Exists gargsig gretsig gcc A1 P1 R1 NEP1 NEQ1 ts1 x1.
+repeat apply andp_right; try solve_andp.
+{ apply prop_right. repeat split;auto. }
+
+Locate func_at.
+
+
+Locate res_predicates.pureat.
+
+
+
+
+Check (predicates_hered.exp
+(fun b : block =>
+ predicates_hered.andp
+   (predicates_hered.prop
+      (eq (eval_expr a r) (Vptr b Ptrofs.zero)))
+   (predicates_hered.exp
+      (fun gs : funspec =>
+       predicates_hered.andp
+         (funspec_sub_si gs
+            (mk_funspec (pair argsig2 retsig2) cc2 A2 P2 R2
+               NEP2 NEQ2))
+         (match gs with
+          | mk_funspec fsig cc A P0 Q0 _ _ =>
+              res_predicates.pureat
+                (compcert_rmaps.RML.R.SomeP 
+                   (SpecTT A) (packPQ P0 Q0))
+                (compcert_rmaps.FUN fsig cc)
+          end (pair b Z0)))))).
+
+          Check andp.
+
+          Check (andp (tc_expr Delta a r)
+          (tc_exprlist Delta (snd (split argsig2)) bl r)).
+
+          Print mpred.
+          Check predicates_hered.exp.
+          unfold predicates_hered.exp.
+          simpl.
+          Check predicates_hered.exp_obligation_1.
+
+simpl. unfold liftx. unfold lift. simpl.
 Intros. unfold predicates_hered.exp.
 (* 
 

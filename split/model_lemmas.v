@@ -28,6 +28,23 @@ Proof.
 Admitted.
 Export predicates_hered. *)
 
+Lemma func_at_unique: forall pp1 k1 pp2 k2 l,
+  pureat pp1 k1 l && pureat pp2 k2 l |--
+  !! (pp1 = pp2 /\ k1 = k2).
+Proof.
+  intros. intro r. simpl.
+  intros. destruct H. rewrite H in H0.
+
+  inv H0. unfold preds_fmap in H3.
+  destruct pp1, pp2. simpl in H3. unfold fmap in H3.
+  inv H3. apply inj_pair2 in H2.
+
+  (** 01/05/2021
+      trying to prove that func_at points to same fun spec
+  *)
+
+Admitted.
+
 
 
 Lemma join_necR_aux: forall n x y z x' y' z',
