@@ -28,23 +28,49 @@ Proof.
 Admitted.
 Export predicates_hered. *)
 
-Lemma func_at_unique: forall pp1 k1 pp2 k2 l,
-  pureat pp1 k1 l && pureat pp2 k2 l |--
-  !! (pp1 = pp2 /\ k1 = k2).
+Require Import VST.veric.seplog.
+Require Import VST.veric.semax_call.
+Require Import VST.msl.subtypes.
+Require Import VST.msl.seplog.
+Locate unfash.
+Locate fash.
+Locate box.
+Locate "!".
+
+Lemma func_at_unique1: forall r
+  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
+  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
+  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l r ->
+  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l r ->
+  (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
 Proof.
-  intros. intro r. simpl.
-  intros. destruct H. rewrite H in H0.
+  intros.
+  unfold func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0. inv H0. auto.
+Qed.
 
-  inv H0. unfold preds_fmap in H3.
-  destruct pp1, pp2. simpl in H3. unfold fmap in H3.
-  inv H3. apply inj_pair2 in H2.
+Axiom classic: forall P , P \/ ~ P.
 
-  (** 01/05/2021
-      trying to prove that func_at points to same fun spec
-  *)
+Lemma pure_eq_inv: forall p1 p2 k1 k2,
+ PURE k1 p1 = PURE k2 p2 -> k1 = k2 /\ p1 = p2.
+intros.
+inv H. auto.
+Qed.
 
-Admitted.
-
+Lemma func_at_unique2: forall r
+  fsig cc A P1 Q1 NEP1 NEQ1
+  P2 Q2 NEP2 NEQ2 l,
+  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+  ((forall ts x vl, unfash (|> (P2 ts x vl <=> P1 ts x vl)) r ) /\
+  (forall ts x vl, unfash (|> (Q2 ts x vl <=> Q1 ts x vl)) r )).
+Proof.
+  intros.
+  unfold func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0.
+  apply pure_eq_inv in H0. destruct H0.
+  apply function_pointer_aux in H1;auto.
+Qed.
 
 
 Lemma join_necR_aux: forall n x y z x' y' z',
