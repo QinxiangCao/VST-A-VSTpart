@@ -28,49 +28,76 @@ Proof.
 Admitted.
 Export predicates_hered. *)
 
-Require Import VST.veric.seplog.
-Require Import VST.veric.semax_call.
-Require Import VST.msl.subtypes.
+
+(* 
 Require Import VST.msl.seplog.
-Locate unfash.
-Locate fash.
-Locate box.
-Locate "!".
 
-Lemma func_at_unique1: forall r
-  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
-  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
-  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l r ->
-  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l r ->
-  (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
-Proof.
-  intros.
-  unfold func_at in *. unfold pureat in *.
-  simpl in H, H0. rewrite H in H0. inv H0. auto.
-Qed.
+Lemma func_at_unique2: forall
+  fsig cc A
+  (P1 Q1 P2 Q2:forall ts : list Type,
+  functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT A))
+    mpred) 
+  (NEP1: super_non_expansive P1) NEQ1 NEP2 NEQ2 l
+  (ts:list Type) 
+  (x: functors.MixVariantFunctor._functor
+  ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
+      match T with
+      | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
+      | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+      | rmaps.DependentType n =>
+          functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
+      | rmaps.ProdType T1 T2 =>
+          functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
+      | rmaps.ArrowType T1 T2 =>
+          functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
+      | rmaps.SigType I0 f =>
+          functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
+      | rmaps.PiType I0 f =>
+          functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
+      | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
+      end) A) mpred) 
+  bl,
+  (func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)%logic
+  |-- 
+   (* (ALL (ts:list Type)
+       x
+        (bl: environ -> environ) 
+        vl, *)
+       (|> (lift.liftx (Q2 ts x) <=> lift.liftx (Q1 ts x)))%logic.
+   
 
-Axiom classic: forall P , P \/ ~ P.
 
-Lemma pure_eq_inv: forall p1 p2 k1 k2,
- PURE k1 p1 = PURE k2 p2 -> k1 = k2 /\ p1 = p2.
-intros.
-inv H. auto.
-Qed.
-
-Lemma func_at_unique2: forall r
-  fsig cc A P1 Q1 NEP1 NEQ1
-  P2 Q2 NEP2 NEQ2 l,
-  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
-  ((forall ts x vl, unfash (|> (P2 ts x vl <=> P1 ts x vl)) r ) /\
-  (forall ts x vl, unfash (|> (Q2 ts x vl <=> Q1 ts x vl)) r )).
-Proof.
-  intros.
-  unfold func_at in *. unfold pureat in *.
-  simpl in H, H0. rewrite H in H0.
-  apply pure_eq_inv in H0. destruct H0.
-  apply function_pointer_aux in H1;auto.
-Qed.
+Lemma func_at_unique2: forall
+  fsig cc A
+  (P1 Q1 P2 Q2:forall ts : list Type,
+  functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT A))
+    mpred) NEP1 NEQ1 NEP2 NEQ2 l,
+  (func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)%logic
+  |-- 
+   (ALL (ts:list Type)
+       (x: functors.MixVariantFunctor._functor
+        ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
+            match T with
+            | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
+            | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+            | rmaps.DependentType n =>
+                functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
+            | rmaps.ProdType T1 T2 =>
+                functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
+            | rmaps.ArrowType T1 T2 =>
+                functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
+            | rmaps.SigType I0 f =>
+                functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
+            | rmaps.PiType I0 f =>
+                functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
+            | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
+            end) A) mpred)
+        (bl: environ -> environ) 
+        vl,
+       (|> (lift.liftx (Q2 ts x) <=> lift.liftx (Q1 ts x))))%logic.
+    *)
 
 
 Lemma join_necR_aux: forall n x y z x' y' z',
@@ -1601,3 +1628,57 @@ intros n. induction n.
   destruct H0 as [? [? ?]].
   eapply rt_trans;[|apply H1]. apply rt_step. auto.
 Qed.
+
+
+
+Require Import VST.veric.seplog.
+Require Import VST.veric.semax_call.
+
+Lemma func_at_unique1: forall r
+  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
+  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
+  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l r ->
+  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l r ->
+  (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
+Proof.
+  intros.
+  unfold func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0. inv H0. auto.
+Qed.
+
+Lemma func_at_unique1_lift: forall
+  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
+  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
+  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l &&
+  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l
+  |-- !! (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
+Proof.
+  intros. intro r. intros. destruct H.
+  eapply func_at_unique1.
+  - apply H.
+  - apply H0.
+Qed.
+
+(* for some reason when p is too complicated, coq will not inversion it *)
+Lemma pure_eq_inv: forall p1 p2 k1 k2,
+ PURE k1 p1 = PURE k2 p2 -> k1 = k2 /\ p1 = p2.
+intros.
+inv H. auto.
+Qed.
+
+
+Lemma func_at_unique2: forall r
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l,
+func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+((forall ts x vl, unfash (|> (P2 ts x vl <=> P1 ts x vl)) r ) /\
+(forall ts x vl, unfash (|> (Q2 ts x vl <=> Q1 ts x vl)) r )).
+Proof.
+  intros.
+  unfold func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0.
+  apply pure_eq_inv in H0. destruct H0.
+  apply function_pointer_aux in bondaH1;auto.
+Qed.
+

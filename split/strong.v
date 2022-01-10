@@ -1221,9 +1221,103 @@ Proof.
       rewrite !semax_call.snd_split in *.
       simpl. rewrite H2. reflexivity.
 Qed.
-Locate func_at.
-Search func_at.
-Print corable.corable.
+
+
+Lemma func_at_unique2_logic: forall
+(fsig : compcert_rmaps.funsig)
+         (cc : calling_convention) (A : rmaps.TypeTree)
+         (P1
+          Q1 : forall ts : list Type,
+               functors.MixVariantFunctor._functor
+                 (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+         (NEP1 : @super_non_expansive A P1)
+         (NEQ1 : @super_non_expansive A Q1)
+         (P2
+          Q2 : forall ts : list Type,
+               functors.MixVariantFunctor._functor
+                 (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+         (NEP2 : @super_non_expansive A P2)
+         (NEQ2 : @super_non_expansive A Q2) (l : address)
+  (ts:list Type)
+     (x: functors.MixVariantFunctor._functor
+      ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
+          match T with
+          | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
+          | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+          | rmaps.DependentType n =>
+              functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
+          | rmaps.ProdType T1 T2 =>
+              functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
+          | rmaps.ArrowType T1 T2 =>
+              functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
+          | rmaps.SigType I0 f =>
+              functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
+          | rmaps.PiType I0 f =>
+              functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
+          | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
+          end) A) mpred)
+      (vl: environ -> environ) (v: environ -> val)
+  ,
+((` (func_ptr (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1))) v &&
+(` (func_ptr (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2))) v
+(* ((func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l : mpred) && *)
+  (* func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l *)
+|-- 
+ |> 
+ ( andp
+    ( imp (` (Q2 ts x : environ -> mpred) vl) (` (Q1 ts x : environ -> mpred) vl))
+    ( imp (` (Q1 ts x : environ -> mpred) vl) (` (Q2 ts x : environ -> mpred) vl))
+ ))%logic .
+Proof.
+  intros. intro r.
+  simpl. unfold liftx. unfold lift. simpl.
+  unfold func_ptr. unfold func_ptr_si.
+  pose proof func_at_unique2.
+  assert (T0: forall (T:Type) (H: ageable.ageable T) B x, 
+  @predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
+    (algNatDed T) B x). reflexivity.
+  assert (T1: forall (T:Type) (H: ageable.ageable T) x y, 
+    @predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
+        (algNatDed T) x y). reflexivity.
+  assert (T2: forall (T:Type) (H: ageable.ageable T) x,  
+  @predicates_hered.prop T H x = @prop (predicates_hered.pred T) 
+      (algNatDed T) x). reflexivity.
+  rewrite !T0. 
+  Intros b1. Intros b2.
+  rewrite !T1.
+  rewrite !T0.
+  Intros gs1. Intros gs2.
+  rewrite !T1.
+  rewrite !T2.
+  assert_PROP (v r = Vptr b2 Ptrofs.zero). solve_andp.
+  assert_PROP (v r = Vptr b1 Ptrofs.zero). solve_andp.
+  rewrite H0 in H1. inv H1.
+  rename b1 into blk_fun.
+  destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
+  destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
+  eapply derives_trans with
+  (Q:= func_at (mk_funspec gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1) (blk_fun, 0)
+    && func_at (mk_funspec gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2) (blk_fun, 0)).
+  solve_andp.
+  assert (predicates_hered.derives
+  (predicates_hered.andp
+     (func_at (mk_funspec gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1) (blk_fun, 0))
+     (func_at (mk_funspec gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2) (blk_fun, 0)))
+  (predicates_hered.prop (gsig1 = gsig2 /\ gcc1 = gcc2 /\ gA1 = gA2))).
+    apply func_at_unique1_lift.
+  rewrite T2 in H1. rewrite T1 in H1.
+  assert_PROP (gsig1 = gsig2 /\ gcc1 = gcc2 /\ gA1 = gA2).
+  { apply H1. }
+  destruct H2 as [? [? ?]]. subst.
+  
+  pose proof func_at_unique2.
+  simpl.
+
+Admitted.
+  (* Check (` (Q2 ts x : mpred ) vl)%logic.
+
+*)
+
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
   @semax_aux CS Espec Delta P 
@@ -1252,7 +1346,13 @@ Proof.
 
   (* find the common subsumption used by both triples *)
 
-  unfold func_ptr. unfold liftx. simpl. unfold lift. intros r.
+
+  unfold func_ptr. unfold liftx. unfold lift.
+  unfold lift_uncurry_open.
+  unfold lift. unfold lift_uncurry_open.
+  
+  
+  simpl. unfold lift. intros r.
   unfold func_ptr_si.
   assert (T0: forall (T:Type) (H: ageable.ageable T) B x, 
     @predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
@@ -1274,12 +1374,21 @@ Proof.
   assert_PROP (eval_expr a r = Vptr b1 Ptrofs.zero). solve_andp.
   rewrite H2 in H5. inv H5.
   rename b1 into blk_fun.
+
+  simpl.
+
+  pose proof func_at_unique1.
+
+  
+  (* Check func_at gs2 (blk_fun, 0).
+  Check (local (tc_environ Delta) r).
+  Print mpred. *)
 (* destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
 destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2]. *)
 
-Print tycontext.
+(* Print tycontext.
 Locate tycontext.
-Print compcert_rmaps.RML.R.SomeP.
+Print compcert_rmaps.RML.R.SomeP. *)
 
 
 assert (gs1 = gs2) by admit.
@@ -1290,63 +1399,6 @@ Exists gargsig gretsig gcc A1 P1 R1 NEP1 NEQ1 ts1 x1.
 repeat apply andp_right; try solve_andp.
 { apply prop_right. repeat split;auto. }
 
-Locate func_at.
-
-
-Locate res_predicates.pureat.
-
-
-
-
-Check (predicates_hered.exp
-(fun b : block =>
- predicates_hered.andp
-   (predicates_hered.prop
-      (eq (eval_expr a r) (Vptr b Ptrofs.zero)))
-   (predicates_hered.exp
-      (fun gs : funspec =>
-       predicates_hered.andp
-         (funspec_sub_si gs
-            (mk_funspec (pair argsig2 retsig2) cc2 A2 P2 R2
-               NEP2 NEQ2))
-         (match gs with
-          | mk_funspec fsig cc A P0 Q0 _ _ =>
-              res_predicates.pureat
-                (compcert_rmaps.RML.R.SomeP 
-                   (SpecTT A) (packPQ P0 Q0))
-                (compcert_rmaps.FUN fsig cc)
-          end (pair b Z0)))))).
-
-          Check andp.
-
-          Check (andp (tc_expr Delta a r)
-          (tc_exprlist Delta (snd (split argsig2)) bl r)).
-
-          Print mpred.
-          Check predicates_hered.exp.
-          unfold predicates_hered.exp.
-          simpl.
-          Check predicates_hered.exp_obligation_1.
-
-simpl. unfold liftx. unfold lift. simpl.
-Intros. unfold predicates_hered.exp.
-(* 
-
-  assert_PROP (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1 = mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2).
-  { unfold liftx. simpl. intros r. unfold lift. simpl.
-    eapply derives_trans;[|apply func_ptr_unique with (v:= eval_expr a r)]. solve_andp. }
-  inv H2. apply inj_pair2 in H9. apply inj_pair2 in H10. subst.
-  Exists argsig2 retsig2 cc2 A2 P2 R2 NEP1 NEQ1 ts1 x1.
-  apply andp_right.
-  { repeat apply andp_right;try solve_andp. apply prop_right. auto. }
-  eapply derives_trans.
-  { apply andp_right. rewrite <-!andp_assoc. apply andp_left1.
-    { apply andp_right. repeat apply andp_left1. apply derives_refl.
-      apply andp_left1. apply andp_left1. apply andp_left1. apply andp_left2. apply derives_refl. }
-    { repeat apply andp_left2. apply derives_refl. }
-  }
-  rewrite andp_assoc. rewrite <- later_andp.
-  apply later_ENTAIL. hnf. intros r. unfold liftx. simpl. unfold lift. simpl. destruct Q as [Qn Qc Qb Qr];unfold_der. simpl. *)
 Admitted.
 
 Lemma share_lub_writable: forall sh1 sh2,
