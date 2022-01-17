@@ -1679,6 +1679,36 @@ Proof.
   unfold func_at in *. unfold pureat in *.
   simpl in H, H0. rewrite H in H0.
   apply pure_eq_inv in H0. destruct H0.
-  apply function_pointer_aux in bondaH1;auto.
+  apply function_pointer_aux in H1;auto.
 Qed.
 
+Check function_pointer_aux.
+
+Lemma func_at_unique: forall l fs1 fs2
+  ,
+((func_at fs1 l) &&
+  (func_at fs2 l)
+|-- |>  !! (funspec_sub fs1 fs2 /\ funspec_sub fs2 fs1)).
+Admitted.
+
+
+(* Lemma func_at_unique2_lift: forall
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l vl x ts,
+func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l |--
+|> 
+(* ( andp
+   ( imp (lift.liftx (Q2 ts x : environ -> mpred) vl) (lift.liftx (Q1 ts x : environ -> mpred) vl))
+   ( imp (lift.liftx (Q1 ts x : environ -> mpred) vl) (lift.liftx (Q2 ts x : environ -> mpred) vl))
+). *)
+
+((forall ts x vl, unfash (|> (P2 ts x vl <--> P1 ts x vl)) ) /\
+(forall ts x vl, unfash (|> (Q2 ts x vl <--> Q1 ts x vl)))).
+Proof.
+  intros.
+  unfold func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0.
+  apply pure_eq_inv in H0. destruct H0.
+  apply function_pointer_aux in bondaH1;auto.
+Qed. *)

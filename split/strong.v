@@ -1238,24 +1238,7 @@ Lemma func_at_unique2_logic: forall
                  (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
          (NEP2 : @super_non_expansive A P2)
          (NEQ2 : @super_non_expansive A Q2) (l : address)
-  (ts:list Type)
-     (x: functors.MixVariantFunctor._functor
-      ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
-          match T with
-          | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
-          | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-          | rmaps.DependentType n =>
-              functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
-          | rmaps.ProdType T1 T2 =>
-              functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
-          | rmaps.ArrowType T1 T2 =>
-              functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
-          | rmaps.SigType I0 f =>
-              functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
-          | rmaps.PiType I0 f =>
-              functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
-          | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
-          end) A) mpred)
+  (ts:list Type) x
       (vl: environ -> environ) (v: environ -> val)
   ,
 ((` (func_ptr (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1))) v &&
@@ -1308,15 +1291,29 @@ Proof.
   rewrite T2 in H1. rewrite T1 in H1.
   assert_PROP (gsig1 = gsig2 /\ gcc1 = gcc2 /\ gA1 = gA2).
   { apply H1. }
-  destruct H2 as [? [? ?]]. subst.
-  
-  pose proof func_at_unique2.
-  simpl.
+  destruct H2 as [? [? ?]]. subst. clear H1.
+
+
+
+
+  unfold func_at in *. unfold res_predicates.pureat in *.
+  hnf. 
 
 Admitted.
   (* Check (` (Q2 ts x : mpred ) vl)%logic.
 
 *)
+
+
+Lemma func_at_unique: forall l fs1 fs2
+  ,
+(`(func_at fs1 l) &&
+  ` (func_at fs2 l)
+|-- !! (funspec_sub fs1 fs2 /\ funspec_sub fs2 fs1)).
+Proof.
+  intros. intro r. simpl. unfold_lift.
+Admitted.
+
 
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
