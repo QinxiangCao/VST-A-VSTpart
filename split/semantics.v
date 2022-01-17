@@ -571,7 +571,7 @@ Proof.
   - inv H. auto.
    (* simpl in H. auto. *)
   - simpl in H0, H. inv H.
-    apply inj_pair2 in H2. subst.
+    apply inj_pair2 in H3. subst.
     hnf. intros. apply H0. auto.
   (* intros x. auto. *)
 Qed.

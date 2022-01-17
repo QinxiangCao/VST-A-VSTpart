@@ -2672,6 +2672,14 @@ Proof.
   revert x. auto.
 Qed.
 
+Lemma path_to_semax_bind_sem: forall X (HX:Non_empty_Type X) ass' p,
+  path_to_semax Delta (Binded_assert X HX ass', p) ->
+  forall x:X, path_to_semax Delta (ass' x, p).
+Proof.
+  intros. inv H. apply inj_pair2 in H2. subst.
+  revert x. auto.
+Qed.
+
 Lemma split_loop_inv1_conn_pre1_inv: forall inv pres1,
   Forall (path_to_semax Delta)
        (posts_conn_pres [(Basic_partial inv, [])] pres1)
@@ -2686,7 +2694,7 @@ Proof.
       * inv H1. inv H2. auto.
         (* inv H1. auto. *)
       * intros x. apply H.
-        inv H1. eapply path_to_semax_given_sem in H3.
+        inv H1. eapply path_to_semax_bind_sem in H3.
         simpl.
         destruct (p x) eqn:E;(constructor;[rewrite <- E; apply H3| constructor]).
     - simpl in H. apply Forall_app in H. apply proj2 in H.

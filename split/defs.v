@@ -68,7 +68,7 @@ Definition FALSE := (PROP (False) LOCAL () SEP ()).
 Fixpoint basic_assert_conn_bind (a1:assert) (a2: partial_assert) : split_assert :=
   match a2 with
   | Basic_partial a2 => (Basic_assert a1 a2)
-  | Binded_partial X HX a2' => (Given_assert X HX (fun x:X => basic_assert_conn_bind
+  | Binded_partial X HX a2' => (Binded_assert X HX (fun x:X => basic_assert_conn_bind
                                                              a1 (a2' x)))
   end.
 
