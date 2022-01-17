@@ -138,7 +138,7 @@ Proof.
 Qed.
 
 
-Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
+(* Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
   match ass with 
   | Binded_assert X HX ass' =>
       forall x:X, path_ass_to_semax (ass' x) path
@@ -150,10 +150,10 @@ Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
         RA_break := FALSE;
         RA_continue := FALSE;
         RA_return := fun _ => FALSE|}
-  end.
+  end. *)
 
 
-(* Inductive extract_exp_from_path (X:Type): 
+Inductive extract_exp_from_path (X:Type): 
   (X -> split_assert) -> (X -> split_assert) -> Prop :=
 (* extract the first EX out from pre condition *)
 | extract_exp_from_path_basic: forall (pre' post': X -> assert),
@@ -166,13 +166,13 @@ Fixpoint path_ass_to_semax (ass : split_assert) (path: path) : Prop :=
          (ass y) (ass_extracted y)) ->
     extract_exp_from_path X
       (fun x:X => (Given_assert Y HY (fun y:Y => ass y x)))
-      (fun x:X => (Given_assert Y HY (fun y:Y => ass_extracted y x))). *)
+      (fun x:X => (Given_assert Y HY (fun y:Y => ass_extracted y x))).
 
-Definition path_to_semax (path:path_statement) : Prop :=
+(* Definition path_to_semax (path:path_statement) : Prop :=
    match path with (ass, path) =>
-   path_ass_to_semax ass path end.
+   path_ass_to_semax ass path end. *)
 
-(* Inductive path_to_semax : path_statement -> Prop :=
+Inductive path_to_semax : path_statement -> Prop :=
 | path_to_semax_given: forall X (HX:Non_empty_Type X)
     (path_ass path_ass': X -> split_assert) path,
     extract_exp_from_path X path_ass path_ass' ->
@@ -188,7 +188,7 @@ Definition path_to_semax (path:path_statement) : Prop :=
 | path_to_semax_binded: forall X (HX:Non_empty_Type X)  ass' path, 
     (forall x:X, path_to_semax (ass' x, path)) ->
     path_to_semax (Binded_assert X HX ass', path)
-. *)
+.
 
 Fixpoint add_post_to_semax_aux (pre_ass: partial_assert) (post: assert) (path: path) : Prop :=
   match pre_ass with
@@ -380,7 +380,8 @@ Proof.
   induction H0.
   - constructor.
   - inv H. constructor.
-    * apply H3.
+    * inv H3. apply inj_pair2 in H2. subst. auto.
+    (* apply H3. *)
     * apply IHbind_path_add. auto.
 Qed.
 
@@ -567,8 +568,12 @@ Lemma path_conn_to_semax_reverse_simple: forall pre a1,
 Proof.
   intros.
   destruct pre as [a2 p2]. induction a2.
-  - simpl in H. auto.
-  - simpl in H0, H. intros x. auto.
+  - inv H. auto.
+   (* simpl in H. auto. *)
+  - simpl in H0, H. inv H.
+    apply inj_pair2 in H2. subst.
+    hnf. intros. apply H0. auto.
+  (* intros x. auto. *)
 Qed.
 
 

@@ -1394,7 +1394,7 @@ destruct gsig as [gargsig gretsig].
 
 Exists gargsig gretsig gcc A1 P1 R1 NEP1 NEQ1 ts1 x1.
 repeat apply andp_right; try solve_andp.
-{ apply prop_right. repeat split;auto. }
+{ apply prop_right. repeat split;auto.
 
 Admitted.
 
