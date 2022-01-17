@@ -567,7 +567,11 @@ Lemma path_conn_to_semax_reverse_simple: forall pre a1,
     add_pre_to_semax a1 pre.
 Proof.
   intros.
-  destruct pre as [a2 p2]. induction a2.
+  destruct pre as [a2 p2]. simpl in H.
+  (* induction H.
+  - destruct HX. auto.
+  - hnf.  *)
+  induction a2.
   - inv H. auto.
    (* simpl in H. auto. *)
   - simpl in H0, H. inv H.

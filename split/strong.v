@@ -1241,10 +1241,10 @@ Lemma func_at_unique2_logic: forall
   (ts:list Type) x
       (vl: environ -> environ) (v: environ -> val)
   ,
-((` (func_ptr (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1))) v &&
-(` (func_ptr (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2))) v
-(* ((func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l : mpred) && *)
-  (* func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l *)
+(* ((` (func_ptr (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1))) v &&
+(` (func_ptr (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2))) v *)
+((func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l ) &&
+   func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l
 |-- 
  |> 
  ( andp

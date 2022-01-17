@@ -127,17 +127,20 @@ Given x...
 
 
 Inductive path_statement : Type :=
-| path_intro (pre:assert) (path:path) (post:assert).
-(* | binded_intro (A:Type) (HA: inhabited A) : (A -> path_statement) -> path_statement. *)
+| path_intro (pre:assert) (path:path) (post:assert)
+| path_binded (A:Type) (HA: inhabited A) : (A -> path_statement) -> path_statement.
 
 Inductive partial_pre_statement : Type :=
-| partial_pre_intro (path:path) (post:assert).  
+| partial_pre_intro (path:path) (post:assert)
+| partial_pre_binded (A:Type) (HA: inhabited A) : (A -> partial_pre_statement) -> partial_pre_statement.
 
 Inductive partial_post_statement : Type :=
-| partial_post_intro (pre:assert) (path:path).  
+| partial_post_intro (pre:assert) (path:path)
+| partial_post_binded (A:Type) (HA: inhabited A) : (A -> partial_post_statement) -> partial_post_statement.
 
 Inductive partial_return_statement : Type :=
-| partial_return_intro (pre:assert) (path:path) (retval: option expr).  
+| partial_return_intro (pre:assert) (path:path) (retval: option expr)
+| partial_return_binded (A:Type) (HA: inhabited A) : (A -> partial_return_statement) -> partial_return_statement.
 
 Inductive atom_normal_statement: Type :=
 | atom_normal_intro (path: path).
@@ -161,8 +164,7 @@ Record split_result_basic: Type := Pack{
 
 Inductive split_result : Type :=
 | split_result_error
-| split_result_intro (res: split_result_basic)
-| split_result_binded (A:Type) (HA: inhabited A) : (A -> split_result) -> split_result.
+| split_result_intro (res: split_result_basic).
 (* The universally quantififed variables may be absent in some/most of the paths
 i.e. binded_Vars = Union(given introduced variables) *)
 
@@ -172,8 +174,13 @@ i.e. binded_Vars = Union(given introduced variables) *)
 (* Basic Operations on paths *)
 (*****************************)
 (*****************************)
-Definition add_P_to_partial_pre P pre := match pre with
-| partial_pre_intro path Q => path_intro P path Q end.
+Fixpoint add_P_to_partial_pre P pre := match pre with
+| partial_pre_intro path Q => path_intro P path Q
+| partial_pre_binded A HA pre' =>
+    path_binded A HA (fun x =>
+      add_P_to_partial_pre P (pre' x)
+    )
+end.
 
 Definition add_P_to_partial_pres P := map (add_P_to_partial_pre P).
 
@@ -188,7 +195,10 @@ Definition add_P_to_return_atom P atom := match atom with
 Definition add_P_to_return_atoms P := map (add_P_to_return_atom P).
 
 Definition add_Q_to_normal_post Q post := match post with
-| partial_post_intro P path => path_intro P path Q end.
+| partial_post_intro P path => path_intro P path Q
+| partial_post_binded A HA post' =>
+    add_Q_to_normal_post
+end.
 
 Definition add_Q_to_normal_posts posts Q := map (add_Q_to_normal_post Q) posts.
 
