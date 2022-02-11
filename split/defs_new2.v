@@ -670,6 +670,22 @@ Fixpoint Sloop_split inv (res1 res2: split_result) : split_result :=
   | split_result_intro res1 => Sloop_split_aux inv res1 res2      
   end.
 
+Print option_map.
+
+Definition option_map2 {A B C:Type} (f:A->B->C) (o1 : option A) (o2 : option B) : option C :=
+  match o1, o2 with
+    | Some a, Some b => @Some C (f a b)
+    | _, _ => @None C
+  end.
+
+Definition option_app {A:Type} := option_map2 (@app A).
+
+Notation "f @ a" := (@option_map _ _ f a) (at level 55, right associativity).
+
+Notation " a [[ f ]] b " := (option_map2 f a b) (at level 75, right associativity).
+
+Notation "a ++ b" := (option_app a b)
+    (at level 60, right associativity).
 
 
 Function split_pre (stm: Split.statement) : option (list partial_pre_statement) := 
@@ -684,23 +700,11 @@ Function split_pre (stm: Split.statement) : option (list partial_pre_statement) 
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-      match split_result s1, split_result s2 with
-      | Some res1, Some res2 => Some (
-          pre res1 ++
-          atoms_conn_pres (normal_atom res1) (pre res2)    
-      )
-      | _, _ => None
-      end
-
+      split_pre s1 ++
+      (split_normal_atom s1 [[atoms_conn_pres]] split_pre s2)
   | Sifthenelse e s1 s2   =>
-    match split_result s1, split_result s2 with
-    | Some res1, Some res2 => Some (
-        add_bexp_to_partial_pres e (pre res1) 
-        ++ add_bexp_to_partial_pres (Cnot e) (pre res2)
-    )
-    | _, _ => None
-    end
-
+      (add_bexp_to_partial_pres e) @ (split_pre s1) ++ 
+      (add_bexp_to_partial_pres (Cnot e)) @ (split_pre s2)
   | Sloop LINull s1 s2       =>
       None
   | Sloop (LISingle inv) s1 s2       =>
@@ -714,7 +718,7 @@ Function split_pre (stm: Split.statement) : option (list partial_pre_statement) 
   | _                     =>    None
   end
 
-with split_result (stm: Split.statement) : option split_result_basic :=
+(* with split_result (stm: Split.statement) : option split_result_basic :=
   match split_pre stm, split_path stm, 
         split_normal_post stm,
         split_continue_post stm,
@@ -740,7 +744,7 @@ with split_result (stm: Split.statement) : option split_result_basic :=
       return_atom := return_atom
     |}
   | _, _, _, _, _, _, _, _, _, _ => None
-  end
+  end *)
 
 
 with split_path (stm: Split.statement) : option (list path_statement) :=
@@ -755,22 +759,11 @@ with split_path (stm: Split.statement) : option (list path_statement) :=
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-      match split_result s1, split_result s2 with
-      | Some res1, Some res2 => Some (
       paths res1 ++ 
       paths res2 ++ 
       posts_conn_pres (normal_post res1) (pre res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
-  paths res1 ++ paths res2
-    )
-    | _, _ => None
-    end
-
+      paths res1 ++ paths res2
   | Sloop LINull s1 s2       =>
       None
   | Sloop (LISingle inv) s1 s2       =>
@@ -786,7 +779,7 @@ with split_path (stm: Split.statement) : option (list path_statement) :=
 
 with split_normal_post (stm: Split.statement) : option (list partial_post_statement) :=
   match stm with
-  | Sassert a             => Some [ partial_post_intro a []]
+  | Sassert a             => Some [ partial_post_intro a [] ]
   | Stopgiven A a stm'    => Some [] 
   | Sgiven A a ass' stm'  => Some []
   | Sassign e1 e2         => Some []
@@ -796,20 +789,10 @@ with split_normal_post (stm: Split.statement) : option (list partial_post_statem
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
       normal_post res2 ++
       posts_conn_atoms (normal_post res1) (normal_atom res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   normal_post res1 ++ normal_post res2
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -836,20 +819,10 @@ with split_continue_post (stm: Split.statement) : option (list partial_post_stat
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
       continue_post res1 ++ continue_post res2
       ++ posts_conn_atoms (normal_post res1) (continue_atom res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   continue_post res1 ++ continue_post res2
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -876,20 +849,10 @@ with split_break_post (stm: Split.statement) : option (list partial_post_stateme
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
       break_post res1 ++ break_post res2
       ++ posts_conn_atoms (normal_post res1) (break_atom res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   break_post res1 ++ break_post res2
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -916,20 +879,10 @@ with split_return_post (stm: Split.statement) : option (list partial_return_stat
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
       return_post res1 ++ return_post res2
       ++ posts_conn_returns (normal_post res1) (return_atom res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   return_post res1 ++ return_post res2
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -956,20 +909,10 @@ with split_normal_atom (stm: Split.statement) : option (list atom_normal_stateme
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       => 
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
       atoms_conn_atoms (normal_atom res1) (normal_atom res2)
-      )
-      | _, _ => None
-      end
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   add_bexp_to_normal_atoms e (normal_atom res1) 
   ++ add_bexp_to_normal_atoms (Cnot e) (normal_atom res2)
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -996,20 +939,11 @@ with split_continue_atom (stm: Split.statement) : option (list atom_normal_state
   | Scontinue             => Some [ atom_normal_intro [] ]
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   continue_atom res1 ++ atoms_conn_atoms (normal_atom res1) (continue_atom res2)
-  )
-  | _, _ => None
-  end
+
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   add_bexp_to_normal_atoms e (continue_atom res1) 
   ++ add_bexp_to_normal_atoms (Cnot e) (continue_atom res2)
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -1036,20 +970,11 @@ with split_break_atom (stm: Split.statement) : option (list atom_normal_statemen
   | Scontinue             => Some []
   | Sreturn rv            => Some []
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2) 
-  )
-  | _, _ => None
-  end
+
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   add_bexp_to_normal_atoms e (break_atom res1) 
   ++ add_bexp_to_normal_atoms (Cnot e) (break_atom res2)
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
@@ -1076,20 +1001,11 @@ with split_return_atom (stm: Split.statement) : option (list atom_return_stateme
   | Scontinue             => Some []
   | Sreturn rv            => Some [ atom_return_intro [] rv ]
   | Ssequence s1 s2       =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2)
-  )
-  | _, _ => None
-  end
+
   | Sifthenelse e s1 s2   =>
-  match split_result s1, split_result s2 with
-  | Some res1, Some res2 => Some (
   add_bexp_to_return_atoms e (return_atom res1) 
   ++ add_bexp_to_return_atoms (Cnot e) (return_atom res2)
-    )
-    | _, _ => None
-    end
 
   | Sloop LINull s1 s2       =>
       None
