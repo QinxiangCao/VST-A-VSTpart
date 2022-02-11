@@ -27,9 +27,6 @@ Require Import Split.vst_ext.
 Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 Require Import VST.veric.semax_lemmas.
 
-
-Check inj_pair2.
-
 Axiom classic: forall P,  P \/ ~ P.
 
 Module Split.
@@ -194,10 +191,10 @@ Definition add_P_to_return_atom P atom := match atom with
 
 Definition add_P_to_return_atoms P := map (add_P_to_return_atom P).
 
-Definition add_Q_to_normal_post Q post := match post with
+Fixpoint add_Q_to_normal_post Q post := match post with
 | partial_post_intro P path => path_intro P path Q
 | partial_post_binded A HA post' =>
-    add_Q_to_normal_post
+    path_binded A HA (fun x => add_Q_to_normal_post Q (post' x))
 end.
 
 Definition add_Q_to_normal_posts posts Q := map (add_Q_to_normal_post Q) posts.
@@ -207,8 +204,12 @@ Definition add_Q_to_normal_atom Q atom := match atom with
 
 Definition add_Q_to_normal_atoms atoms Q := map (add_Q_to_normal_atom Q) atoms.
 
-Definition add_bexp_to_partial_pre bexp pre := match pre with
-| partial_pre_intro path Q => partial_pre_intro ((inl bexp)::path) Q end.
+Fixpoint add_bexp_to_partial_pre bexp pre := match pre with
+| partial_pre_intro path Q => partial_pre_intro ((inl bexp)::path) Q
+| partial_pre_binded A HA pre' =>
+    partial_pre_binded A HA 
+      (fun x => add_bexp_to_partial_pre bexp (pre' x))
+end.
 
 Definition add_bexp_to_partial_pres bexp := map (add_bexp_to_partial_pre bexp).
 
@@ -225,10 +226,14 @@ Definition add_bexp_to_return_atoms bexp := map (add_bexp_to_return_atom bexp).
 Fixpoint product_map {A B C: Type} (f: A -> B -> C) (xs: list A) (ys: list B) : list C :=
   concat (map (fun x => map (f x) ys) xs).
 
-Definition atom_conn_pre atom pre : partial_pre_statement :=
+Fixpoint atom_conn_pre atom pre : partial_pre_statement :=
   match atom with atom_normal_intro p1 =>
-    match pre with partial_pre_intro p2 Q =>
-    partial_pre_intro (p1 ++ p2) Q end
+    match pre with 
+    | partial_pre_intro p2 Q =>
+        partial_pre_intro (p1 ++ p2) Q 
+    | partial_pre_binded A HA pre' =>
+        partial_pre_binded A HA (fun x => atom_conn_pre atom (pre' x))
+    end
   end.
 
 Definition atoms_conn_pres := product_map atom_conn_pre.
@@ -249,26 +254,45 @@ Definition atom_conn_return atom1 atom2 : atom_return_statement :=
 
 Definition atoms_conn_returns := product_map atom_conn_return.
 
-Definition post_conn_atom post atom : partial_post_statement :=
-  match post with partial_post_intro P p1 =>
+Fixpoint post_conn_atom post atom : partial_post_statement :=
+  match post with 
+  | partial_post_intro P p1 =>
     match atom with atom_normal_intro p2 =>
-    partial_post_intro P (p1 ++ p2) end
+      partial_post_intro P (p1 ++ p2) end
+  | partial_post_binded A HA post' =>
+      partial_post_binded A HA 
+        (fun x => post_conn_atom (post' x) atom )
   end.
 
 Definition posts_conn_atoms := product_map post_conn_atom.
 
-Definition post_conn_return post atom : partial_return_statement :=
-  match post with partial_post_intro P p1 =>
+Fixpoint post_conn_return post atom : partial_return_statement :=
+  match post with
+  | partial_post_intro P p1 =>
     match atom with atom_return_intro p2 rv =>
-    partial_return_intro P (p1 ++ p2) rv end
+      partial_return_intro P (p1 ++ p2) rv end
+  | partial_post_binded A HA post' =>
+      partial_return_binded A HA 
+        (fun x => post_conn_return (post' x) atom)
   end.
 
 Definition posts_conn_returns := product_map post_conn_return.
   
-Definition post_conn_pre post pre : path_statement :=
-  match post with partial_post_intro P p1 =>
-    match pre with partial_pre_intro p2 Q =>
-    path_intro P (p1 ++ p2) Q end
+
+Fixpoint post_conn_pre_aux P p1 pre : path_statement :=
+  match pre with
+  | partial_pre_intro p2 Q =>
+      path_intro P (p1 ++ p2) Q 
+  | partial_pre_binded A HA pre' =>
+      path_binded A HA (fun x => post_conn_pre_aux P p1 (pre' x))
+  end.
+
+Fixpoint post_conn_pre post pre : path_statement :=
+  match post with 
+  | partial_post_intro P p1 =>
+      post_conn_pre_aux P p1 pre
+  | partial_post_binded A HA post' =>
+      path_binded A HA (fun x => post_conn_pre (post' x) pre)
   end.
 
 Definition posts_conn_pres := product_map post_conn_pre.
@@ -305,8 +329,8 @@ Definition add_given_P_to_basic_result Ppre P res := {|
 Fixpoint add_pre_to_result (Ppre: assert) (P: assert) (res: split_result) : split_result :=
   match res with
   | split_result_error => split_result_error
-  | split_result_binded A HA res' =>
-      split_result_binded A HA (fun a => add_pre_to_result Ppre P (res' a))
+  (* | split_result_binded A HA res' =>
+      split_result_binded A HA (fun a => add_pre_to_result Ppre P (res' a)) *)
   | split_result_intro res => split_result_intro (add_given_P_to_basic_result Ppre P res)
   end.
 
@@ -429,8 +453,8 @@ Definition Sseq_split_basic res1 res2 := {|
 Fixpoint Sseq_split_aux (res1: split_result_basic) (res2: split_result) : split_result :=
   match res2 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res2' =>
-      split_result_binded A HA (fun a => Sseq_split_aux res1 (res2' a))
+  (* | split_result_binded A HA res2' =>
+      split_result_binded A HA (fun a => Sseq_split_aux res1 (res2' a)) *)
   | split_result_intro res2 =>
       split_result_intro (Sseq_split_basic res1 res2)
   end.
@@ -438,8 +462,8 @@ Fixpoint Sseq_split_aux (res1: split_result_basic) (res2: split_result) : split_
 Fixpoint Sseq_split (res1 res2: split_result) : split_result :=
   match res1 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res1' =>
-      split_result_binded A HA (fun a => Sseq_split (res1' a) res2)
+  (* | split_result_binded A HA res1' =>
+      split_result_binded A HA (fun a => Sseq_split (res1' a) res2) *)
   | split_result_intro res1 => Sseq_split_aux res1 res2      
   end.
 
@@ -468,8 +492,8 @@ Definition Sifthenelse_split_basic a res1 res2 := {|
 Fixpoint Sifthenelse_split_aux b (res1: split_result_basic) (res2: split_result) : split_result :=
   match res2 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res2' =>
-      split_result_binded A HA (fun a => Sifthenelse_split_aux b res1 (res2' a))
+  (* | split_result_binded A HA res2' =>
+      split_result_binded A HA (fun a => Sifthenelse_split_aux b res1 (res2' a)) *)
   | split_result_intro res2 =>
       split_result_intro (Sifthenelse_split_basic b res1 res2)
   end.
@@ -477,8 +501,8 @@ Fixpoint Sifthenelse_split_aux b (res1: split_result_basic) (res2: split_result)
 Fixpoint Sifthenelse_split b (res1 res2: split_result) : split_result :=
   match res1 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res1' =>
-      split_result_binded A HA (fun a => Sifthenelse_split b (res1' a) res2)
+  (* | split_result_binded A HA res1' =>
+      split_result_binded A HA (fun a => Sifthenelse_split b (res1' a) res2) *)
   | split_result_intro res1 => Sifthenelse_split_aux b res1 res2      
   end.
 
@@ -629,8 +653,8 @@ Definition Sloop_split_basic inv res1 res2 :=
 Fixpoint Sloop_split_aux inv (res1: split_result_basic) (res2: split_result) : split_result :=
   match res2 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res2' =>
-      split_result_binded A HA (fun a => Sloop_split_aux inv res1 (res2' a))
+  (* | split_result_binded A HA res2' =>
+      split_result_binded A HA (fun a => Sloop_split_aux inv res1 (res2' a)) *)
   | split_result_intro res2 =>
       match (Sloop_split_basic inv res1 res2) with
       | Some res => split_result_intro res
@@ -641,10 +665,476 @@ Fixpoint Sloop_split_aux inv (res1: split_result_basic) (res2: split_result) : s
 Fixpoint Sloop_split inv (res1 res2: split_result) : split_result :=
   match res1 with
   | split_result_error => split_result_error
-  | split_result_binded A HA res1' =>
-      split_result_binded A HA (fun a => Sloop_split inv (res1' a) res2)
+  (* | split_result_binded A HA res1' =>
+      split_result_binded A HA (fun a => Sloop_split inv (res1' a) res2) *)
   | split_result_intro res1 => Sloop_split_aux inv res1 res2      
   end.
+
+
+
+Function split_pre (stm: Split.statement) : option (list partial_pre_statement) := 
+  match stm with
+  | Sassert a             => Some [ partial_pre_intro [] a ] 
+  | Stopgiven A a stm'    => Some []
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+      match split_result s1, split_result s2 with
+      | Some res1, Some res2 => Some (
+          pre res1 ++
+          atoms_conn_pres (normal_atom res1) (pre res2)    
+      )
+      | _, _ => None
+      end
+
+  | Sifthenelse e s1 s2   =>
+    match split_result s1, split_result s2 with
+    | Some res1, Some res2 => Some (
+        add_bexp_to_partial_pres e (pre res1) 
+        ++ add_bexp_to_partial_pres (Cnot e) (pre res2)
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_result (stm: Split.statement) : option split_result_basic :=
+  match split_pre stm, split_path stm, 
+        split_normal_post stm,
+        split_continue_post stm,
+        split_break_post stm,
+        split_return_post stm,
+        split_normal_atom stm,
+        split_continue_atom stm,
+        split_break_atom stm,
+        split_return_atom stm with
+  | Some pre, Some paths, Some normal_post, Some continue_post, 
+    Some break_post, Some return_post, Some normal_atom, 
+    Some continue_atom, Some break_atom, Some return_atom => 
+    Some {|
+      pre := pre;
+      paths := paths;
+      normal_post := normal_post;
+      continue_post := continue_post;
+      break_post := break_post;
+      return_post := return_post;
+      normal_atom := normal_atom;
+      continue_atom := continue_atom;
+      break_atom := break_atom;
+      return_atom := return_atom
+    |}
+  | _, _, _, _, _, _, _, _, _, _ => None
+  end
+
+
+with split_path (stm: Split.statement) : option (list path_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+      match split_result s1, split_result s2 with
+      | Some res1, Some res2 => Some (
+      paths res1 ++ 
+      paths res2 ++ 
+      posts_conn_pres (normal_post res1) (pre res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  paths res1 ++ paths res2
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_normal_post (stm: Split.statement) : option (list partial_post_statement) :=
+  match stm with
+  | Sassert a             => Some [ partial_post_intro a []]
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+      normal_post res2 ++
+      posts_conn_atoms (normal_post res1) (normal_atom res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  normal_post res1 ++ normal_post res2
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_continue_post (stm: Split.statement) : option (list partial_post_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+      continue_post res1 ++ continue_post res2
+      ++ posts_conn_atoms (normal_post res1) (continue_atom res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  continue_post res1 ++ continue_post res2
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_break_post (stm: Split.statement) : option (list partial_post_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+      break_post res1 ++ break_post res2
+      ++ posts_conn_atoms (normal_post res1) (break_atom res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  break_post res1 ++ break_post res2
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_return_post (stm: Split.statement) : option (list partial_return_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+      return_post res1 ++ return_post res2
+      ++ posts_conn_returns (normal_post res1) (return_atom res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  return_post res1 ++ return_post res2
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_normal_atom (stm: Split.statement) : option (list atom_normal_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some [ atom_normal_intro [ inr (ASassign e1 e2) ] ]
+  | Sset i e              => Some [ atom_normal_intro [ inr (ASset i e) ] ]
+  | Sskip                 => Some [ atom_normal_intro [] ]
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       => 
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+      atoms_conn_atoms (normal_atom res1) (normal_atom res2)
+      )
+      | _, _ => None
+      end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  add_bexp_to_normal_atoms e (normal_atom res1) 
+  ++ add_bexp_to_normal_atoms (Cnot e) (normal_atom res2)
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_continue_atom (stm: Split.statement) : option (list atom_normal_statement) :=
+  match stm with
+  | Sassert a             => Some []
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some [ atom_normal_intro [] ]
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  continue_atom res1 ++ atoms_conn_atoms (normal_atom res1) (continue_atom res2)
+  )
+  | _, _ => None
+  end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  add_bexp_to_normal_atoms e (continue_atom res1) 
+  ++ add_bexp_to_normal_atoms (Cnot e) (continue_atom res2)
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_break_atom (stm: Split.statement) : option (list atom_normal_statement) :=
+  match stm with
+  | Sassert a             => Some [] 
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some [ atom_normal_intro [] ]
+  | Scontinue             => Some []
+  | Sreturn rv            => Some []
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  break_atom res1 ++ atoms_conn_atoms (normal_atom res1) (break_atom res2) 
+  )
+  | _, _ => None
+  end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  add_bexp_to_normal_atoms e (break_atom res1) 
+  ++ add_bexp_to_normal_atoms (Cnot e) (break_atom res2)
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+
+with split_return_atom (stm: Split.statement) : option (list atom_return_statement) :=
+  match stm with
+  | Sassert a             => Some [] 
+  | Stopgiven A a stm'    => Some [] 
+  | Sgiven A a ass' stm'  => Some []
+  | Sassign e1 e2         => Some []
+  | Sset i e              => Some []
+  | Sskip                 => Some []
+  | Sbreak                => Some []
+  | Scontinue             => Some []
+  | Sreturn rv            => Some [ atom_return_intro [] rv ]
+  | Ssequence s1 s2       =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  return_atom res1 ++ atoms_conn_returns (normal_atom res1) (return_atom res2)
+  )
+  | _, _ => None
+  end
+  | Sifthenelse e s1 s2   =>
+  match split_result s1, split_result s2 with
+  | Some res1, Some res2 => Some (
+  add_bexp_to_return_atoms e (return_atom res1) 
+  ++ add_bexp_to_return_atoms (Cnot e) (return_atom res2)
+    )
+    | _, _ => None
+    end
+
+  | Sloop LINull s1 s2       =>
+      None
+  | Sloop (LISingle inv) s1 s2       =>
+      None
+  | Sloop (LIDouble inv1 inv2) s1 s2       =>
+      None
+  
+  (* below are unimplemented commands *)
+  | Scall i e args        =>    None
+  | Sbuiltin i ef tylis args => None
+  | _                     =>    None
+  end
+.
+with is_0inv_valid (stm1 stm2: Split.statement) : bool :=
+  if (isnil (pre res1) || isnil (pre res2))%bool then false
+  (* continue is not allowed in [c_incr] *)
+  else if (negb (isnil (continue_atom res2)) || 
+          negb (isnil (continue_post res2)))%bool then false
+  (* normal_atom1 + normal_atom2 forms an unannotated loop *)
+  else if (isnil (normal_atom res1) && isnil (normal_atom res2))%bool then false
+  (* continue_atom1 + normal_atom2 forms an unannotated loop *)
+  else if (isnil (continue_atom res1) && isnil (normal_atom res2))%bool then false
+  else true
+
+with is_12inv_valid (stm1 stm2: Split.statement) : bool :=
+  ((isnil (continue_atom res2)) && negb (isnil (continue_post res2)))%bool
+.
+
+
+
+
+
+  pre   : list partial_pre_statement; (* no more binded pres with ex-given *)
+  paths : list path_statement;
+  normal_post  : list partial_post_statement;
+  continue_post: list partial_post_statement;
+  break_post   : list partial_post_statement;
+  return_post  : list partial_return_statement;
+  normal_atom  : list atom_normal_statement;
+  continue_atom: list atom_normal_statement;
+  break_atom   : list atom_normal_statement;
+  return_atom  : list atom_return_statement;
+
+
 
 Fixpoint split_hint (stm: Split.statement) : split_result :=
   match stm with
