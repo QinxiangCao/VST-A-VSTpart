@@ -1520,47 +1520,6 @@ rewrite !imp_rewrite.
 Admitted.
 
 
-Definition precise_funspec (f:funspec) : Prop :=
-  match f with
-  | mk_funspec fsig cc A P Q _ _ =>
-      forall (R1 R2:
-        forall ts : list Type,
-        functors.MixVariantFunctor._functor
-          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
-      (ts:list Type),
-      (@derives mpred Nveric) (
-        (@andp mpred Nveric)
-        
-        (@exp mpred Nveric
-        (functors.MixVariantFunctor._functor
-        ((fix dtfr (T : rmaps.TypeTree) :
-            functors.MixVariantFunctor.functor :=
-            match T with
-            | rmaps.ConstType A =>
-                functors.MixVariantFunctorGenerator.fconst A
-            | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-            | rmaps.DependentType n =>
-                functors.MixVariantFunctorGenerator.fconst
-                  (@nth Type n ts unit)
-            | rmaps.ProdType T1 T2 =>
-                functors.MixVariantFunctorGenerator.fpair 
-                  (dtfr T1) (dtfr T2)
-            | rmaps.ArrowType T1 T2 =>
-                functors.MixVariantFunctorGenerator.ffunc 
-                  (dtfr T1) (dtfr T2)
-            | rmaps.SigType I f =>
-                @functors.MixVariantFunctorGenerator.fsig I
-                  (fun i : I => dtfr (f i))
-            | rmaps.PiType I f =>
-                @functors.MixVariantFunctorGenerator.fpi I
-                  (fun i : I => dtfr (f i))
-            | rmaps.ListType T0 =>
-                functors.MixVariantFunctorGenerator.flist (dtfr T0)
-            end) A) mpred)
-        (fun a1 => (P ts a1) * ((Q ts a1) -* R1 ts a1))) 
-        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2)))
-        (EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)))
-  end.
 
 Definition precise_funspec (f:funspec) : Prop :=
   match f with
@@ -1568,136 +1527,26 @@ Definition precise_funspec (f:funspec) : Prop :=
       forall (R1 R2:
         forall ts : list Type,
         functors.MixVariantFunctor._functor
-          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
-      (ts:list Type),
-      (@derives mpred Nveric) (
-        (@andp mpred Nveric)
-        (EX a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) 
-        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2)))
-        (EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)))
+          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
+        (EX ts1 a1, ((P ts1 a1) * ((Q ts1 a1) -* R1 ts1 a1) :functors.MixVariantFunctor._functor
+        (functors.MixVariantFunctorGenerator.ffunc
+           (functors.MixVariantFunctorGenerator.fconst environ)
+           functors.MixVariantFunctorGenerator.fidentity) mpred )) &&
+        (EX ts2 a2, ((P ts2 a2) * ((Q ts2 a2) -* R2 ts2 a2) :functors.MixVariantFunctor._functor
+        (functors.MixVariantFunctorGenerator.ffunc
+           (functors.MixVariantFunctorGenerator.fconst environ)
+           functors.MixVariantFunctorGenerator.fidentity) mpred )) |--
+        (EX ts a, ((P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)) : functors.MixVariantFunctor._functor
+        (functors.MixVariantFunctorGenerator.ffunc
+           (functors.MixVariantFunctorGenerator.fconst environ)
+           functors.MixVariantFunctorGenerator.fidentity) mpred))
   end.
-
-  Print precise_funspec.
-
-Definition precise_funspec (f:funspec) : Prop :=
-  match f with
-  | mk_funspec fsig cc A P Q _ _ =>
-      forall (R1 R2:
-        forall ts : list Type,
-        functors.MixVariantFunctor._functor
-          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
-      ,
-        (EX (ts:list Type) a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) &&
-        (EX (ts:list Type) a2, (P ts a2) * ((Q ts a2) -* R2 ts a2))
-        |-- EX (ts:list Type) a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a))
-  end.
-
-Print precise_funspec.
-
-Definition precise_funspec' (f:funspec) : Prop :=
-  match f with
-  | mk_funspec _ _ A P Q _ _ =>
-    forall
-        (R1
-         R2 : forall ts : list Type,
-              functors.MixVariantFunctor._functor
-                (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
-      (
-        (EX (ts1 : list Type) (a1 : functors.MixVariantFunctor._functor
-                 ((fix dtfr (T : rmaps.TypeTree) :
-                     functors.MixVariantFunctor.functor :=
-                     match T with
-                     | rmaps.ConstType A0 =>
-                         functors.MixVariantFunctorGenerator.fconst A0
-                     | rmaps.Mpred =>
-                         functors.MixVariantFunctorGenerator.fidentity
-                     | rmaps.DependentType n =>
-                         functors.MixVariantFunctorGenerator.fconst
-                           (nth n ts1 unit)
-                     | rmaps.ProdType T1 T2 =>
-                         functors.MixVariantFunctorGenerator.fpair 
-                           (dtfr T1) (dtfr T2)
-                     | rmaps.ArrowType T1 T2 =>
-                         functors.MixVariantFunctorGenerator.ffunc 
-                           (dtfr T1) (dtfr T2)
-                     | rmaps.SigType I0 f0 =>
-                         functors.MixVariantFunctorGenerator.fsig
-                           (fun i : I0 => dtfr (f0 i))
-                     | rmaps.PiType I0 f0 =>
-                         functors.MixVariantFunctorGenerator.fpi
-                           (fun i : I0 => dtfr (f0 i))
-                     | rmaps.ListType T0 =>
-                         functors.MixVariantFunctorGenerator.flist (dtfr T0)
-                     end) A) mpred), P ts1 a1 * (Q ts1 a1 -* R1 ts1 a1))) &&
-      
-      (
-      (EX (ts2 : list Type) (a2 : functors.MixVariantFunctor._functor
-                 ((fix dtfr (T : rmaps.TypeTree) :
-                     functors.MixVariantFunctor.functor :=
-                     match T with
-                     | rmaps.ConstType A0 =>
-                         functors.MixVariantFunctorGenerator.fconst A0
-                     | rmaps.Mpred =>
-                         functors.MixVariantFunctorGenerator.fidentity
-                     | rmaps.DependentType n =>
-                         functors.MixVariantFunctorGenerator.fconst
-                           (nth n ts2 unit)
-                     | rmaps.ProdType T1 T2 =>
-                         functors.MixVariantFunctorGenerator.fpair 
-                           (dtfr T1) (dtfr T2)
-                     | rmaps.ArrowType T1 T2 =>
-                         functors.MixVariantFunctorGenerator.ffunc 
-                           (dtfr T1) (dtfr T2)
-                     | rmaps.SigType I0 f0 =>
-                         functors.MixVariantFunctorGenerator.fsig
-                           (fun i : I0 => dtfr (f0 i))
-                     | rmaps.PiType I0 f0 =>
-                         functors.MixVariantFunctorGenerator.fpi
-                           (fun i : I0 => dtfr (f0 i))
-                     | rmaps.ListType T0 =>
-                         functors.MixVariantFunctorGenerator.flist (dtfr T0)
-                     end) A) mpred), P ts2 a2 * (Q ts2 a2 -* R2 ts2 a2))
-      |--  EX (ts: list Type) (a : functors.MixVariantFunctor._functor
-                   ((fix dtfr (T : rmaps.TypeTree) :
-                       functors.MixVariantFunctor.functor :=
-                       match T with
-                       | rmaps.ConstType A0 =>
-                           functors.MixVariantFunctorGenerator.fconst A0
-                       | rmaps.Mpred =>
-                           functors.MixVariantFunctorGenerator.fidentity
-                       | rmaps.DependentType n =>
-                           functors.MixVariantFunctorGenerator.fconst
-                             (nth n ts unit)
-                       | rmaps.ProdType T1 T2 =>
-                           functors.MixVariantFunctorGenerator.fpair 
-                             (dtfr T1) (dtfr T2)
-                       | rmaps.ArrowType T1 T2 =>
-                           functors.MixVariantFunctorGenerator.ffunc 
-                             (dtfr T1) (dtfr T2)
-                       | rmaps.SigType I0 f0 =>
-                           functors.MixVariantFunctorGenerator.fsig
-                             (fun i : I0 => dtfr (f0 i))
-                       | rmaps.PiType I0 f0 =>
-                           functors.MixVariantFunctorGenerator.fpi
-                             (fun i : I0 => dtfr (f0 i))
-                       | rmaps.ListType T0 =>
-                           functors.MixVariantFunctorGenerator.flist (dtfr T0)
-                       end) A) mpred), P ts a * (Q ts a -* R1 ts a && R2 ts a))
-  end.
-       : funspec -> Prop
-  
-
-.
-
 
 
 Definition all_precise_fun (Delta:tycontext) : Prop := 
 forall x phi, 
   (glob_specs Delta) ! x =  Some phi ->
   precise_funspec phi.
-
-
-
 
 Lemma share_lub_writable: forall sh1 sh2,
   writable_share sh1 -> writable_share sh2 ->

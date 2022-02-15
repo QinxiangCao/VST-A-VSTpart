@@ -550,13 +550,6 @@ Fixpoint split_return_atom (stm: Split.statement) : option (list atom_return_sta
   end
 .
 
-Check sigT.
-Print sigT.
-
-Search sigT.
-
-Print sig.
-
 Fixpoint split_pre (stm: Split.statement) : option ((list partial_pre_statement)) := 
   match stm with
   | Sassert a             => Some [ partial_pre_intro [] a ] 
