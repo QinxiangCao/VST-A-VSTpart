@@ -810,11 +810,13 @@ Definition Gprog : funspecs :=
 (************************************)
 
 Require Import Split.defs.
+Require Import Split.function.
 Require Import VST.msl.shares.
 
 Import Split.
 
-
+Notation "a ++ b" := (app a b)
+    (at level 60, right associativity).
 
 Definition f_append_hint_new : Split.statement :=
 (Stopgiven share Tsh (fun sh => 
@@ -923,4 +925,4 @@ Definition f_append_hint_new : Split.statement :=
 
 
 (**)
-Time Compute (split_hint f_append_hint_new).
+Time Compute (split_result f_append_hint_new).

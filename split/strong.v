@@ -1187,24 +1187,6 @@ Locate andp.*)
 
 
 
-Definition precise_funspec (f:funspec) : Prop :=
-  match f with
-  | mk_funspec fsig cc A P Q _ _ =>
-      forall (R1 R2:
-        forall ts : list Type,
-        functors.MixVariantFunctor._functor
-          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
-      (ts:list Type),
-        (EX a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) &&
-        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2))
-        |-- EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a))
-  end.
-
-Definition all_precise_fun (Delta:tycontext) : Prop := 
-forall x phi, 
-  (glob_specs Delta) ! x =  Some phi ->
-  precise_funspec phi.
-
 Lemma typ_of_params_eq_inv:
 forall argsig1 argsig2,
  type_of_params argsig1 = type_of_params argsig2 ->
@@ -1223,7 +1205,7 @@ Proof.
 Qed.
 
 
-Lemma func_at_unique2_logic: forall
+(* Lemma func_at_unique2_logic: forall
 (fsig : compcert_rmaps.funsig)
          (cc : calling_convention) (A : rmaps.TypeTree)
          (P1
@@ -1302,7 +1284,7 @@ Proof.
 Admitted.
   (* Check (` (Q2 ts x : mpred ) vl)%logic.
 
-*)
+*) *)
 
 
 Lemma func_at_unique: forall l fs1 fs2
@@ -1314,6 +1296,71 @@ Proof.
   intros. intro r. simpl. unfold_lift.
 Admitted.
 
+
+Lemma exp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
+@predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
+  (algNatDed T) B x.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma allp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
+@predicates_hered.allp T H B x = @allp (predicates_hered.pred T) 
+  (algNatDed T) B x.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma andp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
+@predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
+    (algNatDed T) x y).
+Proof.
+    reflexivity.
+Qed.
+
+
+Lemma imp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
+@predicates_hered.imp T H x y = @imp (predicates_hered.pred T) 
+    (algNatDed T) x y).
+Proof.
+    reflexivity.
+Qed.
+
+Lemma prop_rewrite: (forall (T:Type) (H: ageable.ageable T) x,  
+@predicates_hered.prop T H x = @prop (predicates_hered.pred T) 
+  (algNatDed T) x).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma derives_rewrite: forall P Q,
+  predicates_hered.derives P Q ->
+  @derives
+  (@predicates_hered.pred compcert_rmaps.RML.R.rmap
+     compcert_rmaps.RML.R.ag_rmap) Nveric P Q.
+Proof.
+  intros.
+  auto.
+Qed.
+
+Lemma func_at_unique2_logic': forall
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l ts x vl,
+func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
+|--  
+  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
+  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
+     (|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
+.
+Proof.
+  intros.
+  pose proof func_at_unique2_logic fsig cc A P1 Q1 NEP1 NEQ1
+  P2 Q2 NEP2 NEQ2 l ts x vl as E.
+  rewrite !andp_rewrite in E.
+  apply E.
+Qed.
 
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
@@ -1341,9 +1388,9 @@ Proof.
   apply typ_of_params_eq_inv in H6.
   rewrite H6 in *.
 
+  destruct Q as [Qn Qb Qc Qr];unfold_der.
+
   (* find the common subsumption used by both triples *)
-
-
   unfold func_ptr. unfold liftx. unfold lift.
   unfold lift_uncurry_open.
   unfold lift. unfold lift_uncurry_open.
@@ -1351,52 +1398,306 @@ Proof.
   
   simpl. unfold lift. intros r.
   unfold func_ptr_si.
-  assert (T0: forall (T:Type) (H: ageable.ageable T) B x, 
-    @predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
-      (algNatDed T) B x). reflexivity.
-  assert (T1: forall (T:Type) (H: ageable.ageable T) x y, 
-    @predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
-        (algNatDed T) x y). reflexivity.
-  assert (T2: forall (T:Type) (H: ageable.ageable T) x,  
-  @predicates_hered.prop T H x = @prop (predicates_hered.pred T) 
-      (algNatDed T) x). reflexivity.
-  rewrite !T0. 
+  rewrite !exp_rewrite. 
   Intros b1. Intros b2.
-  rewrite !T1.
-  rewrite !T0.
+  rewrite !andp_rewrite.
+  rewrite !exp_rewrite.
   Intros gs1. Intros gs2.
-  rewrite !T1.
-  rewrite !T2.
+  rewrite !andp_rewrite.
+  rewrite !prop_rewrite.
   assert_PROP (eval_expr a r = Vptr b2 Ptrofs.zero). solve_andp.
   assert_PROP (eval_expr a r = Vptr b1 Ptrofs.zero). solve_andp.
   rewrite H2 in H5. inv H5.
   rename b1 into blk_fun.
 
-  simpl.
+  destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
+  destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
 
-  pose proof func_at_unique1.
+  assert_PROP (gsig1 = gsig2 /\ gcc1 = gcc2 /\ gA1 = gA2).
+  { eapply derives_trans. 2:{ apply func_at_unique1_lift. }
+    rewrite !andp_rewrite. solve_andp. }
+  destruct H5 as [?[? ?]]. subst gsig2 gcc2 gA2.
+  destruct gsig1 as [gargsig gretsig].
+  Exists gargsig gretsig gcc1 gA1 gP1 gQ1 gNP1 gNQ1.
 
-  
-  (* Check func_at gs2 (blk_fun, 0).
-  Check (local (tc_environ Delta) r).
-  Print mpred. *)
-(* destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
-destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2]. *)
+unfold funspec_sub_si at 1.
+rewrite !andp_rewrite.
+Search subtypes.unfash.
+Search predicates_hered.allp.
 
-(* Print tycontext.
-Locate tycontext.
-Print compcert_rmaps.RML.R.SomeP. *)
+rewrite semax_switch.unfash_allp.
+(* Locate unfash_allp.
+rewrite unfash_allp. *)
+eapply derives_trans.
+{ apply andp_right;[
+    apply andp_left1;apply derives_refl|
+    apply andp_left2].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+    apply andp_right;[
+      apply andp_left1;apply derives_refl|
+      apply andp_left2].
+      apply andp_right;[
+        apply andp_left1;apply derives_refl|
+        apply andp_left2].
+        apply andp_right;[
+          apply andp_left1|
+          apply andp_left2;apply derives_refl].
+          apply andp_right;[
+            apply andp_left1;apply derives_refl|
+            apply andp_left2].
+    rewrite allp_rewrite.
+    apply allp_instantiate with (x:=ts1).
+}
 
+rewrite semax_switch.unfash_allp.
+eapply derives_trans.
+{ apply andp_right;[
+    apply andp_left1;apply derives_refl|
+    apply andp_left2].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+    apply andp_right;[
+      apply andp_left1;apply derives_refl|
+      apply andp_left2].
+      apply andp_right;[
+        apply andp_left1;apply derives_refl|
+        apply andp_left2].
+        apply andp_right;[
+          apply andp_left1|
+          apply andp_left2;apply derives_refl].
+          apply andp_right;[
+            apply andp_left1;apply derives_refl|
+            apply andp_left2].
+    rewrite allp_rewrite.
+    apply allp_instantiate with (x:=x1).
+}
+rewrite semax_switch.unfash_allp.
+eapply derives_trans.
+{ apply andp_right;[
+    apply andp_left1;apply derives_refl|
+    apply andp_left2].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+  apply andp_right;[
+    apply andp_left1|
+    apply andp_left2;apply derives_refl].
+    apply andp_right;[
+      apply andp_left1;apply derives_refl|
+      apply andp_left2].
+      apply andp_right;[
+        apply andp_left1;apply derives_refl|
+        apply andp_left2].
+        apply andp_right;[
+          apply andp_left1|
+          apply andp_left2;apply derives_refl].
+          apply andp_right;[
+            apply andp_left1;apply derives_refl|
+            apply andp_left2].
+    rewrite allp_rewrite.
+    eapply derives_trans.
+    apply allp_instantiate with (x:=(make_args' (pair argsig1 retsig2)
+    (eval_exprlist (snd (split argsig2)) bl) r)).
+    apply derives_rewrite.
+    apply semax.unfash_fash.
+}
 
-assert (gs1 = gs2) by admit.
-subst gs2. destruct gs1 as [gsig gcc gA gP gQ gNP gNQ].
-destruct gsig as [gargsig gretsig].
+rewrite !andp_rewrite.
+rewrite !prop_rewrite.
+rewrite !exp_rewrite.
+rewrite !imp_rewrite.
 
-Exists gargsig gretsig gcc A1 P1 R1 NEP1 NEQ1 ts1 x1.
-repeat apply andp_right; try solve_andp.
-{ apply prop_right. repeat split;auto.
 
 Admitted.
+
+
+Definition precise_funspec (f:funspec) : Prop :=
+  match f with
+  | mk_funspec fsig cc A P Q _ _ =>
+      forall (R1 R2:
+        forall ts : list Type,
+        functors.MixVariantFunctor._functor
+          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+      (ts:list Type),
+      (@derives mpred Nveric) (
+        (@andp mpred Nveric)
+        
+        (@exp mpred Nveric
+        (functors.MixVariantFunctor._functor
+        ((fix dtfr (T : rmaps.TypeTree) :
+            functors.MixVariantFunctor.functor :=
+            match T with
+            | rmaps.ConstType A =>
+                functors.MixVariantFunctorGenerator.fconst A
+            | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+            | rmaps.DependentType n =>
+                functors.MixVariantFunctorGenerator.fconst
+                  (@nth Type n ts unit)
+            | rmaps.ProdType T1 T2 =>
+                functors.MixVariantFunctorGenerator.fpair 
+                  (dtfr T1) (dtfr T2)
+            | rmaps.ArrowType T1 T2 =>
+                functors.MixVariantFunctorGenerator.ffunc 
+                  (dtfr T1) (dtfr T2)
+            | rmaps.SigType I f =>
+                @functors.MixVariantFunctorGenerator.fsig I
+                  (fun i : I => dtfr (f i))
+            | rmaps.PiType I f =>
+                @functors.MixVariantFunctorGenerator.fpi I
+                  (fun i : I => dtfr (f i))
+            | rmaps.ListType T0 =>
+                functors.MixVariantFunctorGenerator.flist (dtfr T0)
+            end) A) mpred)
+        (fun a1 => (P ts a1) * ((Q ts a1) -* R1 ts a1))) 
+        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2)))
+        (EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)))
+  end.
+
+Definition precise_funspec (f:funspec) : Prop :=
+  match f with
+  | mk_funspec fsig cc A P Q _ _ =>
+      forall (R1 R2:
+        forall ts : list Type,
+        functors.MixVariantFunctor._functor
+          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+      (ts:list Type),
+      (@derives mpred Nveric) (
+        (@andp mpred Nveric)
+        (EX a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) 
+        (EX a2, (P ts a2) * ((Q ts a2) -* R2 ts a2)))
+        (EX a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)))
+  end.
+
+  Print precise_funspec.
+
+Definition precise_funspec (f:funspec) : Prop :=
+  match f with
+  | mk_funspec fsig cc A P Q _ _ =>
+      forall (R1 R2:
+        forall ts : list Type,
+        functors.MixVariantFunctor._functor
+          (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred)
+      ,
+        (EX (ts:list Type) a1, (P ts a1) * ((Q ts a1) -* R1 ts a1)) &&
+        (EX (ts:list Type) a2, (P ts a2) * ((Q ts a2) -* R2 ts a2))
+        |-- EX (ts:list Type) a, (P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a))
+  end.
+
+Print precise_funspec.
+
+Definition precise_funspec' (f:funspec) : Prop :=
+  match f with
+  | mk_funspec _ _ A P Q _ _ =>
+    forall
+        (R1
+         R2 : forall ts : list Type,
+              functors.MixVariantFunctor._functor
+                (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
+      (
+        (EX (ts1 : list Type) (a1 : functors.MixVariantFunctor._functor
+                 ((fix dtfr (T : rmaps.TypeTree) :
+                     functors.MixVariantFunctor.functor :=
+                     match T with
+                     | rmaps.ConstType A0 =>
+                         functors.MixVariantFunctorGenerator.fconst A0
+                     | rmaps.Mpred =>
+                         functors.MixVariantFunctorGenerator.fidentity
+                     | rmaps.DependentType n =>
+                         functors.MixVariantFunctorGenerator.fconst
+                           (nth n ts1 unit)
+                     | rmaps.ProdType T1 T2 =>
+                         functors.MixVariantFunctorGenerator.fpair 
+                           (dtfr T1) (dtfr T2)
+                     | rmaps.ArrowType T1 T2 =>
+                         functors.MixVariantFunctorGenerator.ffunc 
+                           (dtfr T1) (dtfr T2)
+                     | rmaps.SigType I0 f0 =>
+                         functors.MixVariantFunctorGenerator.fsig
+                           (fun i : I0 => dtfr (f0 i))
+                     | rmaps.PiType I0 f0 =>
+                         functors.MixVariantFunctorGenerator.fpi
+                           (fun i : I0 => dtfr (f0 i))
+                     | rmaps.ListType T0 =>
+                         functors.MixVariantFunctorGenerator.flist (dtfr T0)
+                     end) A) mpred), P ts1 a1 * (Q ts1 a1 -* R1 ts1 a1))) &&
+      
+      (
+      (EX (ts2 : list Type) (a2 : functors.MixVariantFunctor._functor
+                 ((fix dtfr (T : rmaps.TypeTree) :
+                     functors.MixVariantFunctor.functor :=
+                     match T with
+                     | rmaps.ConstType A0 =>
+                         functors.MixVariantFunctorGenerator.fconst A0
+                     | rmaps.Mpred =>
+                         functors.MixVariantFunctorGenerator.fidentity
+                     | rmaps.DependentType n =>
+                         functors.MixVariantFunctorGenerator.fconst
+                           (nth n ts2 unit)
+                     | rmaps.ProdType T1 T2 =>
+                         functors.MixVariantFunctorGenerator.fpair 
+                           (dtfr T1) (dtfr T2)
+                     | rmaps.ArrowType T1 T2 =>
+                         functors.MixVariantFunctorGenerator.ffunc 
+                           (dtfr T1) (dtfr T2)
+                     | rmaps.SigType I0 f0 =>
+                         functors.MixVariantFunctorGenerator.fsig
+                           (fun i : I0 => dtfr (f0 i))
+                     | rmaps.PiType I0 f0 =>
+                         functors.MixVariantFunctorGenerator.fpi
+                           (fun i : I0 => dtfr (f0 i))
+                     | rmaps.ListType T0 =>
+                         functors.MixVariantFunctorGenerator.flist (dtfr T0)
+                     end) A) mpred), P ts2 a2 * (Q ts2 a2 -* R2 ts2 a2))
+      |--  EX (ts: list Type) (a : functors.MixVariantFunctor._functor
+                   ((fix dtfr (T : rmaps.TypeTree) :
+                       functors.MixVariantFunctor.functor :=
+                       match T with
+                       | rmaps.ConstType A0 =>
+                           functors.MixVariantFunctorGenerator.fconst A0
+                       | rmaps.Mpred =>
+                           functors.MixVariantFunctorGenerator.fidentity
+                       | rmaps.DependentType n =>
+                           functors.MixVariantFunctorGenerator.fconst
+                             (nth n ts unit)
+                       | rmaps.ProdType T1 T2 =>
+                           functors.MixVariantFunctorGenerator.fpair 
+                             (dtfr T1) (dtfr T2)
+                       | rmaps.ArrowType T1 T2 =>
+                           functors.MixVariantFunctorGenerator.ffunc 
+                             (dtfr T1) (dtfr T2)
+                       | rmaps.SigType I0 f0 =>
+                           functors.MixVariantFunctorGenerator.fsig
+                             (fun i : I0 => dtfr (f0 i))
+                       | rmaps.PiType I0 f0 =>
+                           functors.MixVariantFunctorGenerator.fpi
+                             (fun i : I0 => dtfr (f0 i))
+                       | rmaps.ListType T0 =>
+                           functors.MixVariantFunctorGenerator.flist (dtfr T0)
+                       end) A) mpred), P ts a * (Q ts a -* R1 ts a && R2 ts a))
+  end.
+       : funspec -> Prop
+  
+
+.
+
+
+
+Definition all_precise_fun (Delta:tycontext) : Prop := 
+forall x phi, 
+  (glob_specs Delta) ! x =  Some phi ->
+  precise_funspec phi.
+
+
+
 
 Lemma share_lub_writable: forall sh1 sh2,
   writable_share sh1 -> writable_share sh2 ->

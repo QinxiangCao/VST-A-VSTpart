@@ -1666,6 +1666,7 @@ intros.
 inv H. auto.
 Qed.
 
+Search func_at.
 
 Lemma func_at_unique2: forall r
 fsig cc A P1 Q1 NEP1 NEQ1
@@ -1687,18 +1688,32 @@ fsig cc A P1 Q1 NEP1 NEQ1
 P2 Q2 NEP2 NEQ2 l ts x vl,
 func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
 func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
-|--  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)).
+|--  
+  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
+  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
+  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
+     (|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
+.
 intros.
 intro r. intros.
-destruct H. eapply func_at_unique2 in H0. 2:{ apply H. }
- destruct H0. clear H1.
+destruct H. pose proof H0 as H0'.
+ eapply func_at_unique2 in H0. 2:{ apply H. }
+ destruct H0.
  pose proof H0 ts x vl.
-rewrite <- later_unfash in H1.
-clear H H0.
+ pose proof H1 ts x vl.
+rewrite <- later_unfash in H2, H3.
+clear H0 H1.
 assert (
   (|> ! (P2 ts x vl <=> P1 ts x vl)) |-- 
   (|> (P2 ts x vl <--> P1 ts x vl))).
 apply later_derives.
 apply semax.unfash_fash.
-apply H in H1. auto.
+assert (
+  (|> ! (Q2 ts x vl <=> Q1 ts x vl)) |-- 
+  (|> (Q2 ts x vl <--> Q1 ts x vl))).
+apply later_derives.
+apply semax.unfash_fash.
+split;auto. split;auto.
+split;auto.
 Qed.
+

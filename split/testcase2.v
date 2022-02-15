@@ -409,6 +409,7 @@ Definition sgn_spec :=
   ltac:(make_funcspec _sgn f_sgn_funsig f_sgn_spec_complex).
 
 Require Import Split.defs.
+Require Import Split.function.
 Import Split.
 
 Definition f_sgn_hint :=
@@ -437,4 +438,4 @@ Definition Gprog : funspecs :=
 
 
 (**)
-Time Compute (split_hint f_sgn_hint).
+Time Compute (split_result f_sgn_hint).

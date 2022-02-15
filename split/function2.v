@@ -27,8 +27,6 @@ Require Import Split.vst_ext.
 Notation "x ;; y" := (Ssequence x y)  (at level 65) : logic.
 Require Import VST.veric.semax_lemmas.
 
-Axiom classic: forall P,  P \/ ~ P.
-
 Module Split.
 
 
@@ -131,10 +129,26 @@ Given x...
 
 *)
 
-
 Inductive path_statement : Type :=
 | path_intro (pre:assert) (path:path) (post:assert)
 | path_binded (A:Type) (HA: inhabited A) : (A -> path_statement) -> path_statement.
+
+
+
+Inductive path_statements : Type :=
+| path_statements_nil
+| path_statements_cons (st:path_statement) (sts:path_statements)
+| path_statementsbinded (A:Type) (HA: inhabited A) : (A -> path_statements) -> path_statements.
+
+Fixpoint path_statements_flatten (paths : path_statements) : list path_statement :=
+  match paths with
+  | path_statements_nil => []
+  | path_statements_cons (st) sts => st::(path_statements_flatten sts)
+  | path_statements_binded A HA sts' =>
+  
+      
+
+
 
 Inductive partial_pre_statement : Type :=
 | partial_pre_intro (path:path) (post:assert)
@@ -167,12 +181,6 @@ Record split_result_basic: Type := Pack{
   break_atom   : list atom_normal_statement;
   return_atom  : list atom_return_statement;
 }.
-
-Inductive split_result : Type :=
-| split_result_error
-| split_result_intro (res: split_result_basic).
-(* The universally quantififed variables may be absent in some/most of the paths
-i.e. binded_Vars = Union(given introduced variables) *)
 
 
 (*****************************)
@@ -333,15 +341,6 @@ Definition add_given_P_to_basic_result Ppre P res := {|
   break_atom   := [] ;
   return_atom  := [] ;
 |}.
-
-
-Fixpoint add_pre_to_result (Ppre: assert) (P: assert) (res: split_result) : split_result :=
-  match res with
-  | split_result_error => split_result_error
-  (* | split_result_binded A HA res' =>
-      split_result_binded A HA (fun a => add_pre_to_result Ppre P (res' a)) *)
-  | split_result_intro res => split_result_intro (add_given_P_to_basic_result Ppre P res)
-  end.
 
 (**********************************************)
 (* split results for baisc language structures *)
@@ -565,12 +564,18 @@ Fixpoint split_return_atom (stm: Split.statement) : option (list atom_return_sta
   end
 .
 
+Check sigT.
+Print sigT.
 
-Fixpoint split_pre (stm: Split.statement) : option (list partial_pre_statement) := 
+Search sigT.
+
+Print sig.
+
+Fixpoint split_pre (stm: Split.statement) : option (sigT (list partial_pre_statement)) := 
   match stm with
   | Sassert a             => Some [ partial_pre_intro [] a ] 
-  | Stopgiven A a stm'    => Some []
-  | Sgiven A a ass' stm'  => Some []
+  | Stopgiven A a stm'    => Some [ ]
+  | Sgiven A a ass' stm'  => Some [ partial_pre_intro [] (EX x, ass' x)]
   | Sassign e1 e2         => Some []
   | Sset i e              => Some []
   | Sskip                 => Some []
@@ -849,6 +854,38 @@ Fixpoint split_path (stm: Split.statement) : option (list path_statement) :=
   | Sbuiltin i ef tylis args => None
   | _                     =>    None
   end.
+
+
+Definition split_result (stm: Split.statement) : option split_result_basic :=
+  match split_pre stm, split_path stm, 
+        split_normal_post stm,
+        split_continue_post stm,
+        split_break_post stm,
+        split_return_post stm,
+        split_normal_atom stm,
+        split_continue_atom stm,
+        split_break_atom stm,
+        split_return_atom stm with
+  | Some pre, Some paths, Some normal_post, Some continue_post, 
+    Some break_post, Some return_post, Some normal_atom, 
+    Some continue_atom, Some break_atom, Some return_atom => 
+    Some {|
+      pre := pre;
+      paths := paths;
+      normal_post := normal_post;
+      continue_post := continue_post;
+      break_post := break_post;
+      return_post := return_post;
+      normal_atom := normal_atom;
+      continue_atom := continue_atom;
+      break_atom := break_atom;
+      return_atom := return_atom
+    |}
+  | _, _, _, _, _, _, _, _, _, _ => None
+  end.
+
+
+
 
 Definition FALSE := (PROP (False) LOCAL () SEP ()).
 
