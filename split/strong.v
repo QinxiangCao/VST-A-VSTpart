@@ -1393,6 +1393,9 @@ forall x phi,
 
 Set Nested Proofs Allowed.
 
+
+
+
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
   all_precise_fun Delta ->
   @semax_aux CS Espec Delta P 
@@ -1429,6 +1432,9 @@ Proof.
   
   
   simpl. unfold lift. intros r.
+
+
+
   unfold func_ptr_si.
   rewrite !exp_rewrite. 
   Intros b1. Intros b2.
@@ -1451,6 +1457,14 @@ Proof.
   destruct H5 as [?[? ?]]. subst gsig2 gcc2 gA2.
   destruct gsig1 as [gargsig gretsig].
   Exists gargsig gretsig gcc1 gA1 gP1 gQ1 gNP1 gNQ1.
+  unfold funspec_sub_si at 1.
+
+  unfold funsig_of_funspec.
+  unfold funsig_tycontext.
+  eapply derives_trans.
+  apply andp_left2.
+  apply andp_left1.
+
   (* unfold funspec_sub_si at 1.
   rewrite !andp_rewrite.
   
@@ -1630,6 +1644,18 @@ Proof.
   rewrite <- andp_in_order2. solve_andp.
 Qed.
 
+Lemma tc_exprlist_rewrite : forall CS Delta sig bl r,
+  @extend_tc.tc_exprlist CS Delta sig bl r =
+  @tc_exprlist CS Delta sig bl r.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma make_args_rewrite : forall ids vals r,
+  @seplog.make_args ids vals r = @make_args ids vals r.
+Proof.
+  reflexivity.
+Qed.
 
 Lemma funspec_sub_sem: forall CS gargsig gretsig gcc gA gP gR 
   (gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
@@ -1695,6 +1721,15 @@ Proof.
     { apply andp_left2. apply derives_refl. }
   }
   rewrite <- later_andp. apply later_derives.
+  rewrite andp_assoc.
+  eapply derives_trans.
+  { apply andp_right.
+    { apply andp_left1. apply derives_refl. }
+    { apply andp_left2.
+      rewrite <- corable_andp_sepcon1;[|apply assert_lemmas.corable_funspec_sub_si].
+      apply derives_refl.
+    }
+  }
   unfold funspec_sub_si.
   rewrite !andp_rewrite.
   rewrite andp_assoc.
@@ -1702,17 +1737,21 @@ Proof.
   unfold local. unfold lift1.
   rewrite andp_assoc.
   apply derives_extract_prop. intros.
-  rewrite andp_assoc. rewrite andp_comm at 1.
+  rewrite <- andp_assoc. rewrite andp_comm at 1.
   rewrite andp_assoc.
+  rewrite sepcon_andp_prop'. rewrite andp_assoc.
   apply derives_extract_prop. intros.
   rewrite semax_switch.unfash_allp.
   eapply derives_trans.
   { apply andp_right.
-    { apply andp_left1. 
-      apply andp_right.
-      { apply andp_left1. rewrite allp_rewrite.
-        apply allp_instantiate with (x:=ts1). }
-      { apply andp_left2. apply derives_refl. }
+    { apply andp_left1.
+      apply sepcon_derives.
+      { apply andp_right.
+        { apply andp_left1. rewrite allp_rewrite.
+          apply allp_instantiate with (x:=ts1). }
+        { apply andp_left2. apply derives_refl. }
+      }
+      { apply derives_refl. }
     }
     apply andp_left2. apply derives_refl. 
   }
@@ -1720,10 +1759,13 @@ Proof.
   eapply derives_trans.
   { apply andp_right.
     { apply andp_left1. 
-      apply andp_right.
-      { apply andp_left1. rewrite allp_rewrite.
-        apply allp_instantiate with (x:=x1). }
-      { apply andp_left2. apply derives_refl. }
+      apply sepcon_derives.
+      { apply andp_right.
+        { apply andp_left1. rewrite allp_rewrite.
+          apply allp_instantiate with (x:=x1). }
+        { apply andp_left2. apply derives_refl. }
+      }
+      { apply derives_refl. }
     }
     apply andp_left2. apply derives_refl. 
   }
@@ -1731,30 +1773,76 @@ Proof.
   eapply derives_trans.
   { apply andp_right.
     { apply andp_left1. 
-      apply andp_right.
-      { apply andp_left1. rewrite allp_rewrite.
-        apply allp_instantiate with
-        (x:=(make_args' (pair argsig retsig)
-        (eval_exprlist (snd (split argsig)) bl) r)). }
-      { apply andp_left2. apply derives_refl. }
+      apply sepcon_derives.
+      { apply andp_right.
+        { apply andp_left1. rewrite allp_rewrite.
+          apply allp_instantiate with
+          (x:=(make_args' (pair argsig retsig)
+          (eval_exprlist (snd (split argsig)) bl) r)). }
+        { apply andp_left2. apply derives_refl. }
+      }
+      { apply derives_refl. }
     }
     apply andp_left2. apply derives_refl. 
   }
   eapply derives_trans.
   { apply andp_right.
     { apply andp_left1.
-      apply andp_right.
-      { apply andp_left1. apply derives_rewrite.
-        apply semax.unfash_fash. }
-      apply andp_left2. apply derives_refl.
+      apply sepcon_derives.
+      { apply andp_right.
+        { apply andp_left1. apply derives_rewrite.
+          apply semax.unfash_fash. }
+        apply andp_left2. apply derives_refl.
+      }
+      { apply derives_refl. }
     }
     apply andp_left2. apply derives_refl. 
   }
-  rewrite_predicates_hered.
+
   pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H as Et.
-  rewrite andp_comm.
+  apply derives_rewrite in Et.
+  rewrite tc_exprlist_rewrite in Et.
+  apply add_andp in Et.
+  rewrite Et. clear Et.
+  rewrite andp_comm. rewrite andp_assoc.
+  rewrite_predicates_hered.
+  rewrite <- sepcon_andp_prop'.
+
+  eapply derives_trans.
+  { apply andp_right.
+    { apply andp_left1. apply derives_refl. }
+    { apply andp_left2. apply sepcon_derives;[| apply derives_refl].
+      rewrite andp_comm. rewrite_predicates_hered.
+      eapply derives_trans.
+      apply andp_right.
+      { apply andp_left1. rewrite andp_comm. apply imp_andp_elim. }
+      { apply andp_left2. apply derives_refl. }
+      rewrite andp_assoc. apply andp_right.
+      { apply andp_left1. apply derives_refl. }
+      { apply andp_left2. rewrite andp_comm.
+        apply derives_extract_prop. intros.
+        unfold seplog.local. unfold lift1.
+        rewrite_predicates_hered.
+        rewrite log_normalize.prop_imp.
+        { apply derives_refl. }
+        { unfold funsig_of_funspec.
+          unfold make_args'. rewrite make_args_rewrite in H1.
+          destruct H0. inv H0.
+          apply H1. }
+      }
+    }
+  }
+
+
+
+  rewrite (andp_comm _ (P ts1 x1
+  (make_args' (argsig, retsig) (eval_exprlist (snd (split argsig)) bl)
+     r))).
+  
+  
 
   Check corable_func_ptr.
+  Print func_ptr_si.
   (* Use this lemma to get corable of funspec_sub
     and then distribute the funsepc to P) 
   *)
