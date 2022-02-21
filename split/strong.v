@@ -1832,24 +1832,6 @@ Proof.
       }
     }
   }
-
-
-
-  rewrite (andp_comm _ (P ts1 x1
-  (make_args' (argsig, retsig) (eval_exprlist (snd (split argsig)) bl)
-     r))).
-  
-  
-
-  Check corable_func_ptr.
-  Print func_ptr_si.
-  (* Use this lemma to get corable of funspec_sub
-    and then distribute the funsepc to P) 
-  *)
-  Check corable_andp_sepcon1.
-
-  eapply derives_trans.
-  { rewrite <- !andp_assoc.
 Abort.
 
 
