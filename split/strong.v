@@ -1626,12 +1626,20 @@ Proof.
 
 Abort.
 
+Lemma sepcon_rewrite: forall A B,
+predicates_sl.sepcon A B = sepcon A B.
+Proof.
+  intros. reflexivity.
+Qed.
+
+
 Ltac rewrite_predicates_hered:=
   repeat (try rewrite !andp_rewrite;
           try rewrite !prop_rewrite;
           try rewrite !exp_rewrite;
           try rewrite !imp_rewrite;
-          try rewrite !allp_rewrite
+          try rewrite !allp_rewrite;
+          try rewrite !sepcon_rewrite
   ).
 
 Lemma imp_andp_elim: 
@@ -1657,6 +1665,22 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma funspec_sub_sem_der: forall {A : Type} {ND : NatDed A} C P F gP R T,
+corable C ->
+T && ((P && (F * gP && C)) * R)
+|--  T && ((P && (F * gP)) * (C && R)).
+Proof.
+  intros.
+  rewrite (andp_comm _ C).
+  rewrite (sepcon_comm _ R).
+  apply andp_right;try solve_andp.
+  apply andp_left2.
+  rewrite (andp_comm P). rewrite andp_assoc.
+  rewrite (corable_sepcon_andp1 _ _ _ H).
+  rewrite <- (corable_andp_sepcon2 _ _ _ H).
+  rewrite sepcon_comm. apply sepcon_derives;solve_andp.
+Qed.
+
 Lemma funspec_sub_sem: forall CS gargsig gretsig gcc gA gP gR 
   (gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
   argsig retsig cc A P R 
@@ -1674,6 +1698,15 @@ local (tc_environ Delta) r && (tc_exprlist Delta (snd (split argsig)) bl r )&&
      oboxopt Delta ret
        (fun rho : environ =>
         maybe_retval (R ts1 x1) retsig ret rho -* Q rho) r)
+|-- |> (
+  (EX ts' x',
+  (gP ts' x' 
+    (make_args' (argsig, retsig)
+        (@eval_exprlist CS (snd (split argsig)) bl) r))
+  * (oboxopt Delta ret 
+     (fun rho : environ =>
+      maybe_retval (gR ts' x') retsig ret rho -* Q rho) r)
+  )).
 (* |-- |> (
 (EX ts2 x2 (F: predicates_hered.pred compcert_rmaps.RML.R.rmap),
       F * (gP ts2 x2 r) &&
@@ -1682,7 +1715,7 @@ local (tc_environ Delta) r && (tc_exprlist Delta (snd (split argsig)) bl r )&&
     ) *
     oboxopt Delta ret
       (fun rho : environ =>
-       maybe_retval (R ts1 x1) retsig2 ret rho -* Q rho) r)
+        maybe_retval (R ts1 x1) retsig2 ret rho -* Q rho) r)
 |-- |> (
 (EX ts2 x2 F,
       F * (gP ts2 x2 r) &&
@@ -1709,10 +1742,6 @@ local (tc_environ Delta) r && (tc_exprlist Delta (snd (split argsig)) bl r )&&
       
       )
 ) *)
-|-- |> (
-(EX ts2 x2,
-      (gP ts2 x2 r) * ((gR ts2 x2 r) -* Q r))
-).
 Proof.
   intros.
   eapply derives_trans.
@@ -1832,7 +1861,34 @@ Proof.
       }
     }
   }
-Abort.
+  Intros ts'. rewrite_predicates_hered.
+  Intros x'. rewrite_predicates_hered.
+  Intros F. rewrite_predicates_hered.
+  Exists ts' x'.
+eapply derives_trans.
+apply (funspec_sub_sem_der).
+{
+assert (corable
+(ALL rho' : environ,
+ subtypes.unfash
+   (subtypes.fash
+      (predicates_hered.imp
+         (predicates_hered.andp
+            (predicates_hered.prop
+               (seplog.tc_environ
+                  (seplog.ret0_tycon
+                     (funsig_tycontext
+                        (funsig_of_funspec
+                           (mk_funspec (gargsig, gretsig) gcc gA gP gR gNP
+                              gNR)))) rho'))
+            (predicates_sl.sepcon F (gR ts' x' rho'))) 
+         (R ts1 x1 rho'))))).
+{ intros. intro w. apply prop_ext; split; intro Hx.
+- apply Hx.
+- apply Hx. }
+admit.
+}
+Admitted.
 
 
 
