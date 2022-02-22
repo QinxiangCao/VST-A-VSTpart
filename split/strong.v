@@ -1681,6 +1681,30 @@ Proof.
   rewrite sepcon_comm. apply sepcon_derives;solve_andp.
 Qed.
 
+Lemma imp_wand_pre: forall P Q R,
+   corable (P --> Q) ->
+   (P --> Q) && (Q -* R) |-- (P -* R).
+Proof.
+  intros.
+  apply wand_frame_intro'.
+  rewrite (corable_sepcon_andp1 _ _ _ H).
+  rewrite sepcon_comm.
+  rewrite <- (corable_sepcon_andp1 _ _ _ H).
+  rewrite andp_comm.
+  eapply derives_trans.
+  { apply sepcon_derives.
+    - apply derives_refl.
+    - apply modus_ponens.
+  }
+  apply wand_frame_elim''.
+Qed.
+
+
+Lemma rewrite_corable: forall P,
+ (@corable mpred Nveric Sveric CSLveric) P = corable.corable P.
+ reflexivity.
+Qed.
+
 Lemma funspec_sub_sem: forall CS gargsig gretsig gcc gA gP gR 
   (gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
   argsig retsig cc A P R 
@@ -1867,25 +1891,96 @@ Proof.
   Exists ts' x'.
 eapply derives_trans.
 apply (funspec_sub_sem_der).
-{
-assert (corable
+{ rewrite rewrite_corable.
+  intro w. apply prop_ext. split; intro Hx.
+  - Print subtypes.fash.
+    Print subtypes.unfash.
+
+
+}
+
+assert (@corable mpred Nveric Sveric CSLveric
 (ALL rho' : environ,
- subtypes.unfash
-   (subtypes.fash
-      (predicates_hered.imp
-         (predicates_hered.andp
-            (predicates_hered.prop
+ @subtypes.unfash compcert_rmaps.RML.R.rmap compcert_rmaps.RML.R.ag_rmap
+   (@subtypes.fash compcert_rmaps.RML.R.rmap compcert_rmaps.RML.R.ag_rmap
+      (@predicates_hered.imp compcert_rmaps.RML.R.rmap
+         compcert_rmaps.RML.R.ag_rmap
+         (@predicates_hered.andp compcert_rmaps.RML.R.rmap
+            compcert_rmaps.RML.R.ag_rmap
+            (@predicates_hered.prop compcert_rmaps.RML.R.rmap
+               compcert_rmaps.RML.R.ag_rmap
                (seplog.tc_environ
                   (seplog.ret0_tycon
                      (funsig_tycontext
                         (funsig_of_funspec
-                           (mk_funspec (gargsig, gretsig) gcc gA gP gR gNP
-                              gNR)))) rho'))
-            (predicates_sl.sepcon F (gR ts' x' rho'))) 
-         (R ts1 x1 rho'))))).
-{ intros. intro w. apply prop_ext; split; intro Hx.
+                           (mk_funspec (gargsig, gretsig) gcc gA gP gR gNP gNR))))
+                  rho'))
+            (@predicates_sl.sepcon compcert_rmaps.RML.R.rmap
+               compcert_rmaps.RML.R.Join_rmap compcert_rmaps.RML.R.Perm_rmap
+               compcert_rmaps.RML.R.ag_rmap compcert_rmaps.RML.R.Age_rmap F
+               (gR ts' x' rho'))) (R ts1 x1 rho'))))).
+  
+{ intros.  Locate corable. intro w.
+  apply corable_allp. intro w.
+
+Locate pred_ext.
+  apply pred_ext.
+  
+  (* apply prop_ext; split; intro Hx.
+  - apply Hx.
+  - apply Hx. } *)
+
+
+  unfold corable.
+
+
+
+  unfold subtypes.unfash.
+  unfold subtypes.fash.
+
+  Print subtypes.fash.
+  Print subtypes.unfash.
+  Locate fash.
+
+  fun x => forall y, n >= level x -> P y
+
+(* Program Definition unfash {A} `{agA: ageable A} (P: pred nat) : pred A :=
+     fun x => P (level x).
+Next Obligation.
+ apply age_level in H.
+ rewrite H in H0.
+ eapply pred_hereditary; eauto. unfold age;  simpl. auto.
+Qed.
+
+
+Program Definition fash {A: Type} `{NA: ageable A} (P: pred A): pred nat :=
+      fun n => forall y, n >= level y -> P y.
+Next Obligation.
+destruct P as [P HP].
+simpl in *.
+apply H0.
+unfold age, age1, ag_nat,natAge1 in H.
+destruct a; inv H.
+omega.
+Qed. *)
+
+
+  Print prop_ext.
+  Print corable.
+  unfold corable. simpl.
+  unfold corable.
+  
+  unfold subtypes.unfash. unfold subtypes.fash. simpl.
+  unfold exist.
+  Search corable.
+  apply prop_ext.
+
+intro w. apply prop_ext; split; intro Hx.
 - apply Hx.
 - apply Hx. }
+
+
+apply H1.
 admit.
 }
 Admitted.
