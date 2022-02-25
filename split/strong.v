@@ -368,6 +368,9 @@ Proof.
   rewrite H6 in *.
 
   destruct Q as [Qn Qb Qc Qr];unfold_der.
+  unfold oboxopt. unfold obox. Search oboxopt.
+
+Search maybe_retval. Search oboxopt sepcon.
 
   Print func_ptr. Locate oboxopt. Locate tc_environ. Locate tc_exprlist. Locate "`".
   Search oboxopt. Locate make_args'. Check semax_call.make_args'.
@@ -403,7 +406,8 @@ Check func_ptr.
   destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
 
   apply derives_rewrite.
-
+Search tc_environ ret0_tycon.
+Locate make_args0_tc_environ.
 
 Abort.
 

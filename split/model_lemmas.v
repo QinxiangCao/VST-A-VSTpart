@@ -1631,6 +1631,32 @@ Proof.
   apply H1 with (x:=w1);auto.
 Qed.
 
+Lemma oboxopt_K:
+  forall (Delta : seplog.tycontext) (i : option ident)
+	(P Q : environ -> pred rmap) r,
+  derives (P r) (Q r) ->
+  derives ((SeparationLogicFacts.oboxopt Delta i P) r)
+    (SeparationLogicFacts.oboxopt Delta i Q r).
+Admitted.
+
+Lemma oboxopt_K':
+  forall (Delta : seplog.tycontext) (i : option ident)
+	(P Q : environ -> pred rmap) r (w:rmap),
+  ((P r w) -> (Q r w)) ->
+  ((SeparationLogicFacts.oboxopt Delta i P : environ -> pred rmap) r w) ->
+    ((SeparationLogicFacts.oboxopt Delta i Q : environ -> pred rmap) r w).
+Proof.
+  intros.
+  apply oboxopt_K with (P:=P);auto.
+Admitted.
+
+Lemma oboxopt_sepcon:
+  forall (Delta : seplog.tycontext) (i : option ident) (P Q : environ -> mpred) r,
+  SeparationLogicFacts.oboxopt Delta i P r * 
+  SeparationLogicFacts.oboxopt Delta i Q r 
+  |-- SeparationLogicFacts.oboxopt Delta i (fun rho => sepcon (P rho) (Q rho)) r.
+Admitted.
+
 
 Lemma funspec_rewrite:  forall CS  gA gP gR 
 (gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
@@ -1676,6 +1702,23 @@ Proof.
   pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H _ E1 as Et.
   simpl in Et. destruct E4 as [w1 [w2 [Ejoin [E4 E5]]]].
 
+
+  (*      w
+       /    \
+      w1    w2
+     / \     \
+   w1b w1a   \
+    |  |     \
+   gP  F   (R -* Q) 
+   [x]
+
+   w' = w1a + w2
+   w1 |= forall r, forall a a', F * gR --> R
+
+Step 1:
+   w' |= forall r, forall a a', F * gR --> R
+*)
+
   assert (Ecor1: core w = core w1).
   { symmetry. apply join_core in Ejoin. auto. }
   pose proof Ecor _ _ Ecor1 E2.
@@ -1701,25 +1744,101 @@ Proof.
   destruct (join_assoc Ejoin2 Ejoin) as [w' [Ejoin3 Ejoin4]].
   exists w1b, w'. split;auto. split;auto.
 
+simpl.
+  apply oboxopt_K with (P:= (fun rho : environ =>
+    sepcon F (maybe_retval (R ts1 x1) retsig ret rho -* Q rho)%pred)).
+  {
+    
+  intros.
+    
+  
+  rewrite <- wand_sepcon_adjoint.
+    assert (F * maybe_retval (gR ts' x') retsig ret r 
+           |-- maybe_retval (R ts1 x1) retsig ret r).
+    { unfold maybe_retval. destruct ret.
+    + specialize (E3b (Clight_seplog.get_result1 i r)).
+      rewrite fun_beta in E3b.
+      apply semax.unfash_fash in E3b.
+      specialize (E3b w1 (necR_refl _)).
+      assert ((seplog.tc_environ
+          (seplog.ret0_tycon
+            (seplog.funsig_tycontext
+                (seplog.funsig_of_funspec
+                  (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)))))
+      (Clight_seplog.get_result1 i r)).
+    { hnf. simpl. split3.
+      + hnf. intros. rewrite PTree.gempty in H0. inv H0.
+      + hnf. intros. split;intros.
+        - rewrite PTree.gempty in H0. inv H0.
+        - destruct H0. inv H0.
+      + hnf. intros. rewrite PTree.gempty in H0. inv H0. }
+    admit.
+    + destruct retsig.
+    * specialize (E3b (seplog.globals_only r)). rewrite fun_beta in E3b.
+      apply semax.unfash_fash in E3b.
+      specialize (E3b w1 (necR_refl _)).
 
-  (*      w
-       /    \
-      w1    w2
-     / \     \
-   w1b w1a   \
-    |  |     \
-   gP  F   (R -* Q) 
-   [x]
+      assert ((seplog.tc_environ
+      (seplog.ret0_tycon
+         (seplog.funsig_tycontext
+            (seplog.funsig_of_funspec
+               (mk_funspec (argsig, Tvoid) cc gA gP gR gNP
+                  gNR))))) (seplog.globals_only r)).
+      { hnf. simpl. split3.
+        + hnf. intros. rewrite PTree.gempty in H0. inv H0.
+        + hnf. intros. split;intros.
+          - rewrite PTree.gempty in H0. inv H0.
+          - destruct H0. inv H0.
+        + hnf. intros. rewrite PTree.gempty in H0. inv H0. }
+      admit.
+    * rewrite exp_sepcon2. apply exp_left. 
+      intros v. exists v. 
+       specialize (E3b ((seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r))). rewrite fun_beta in E3b.
+       apply semax.unfash_fash in E3b.
+       specialize (E3b w1 (necR_refl _)).
+       assert ((seplog.tc_environ
+          (seplog.ret0_tycon
+             (seplog.funsig_tycontext
+                (seplog.funsig_of_funspec
+                   (mk_funspec (argsig, Tint i s a) cc gA gP gR gNP gNR)))))
+       (seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r)).
+       { hnf. simpl. split3.
+          + hnf. intros. rewrite PTree.gempty in H1. inv H1.
+          + hnf. intros. split;intros.
+            - rewrite PTree.gempty in H1. inv H1.
+            - destruct H1. inv H1.
+          + hnf. intros. rewrite PTree.gempty in H1. inv H1.
+       }
+       admit.
+    * admit.
+    * admit.
+    * admit.
+    * admit.
+    * admit.
+    * admit.
+    * admit.
+    }
 
-   w' = w1a + w2
-   w1 |= forall r, forall a a', F * gR --> R
+    rewrite sepcon_comm.
+    rewrite <- sepcon_assoc.
+    rewrite (sepcon_comm _ F).
+    eapply derives_trans.
+    { apply sepcon_derives.
+      { apply H0. }
+      apply derives_refl. }
+    apply modus_wand.
+  }
+  { apply oboxopt_sepcon. exists w1a, w2. split;auto.
+    split;auto.
+    unfold SeparationLogicFacts.oboxopt. destruct ret;auto.
+    unfold SeparationLogicFacts.obox. simpl.
+    replace seplog.allp with (@allp rmap ag_rmap val) by reflexivity.
+    intros x. destruct ((seplog.temp_types Delta) ! i ).
+    { replace seplog.imp with (@imp rmap ag_rmap) by reflexivity.
+      hnf. intros. unfold SeparationLogic.subst.
+      apply pred_nec_hereditary with (a:= w1a);auto. }
+    { replace seplog.prop with (@prop rmap ag_rmap)by reflexivity.
+      simpl. auto. }
+  }
 
-Step 1:
-   w' |= forall r, forall a a', F * gR --> R
-*)
-  specialize (E3b r). rewrite fun_beta in E3b.
-  assert (Ecor2: core w1 = core w').
-  { apply join_core2 in Ejoin4.
-    apply join_core in Ejoin2. congruence. }
-  apply (corable_fash_spec _ _ _ Ecor2) in E3b.
 Admitted.
