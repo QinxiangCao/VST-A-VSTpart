@@ -13,116 +13,8 @@ Require Import VST.veric.slice.
 
 Require Import VST.veric.mpred.
 Require Import VST.veric.mapsto_memory_block.
-(* Import predicates_hered.
-Lemma func_ptr_unique: forall phi1 phi2 v,
-  (predicates_hered.derives ((func_ptr phi1 v) && (func_ptr phi2 v)) (!! (phi1 = phi2)))%pred.
-Proof.
-  intros. unfold func_ptr. unfold func_ptr_si.
-  rewrite !ex_and. apply predicates_hered.exp_left.
-  intros x. rewrite andp_assoc. apply prop_andp_left. intros.
-  rewrite !ex_and. apply exp_left. intros gs.
-  rewrite andp_comm. rewrite !ex_and. apply exp_left. intros x1.
-  rewrite !andp_assoc. apply prop_andp_left. intros.
-  rewrite ex_and. apply exp_left. intros gs1.
-  rewrite H in H0. inv H0.
-Admitted.
-Export predicates_hered. *)
 
 
-(* 
-Require Import VST.msl.seplog.
-
-Lemma func_at_unique2: forall
-  fsig cc A
-  (P1 Q1 P2 Q2:forall ts : list Type,
-  functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT A))
-    mpred) 
-  (NEP1: super_non_expansive P1) NEQ1 NEP2 NEQ2 l
-  (ts:list Type) 
-  (x: functors.MixVariantFunctor._functor
-  ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
-      match T with
-      | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
-      | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-      | rmaps.DependentType n =>
-          functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
-      | rmaps.ProdType T1 T2 =>
-          functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
-      | rmaps.ArrowType T1 T2 =>
-          functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
-      | rmaps.SigType I0 f =>
-          functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
-      | rmaps.PiType I0 f =>
-          functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
-      | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
-      end) A) mpred) 
-  bl,
-  (func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)%logic
-  |-- 
-   (* (ALL (ts:list Type)
-       x
-        (bl: environ -> environ) 
-        vl, *)
-       (|> (lift.liftx (Q2 ts x) <=> lift.liftx (Q1 ts x)))%logic.
-   
-
-
-Lemma func_at_unique2: forall
-  fsig cc A
-  (P1 Q1 P2 Q2:forall ts : list Type,
-  functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT A))
-    mpred) NEP1 NEQ1 NEP2 NEQ2 l,
-  (func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)%logic
-  |-- 
-   (ALL (ts:list Type)
-       (x: functors.MixVariantFunctor._functor
-        ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
-            match T with
-            | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
-            | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-            | rmaps.DependentType n =>
-                functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
-            | rmaps.ProdType T1 T2 =>
-                functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
-            | rmaps.ArrowType T1 T2 =>
-                functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
-            | rmaps.SigType I0 f =>
-                functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
-            | rmaps.PiType I0 f =>
-                functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
-            | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
-            end) A) mpred)
-        (bl: environ -> environ) 
-        vl,
-       (|> (lift.liftx (Q2 ts x) <=> lift.liftx (Q1 ts x))))%logic.
-    *)
-
-
-Lemma join_necR_aux: forall n x y z x' y' z',
-relation_power n age x x' -> 
-relation_power n age y y' -> join x y z -> join x' y' z' -> 
-relation_power n age z z'.
-Proof.
-intros n. induction n.
-{ intros. simpl in *. subst. eapply join_eq;eassumption. }
-intros.
-
-apply power_age_age1 in H. simpl in H.
-destruct (age1 x) as [x''|] eqn:Ex.
-2:{ inversion H. }
-apply power_age_age1 in H0. simpl in H0.
-destruct (age1 y) as [y''|] eqn:Ey.
-2:{ inversion H0. }
-pose proof @age1_join _ _ _ _ _ _ _ _ H1 Ex.
-destruct H3 as [y''' [z'' [H3 [? ?]]]].
-assert (y'' = y''').
-{ hnf in H4. congruence. } subst y'''.
-exists z''. split.
-* auto.
-* eapply IHn;try eassumption;apply power_age_age1;auto.
-Qed.
 
 
 Lemma relation_power_level: forall n x y,
@@ -133,47 +25,6 @@ intros n. induction n;intros.
 simpl in H. destruct H as [x' [? ?]].
 apply IHn in H0. simpl. rewrite <- H0.
 apply age_level. auto.
-Qed.
-
-Lemma join_necR_same_level: forall m n x y x' y',
-relation_power m age x x' -> 
-relation_power n age y y' -> level x = level y -> level x' = level y' -> m = n.
-Proof.
-intros. apply relation_power_level in H. apply relation_power_level in H0.
-omega.
-Qed.
-
-Lemma join_necR: forall x y z x' y' z',
-necR x x' -> 
-necR y y' -> join x y z -> join x' y' z' -> 
-necR z z'.
-Proof.
-intros.
-pose proof join_level _ _ _ H1 as [E1 E2].
-pose proof join_level _ _ _ H2 as [E3 E4].
-apply necR_power_age in H. apply necR_power_age in H0.
-destruct H as [n1 H], H0 as [n2 H0].
-assert (n1 = n2).
-{ pose proof join_necR_same_level _ _ _ _ _ _ H H0.
-  apply H3;congruence. }
-subst n2.
-pose proof join_necR_aux _ _ _ _ _ _ _ H H0 H1 H2.
-apply necR_power_age. exists n1. auto.
-Qed.
-
-Lemma join_necR_2: forall x y z x' y',
-necR x x' -> 
-necR y y' -> join x y z -> level x' = level y' ->
-exists z', join x' y' z' /\ necR z z'.
-Proof.
-intros.
-epose proof nec_join H1 H.
-destruct H3 as [y'' [z' [? [? ?]]]].
-exists z'. split;auto.
-assert (y'' = y').
-{ apply (necR_linear' H4 H0).
-  apply join_level in H1. apply join_level in H3. omega. }
-subst. auto.
 Qed.
 
 
@@ -288,6 +139,10 @@ match rall with
 | PURE k p => PURE k p
 end.
 
+
+
+(* Using the notations from VST.msl.predicates_hered
+below are semantic-level lemmas *)
 
 Local Open Scope pred_derives.
 
@@ -1631,33 +1486,9 @@ Qed.
 
 
 
-Require Import VST.veric.seplog.
 Require Import VST.veric.semax_call.
 
-Lemma func_at_unique1: forall r
-  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
-  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
-  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l r ->
-  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l r ->
-  (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
-Proof.
-  intros.
-  unfold func_at in *. unfold pureat in *.
-  simpl in H, H0. rewrite H in H0. inv H0. auto.
-Qed.
 
-Lemma func_at_unique1_lift: forall
-  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
-  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
-  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l
-  |-- !! (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
-Proof.
-  intros. intro r. intros. destruct H.
-  eapply func_at_unique1.
-  - apply H.
-  - apply H0.
-Qed.
 
 (* for some reason when p is too complicated, coq will not inversion it *)
 Lemma pure_eq_inv: forall p1 p2 k1 k2,
@@ -1666,54 +1497,229 @@ intros.
 inv H. auto.
 Qed.
 
-Search func_at.
 
 Lemma func_at_unique2: forall r
 fsig cc A P1 Q1 NEP1 NEQ1
 P2 Q2 NEP2 NEQ2 l,
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
 ((forall ts x vl, unfash (|> (P2 ts x vl <=> P1 ts x vl)) r ) /\
 (forall ts x vl, unfash (|> (Q2 ts x vl <=> Q1 ts x vl)) r )).
 Proof.
   intros.
-  unfold func_at in *. unfold pureat in *.
+  unfold seplog.func_at in *. unfold pureat in *.
   simpl in H, H0. rewrite H in H0.
   apply pure_eq_inv in H0. destruct H0.
   apply function_pointer_aux in H1;auto.
 Qed.
 
-Lemma func_at_unique2_logic: forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 l ts x vl,
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
-|--  
-  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
-  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
-     (|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
-.
+
+
+Lemma func_at_unique1: forall r
+    { fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
+    fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 } l,
+    seplog.func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l r ->
+    seplog.func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l r ->
+    (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
+Proof.
 intros.
-intro r. intros.
-destruct H. pose proof H0 as H0'.
- eapply func_at_unique2 in H0. 2:{ apply H. }
- destruct H0.
- pose proof H0 ts x vl.
- pose proof H1 ts x vl.
-rewrite <- later_unfash in H2, H3.
-clear H0 H1.
-assert (
-  (|> ! (P2 ts x vl <=> P1 ts x vl)) |-- 
-  (|> (P2 ts x vl <--> P1 ts x vl))).
-apply later_derives.
-apply semax.unfash_fash.
-assert (
-  (|> ! (Q2 ts x vl <=> Q1 ts x vl)) |-- 
-  (|> (Q2 ts x vl <--> Q1 ts x vl))).
-apply later_derives.
-apply semax.unfash_fash.
-split;auto. split;auto.
-split;auto.
+unfold seplog.func_at in *. unfold pureat in *.
+simpl in H, H0. rewrite H in H0. inv H0. auto.
 Qed.
 
+
+Lemma func_ptr_der: forall  argsig retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
+(( (seplog.func_ptr_si (mk_funspec (argsig, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
+((seplog.func_ptr_si (mk_funspec (argsig, retsig) cc A2 P2 R2 NEP2 NER2))) v)
+|--
+(EX (blk_fun: address) (gA : rmaps.TypeTree)
+      (gP1 gP2 gR1 gR2 : forall ts : list Type,
+      functors.MixVariantFunctor._functor
+        (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
+      ((seplog.func_at (mk_funspec (argsig, retsig) cc gA gP1 gR1 NEgP1 NEgR1) blk_fun) ) &&
+      ((seplog.func_at (mk_funspec (argsig, retsig) cc gA gP2 gR2 NEgP2 NEgR2) blk_fun) ) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
+                      (mk_funspec (argsig, retsig) cc A1 P1 R1 NEP1 NER1))) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP2 gR2 NEgP2 NEgR2)
+                      (mk_funspec (argsig, retsig) cc A2 P2 R2 NEP2 NER2)))).
+Proof.
+  intros.
+  unfold seplog.func_ptr_si.
+  repeat rewrite exp_andp1; apply exp_left; intro blk1.
+  repeat rewrite andp_assoc; apply prop_andp_left; intros.
+  repeat rewrite exp_andp1; apply exp_left; intro gs1.
+  rewrite andp_comm.
+  repeat rewrite exp_andp1; apply exp_left; intro blk2.
+  repeat rewrite andp_assoc; apply prop_andp_left; intros.
+  repeat rewrite exp_andp1; apply exp_left; intro gs2.
+  rewrite H in H0. inv H0.
+  apply exp_right with (x:=(blk2, 0)).
+  destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
+  destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
+  subst. intro r.
+  intros [[E1 E2] [E3 E4]].
+  pose proof func_at_unique1 _ _ E2 E4.
+  destruct H as [? [? ?]]. subst.
+  pose proof E1 as E1'.
+  hnf in E1'. destruct E1' as [Heq E1']. clear E1'.
+  destruct Heq. destruct gsig1. inv H.
+  exists gA1, gP1, gP2, gQ1, gQ2.
+  exists gNP1, gNP2, gNQ1, gNQ2.
+  split;[split|];[split| |];auto.
+Qed.
+
+
+Require VST.veric.SeparationLogic.
+(* Require Import VST.veric.lift. *)
+Require VST.floyd.SeparationLogicFacts.
+Require Import VST.veric.extend_tc.
+Notation "P '-*' Q" := (wand P Q) : pred.
+
+Locate derives.
+
+
+Lemma fun_beta: forall {A B:Type} (a: A -> B) y, (fun x => a x) y = a y.
+Proof.
+  reflexivity.
+Qed.
+
+(* Lemma sepcon_imp_left: forall P Q R W r,
+(!! W)%pred  r -> (!! W && P --> R)%pred r ->
+(P * Q)%pred r -> (R * Q)%pred r. *)
+
+(* Locate "|>".
+Check box.
+Print modality.
+Check later_andp.
+Locate liftx.
+Check lift.Lift.
+
+
+Lemma funspec_rewrite:  forall CS  gA gP gR 
+(gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
+argsig retsig cc A P R 
+(NEP: super_non_expansive P)
+(NER: super_non_expansive R)
+r bl ts1 x1 ret Q Delta, 
+(* ret a bl P Q R r ts1 x1, *)
+ seplog.tc_environ Delta r ->
+ SeparationLogic.tc_exprlist Delta (snd (split argsig)) bl  &&
+liftx (seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
+(mk_funspec (argsig, retsig) cc A P R NEP NER))
+&& (P ts1 x1
+(SeparationLogic.make_args' (argsig, retsig)
+   (@expr.eval_exprlist CS (snd (split argsig)) bl)) *
+   SeparationLogicFacts.oboxopt Delta ret
+   (fun rho : environ =>
+    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)))
+|-- ((EX ts' x',
+  (gP ts' x' 
+    (SeparationLogic.make_args' (argsig, retsig)
+    (@expr.eval_exprlist CS (snd (split argsig)) bl))) *
+  SeparationLogicFacts.oboxopt Delta ret
+    (fun rho : environ => 
+      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)))). *)
+
+
+
+Lemma corable_fash_spec: forall (P: pred nat) (w1:rmap) (w2:rmap), core w1 = core w2 ->
+  (! P)%pred w1 -> (! P)%pred w2.
+Proof.
+  intros.
+  pose proof semax.corable_unfash _ _ _ _ _ _ P.
+  rewrite corable_spec in H1.
+  apply H1 with (x:=w1);auto.
+Qed.
+
+
+Lemma funspec_rewrite:  forall CS  gA gP gR 
+(gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
+argsig retsig cc A P R 
+(NEP: super_non_expansive P)
+(NER: super_non_expansive R)
+r bl ts1 x1 ret Q Delta, 
+(* ret a bl P Q R r ts1 x1, *)
+ seplog.tc_environ Delta r ->
+ SeparationLogic.tc_exprlist Delta (snd (split argsig)) bl r  &&
+(seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
+(mk_funspec (argsig, retsig) cc A P R NEP NER))
+&& |> (P ts1 x1
+(SeparationLogic.make_args' (argsig, retsig)
+   (@expr.eval_exprlist CS (snd (split argsig)) bl) r) *
+   SeparationLogicFacts.oboxopt Delta ret
+   (fun rho : environ =>
+    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)
+|-- |> ((EX ts' x',
+  (gP ts' x' 
+    (SeparationLogic.make_args' (argsig, retsig)
+    (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
+  SeparationLogicFacts.oboxopt Delta ret
+    (fun rho : environ => 
+      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)).
+Proof.
+  intros.
+  eapply derives_trans.
+  { apply andp_right.
+    { apply andp_left1. apply now_later. }
+    { apply andp_left2. apply derives_refl. }
+  }
+  rewrite <- later_andp. apply later_derives.
+  intro w.
+  
+  
+  intros [[E1 E2] E4].
+  pose proof assert_lemmas.corable_funspec_sub_si
+    (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
+    (mk_funspec (argsig, retsig) cc A P R NEP NER) as Ecor.
+  rewrite corable_spec in Ecor.
+
+  pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H _ E1 as Et.
+  simpl in Et. destruct E4 as [w1 [w2 [Ejoin [E4 E5]]]].
+
+  assert (Ecor1: core w = core w1).
+  { symmetry. apply join_core in Ejoin. auto. }
+  pose proof Ecor _ _ Ecor1 E2.
+
+  destruct H0 as [_ E3].
+  rewrite semax.unfash_allp in E3. specialize (E3 ts1).
+  rewrite fun_beta in E3.
+  rewrite semax.unfash_allp in E3. specialize (E3 x1).
+  rewrite fun_beta in E3.
+  rewrite semax.unfash_allp in E3. 
+  specialize (E3 ((SeparationLogic.make_args' (argsig, retsig)
+                (expr.eval_exprlist (snd (split argsig)) bl) r))).
+  rewrite fun_beta in E3.
+  apply semax.unfash_fash in E3.
+  unfold imp in E3. 
+  specialize (E3 w1 (necR_refl _)).
+  destruct E3 as [ts' [x' [F [E3a E3b]]]].
+  { split;auto. }
+  
+  destruct E3a as [w1a [w1b [Ejoin2 [E3a1 E3a2]]]].
+  exists ts', x'.
+  apply join_comm in Ejoin2.
+  destruct (join_assoc Ejoin2 Ejoin) as [w' [Ejoin3 Ejoin4]].
+  exists w1b, w'. split;auto. split;auto.
+
+
+  (*      w
+       /    \
+      w1    w2
+     / \     \
+   w1b w1a   \
+    |  |     \
+   gP  F   (R -* Q) 
+   [x]
+
+   w' = w1a + w2
+   w1 |= forall r, forall a a', F * gR --> R
+
+Step 1:
+   w' |= forall r, forall a a', F * gR --> R
+*)
+  specialize (E3b r). rewrite fun_beta in E3b.
+  assert (Ecor2: core w1 = core w').
+  { apply join_core2 in Ejoin4.
+    apply join_core in Ejoin2. congruence. }
+  apply (corable_fash_spec _ _ _ Ecor2) in E3b.
+Admitted.

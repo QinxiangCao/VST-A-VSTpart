@@ -13,7 +13,7 @@ NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)
 
 
 
-NORMAL_FILES = model_lemmas.v vst_ext.v function.v defs.v rule.v strong.v semantics.v soundness.v
+NORMAL_FILES = model_lemmas.v logic_lemmas.v vst_ext.v function.v defs.v rule.v strong.v semantics.v soundness.v
 
 $(NORMAL_FILES:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
