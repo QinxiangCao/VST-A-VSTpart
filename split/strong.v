@@ -368,16 +368,67 @@ Proof.
   rewrite H6 in *.
 
   destruct Q as [Qn Qb Qc Qr];unfold_der.
-  unfold oboxopt. unfold obox. Search oboxopt.
 
-Search maybe_retval. Search oboxopt sepcon.
+  eapply derives_trans with (Q:=
+  local (tc_environ Delta) &&
+  (tc_exprlist Delta (snd (split argsig2)) bl &&
+  ((` (func_ptr (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))  (eval_expr a) ) &&
+  (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )) &&
+|> ((` (P1 ts1 x1 : environ -> mpred))
+      (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig2)) bl)) *
+    oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1)) &&
+ |> ((` (P2 ts2 x2 : environ -> mpred))
+       (make_args' (argsig2, retsig2)
+          (eval_exprlist (snd (split argsig2)) bl)) *
+     oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
+  { solve_andp. }
+  
+  rewrite (add_andp _ _ (func_ptr_der_logic _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
+  Intros blk_fun gA gP1 gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2.
+  assert_PROP (argsig1 = argsig2). { solve_andp. }
+  subst argsig2.
+  
+  eapply derives_trans with (Q:=
+  local (tc_environ Delta) &&
+  (tc_exprlist Delta (snd (split argsig1)) bl &&
+    (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))) (eval_expr a) &&
+    (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))) (eval_expr a) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) blk_fun)) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) blk_fun))) &&
+   (  local (tc_environ Delta) &&
+      tc_exprlist Delta (snd (split argsig1)) bl &&
+     ` (funspec_sub_si
+        (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1)
+        (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1)) &&
+      |> ((` (P1 ts1 x1 : environ -> mpred))
+          (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+        oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1))) &&   
+   (  local (tc_environ Delta) &&
+     tc_exprlist Delta (snd (split argsig1)) bl &&
+     ` (funspec_sub_si
+        (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)
+        (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)) &&
+     |> ((` (P2 ts2 x2 : environ -> mpred))
+          (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+        oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
+  { solve_andp. }
+  
+  eapply derives_trans.
+  { apply andp_right.
+    - apply andp_left1.
+      apply andp_right. { apply andp_left1. apply derives_refl. }
+      apply andp_left2. apply funspec_rewrite_logic.
+    - apply andp_left2. apply funspec_rewrite_logic.
+  }
+  rewrite later_exp'. 2:{ apply nil. }
+  rewrite later_exp'. 2:{ apply nil. }
+  Intros gts1. Intros gts2.
+  rewrite later_exp'. 2:{ Search functors.MixVariantFunctor._functor.  apply TT. nil. }
+  Search later exp.
+  Intros ts1.
 
-  Print func_ptr. Locate oboxopt. Locate tc_environ. Locate tc_exprlist. Locate "`".
-  Search oboxopt. Locate make_args'. Check semax_call.make_args'.
-  Check (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))).
-  Check (tc_expr Delta a ).
 
-Check func_ptr.
+
 
   (* find the common subsumption used by both triples *)
   unfold func_ptr. unfold liftx. unfold lift.

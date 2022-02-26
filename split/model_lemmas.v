@@ -1528,20 +1528,21 @@ simpl in H, H0. rewrite H in H0. inv H0. auto.
 Qed.
 
 
-Lemma func_ptr_der: forall  argsig retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
-(( (seplog.func_ptr_si (mk_funspec (argsig, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
-((seplog.func_ptr_si (mk_funspec (argsig, retsig) cc A2 P2 R2 NEP2 NER2))) v)
+Lemma func_ptr_der: forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
+(( (seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
+((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v)
 |--
+!! (argsig1 = argsig2) &&
 (EX (blk_fun: address) (gA : rmaps.TypeTree)
       (gP1 gP2 gR1 gR2 : forall ts : list Type,
       functors.MixVariantFunctor._functor
         (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
-      ((seplog.func_at (mk_funspec (argsig, retsig) cc gA gP1 gR1 NEgP1 NEgR1) blk_fun) ) &&
-      ((seplog.func_at (mk_funspec (argsig, retsig) cc gA gP2 gR2 NEgP2 NEgR2) blk_fun) ) &&
-      ((seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
-                      (mk_funspec (argsig, retsig) cc A1 P1 R1 NEP1 NER1))) &&
-      ((seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP2 gR2 NEgP2 NEgR2)
-                      (mk_funspec (argsig, retsig) cc A2 P2 R2 NEP2 NER2)))).
+      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) blk_fun) ) &&
+      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) blk_fun) ) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
+                      (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2)
+                      (mk_funspec (argsig1, retsig) cc A2 P2 R2 NEP2 NER2)))).
 Proof.
   intros.
   unfold seplog.func_ptr_si.
@@ -1553,7 +1554,6 @@ Proof.
   repeat rewrite andp_assoc; apply prop_andp_left; intros.
   repeat rewrite exp_andp1; apply exp_left; intro gs2.
   rewrite H in H0. inv H0.
-  apply exp_right with (x:=(blk2, 0)).
   destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
   destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
   subst. intro r.
@@ -1562,11 +1562,83 @@ Proof.
   destruct H as [? [? ?]]. subst.
   pose proof E1 as E1'.
   hnf in E1'. destruct E1' as [Heq E1']. clear E1'.
-  destruct Heq. destruct gsig1. inv H.
+  pose proof E3 as E3'.
+  hnf in E3'. destruct E3' as [Heq' E3']. clear E3'.
+  destruct Heq. destruct Heq'. destruct gsig1. inv H.
+  inv H1. subst. split. { reflexivity. }
+  exists (blk2, 0).
   exists gA1, gP1, gP2, gQ1, gQ2.
   exists gNP1, gNP2, gNQ1, gNQ2.
   split;[split|];[split| |];auto.
 Qed.
+
+
+
+Lemma fun_beta: forall {A B:Type} (a: A -> B) y, (fun x => a x) y = a y.
+Proof.
+  reflexivity.
+Qed.
+
+(* Lemma func_ptr_der': forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
+(( (seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
+((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v)
+|--
+!! (argsig1 = argsig2) &&
+(EX (blk_fun: address) (gA : rmaps.TypeTree)
+      (gP gR : forall ts : list Type,
+      functors.MixVariantFunctor._functor
+        (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP NEgR,
+      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP gR NEgP NEgR) blk_fun) ) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP gR NEgP NEgR)
+                      (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) &&
+      ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP gR NEgP NEgR)
+                      (mk_funspec (argsig1, retsig) cc A2 P2 R2 NEP2 NER2)))).
+Proof.
+  intros.
+  unfold seplog.func_ptr_si.
+  repeat rewrite exp_andp1; apply exp_left; intro blk1.
+  repeat rewrite andp_assoc; apply prop_andp_left; intros.
+  repeat rewrite exp_andp1; apply exp_left; intro gs1.
+  rewrite andp_comm.
+  repeat rewrite exp_andp1; apply exp_left; intro blk2.
+  repeat rewrite andp_assoc; apply prop_andp_left; intros.
+  repeat rewrite exp_andp1; apply exp_left; intro gs2.
+  rewrite H in H0. inv H0.
+  destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
+  destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
+  subst. intro r.
+  intros [[E1 E2] [E3 E4]].
+  pose proof func_at_unique1 _ _ E2 E4.
+  destruct H as [? [? ?]]. subst.
+  pose proof E1 as E1'.
+  hnf in E1'. destruct E1' as [Heq E1']. clear E1'.
+  pose proof E3 as E3'.
+  hnf in E3'. destruct E3' as [Heq' E3']. clear E3'.
+  destruct Heq. destruct Heq'. destruct gsig1. inv H.
+  inv H1. subst. split. { reflexivity. }
+  exists (blk2, 0).
+  exists gA1, gP1, gQ1.
+  exists gNP1, gNQ1.
+  split;[split|];auto.
+  
+  pose proof func_at_unique2 _ _ _ _ _ _ _ _ _ _ _ _ _ E2 E4.
+  destruct H as [HP HQ].
+  destruct E3 as [_ E3].
+  hnf. split. { split;reflexivity. }
+  rewrite semax.unfash_allp. intros ts.
+  rewrite semax.unfash_allp in E3. specialize (E3 ts). rewrite fun_beta in E3.
+  rewrite semax.unfash_allp. intros x. 
+  rewrite semax.unfash_allp in E3. specialize (E3 x).
+
+
+  rewrite semax.unfash_fash.
+
+
+  pose proof func_at_unique2.
+
+
+
+Qed. *)
 
 
 Require VST.veric.SeparationLogic.
@@ -1575,13 +1647,7 @@ Require VST.floyd.SeparationLogicFacts.
 Require Import VST.veric.extend_tc.
 Notation "P '-*' Q" := (wand P Q) : pred.
 
-Locate derives.
 
-
-Lemma fun_beta: forall {A B:Type} (a: A -> B) y, (fun x => a x) y = a y.
-Proof.
-  reflexivity.
-Qed.
 
 (* Lemma sepcon_imp_left: forall P Q R W r,
 (!! W)%pred  r -> (!! W && P --> R)%pred r ->
