@@ -150,18 +150,18 @@ Proof.
 Qed.
 
 
-
 Lemma func_ptr_der_logic: forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
 (` (func_ptr (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v &&
  (` (func_ptr (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v
 |--
 !! (argsig1 = argsig2) &&
-(EX (blk_fun: address) (gA : rmaps.TypeTree)
+(EX (blk_fun: block) (gA : rmaps.TypeTree)
       (gP1 gP2 gR1 gR2 : forall ts : list Type,
       functors.MixVariantFunctor._functor
         (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
-      (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) blk_fun) ) &&
-      (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) blk_fun) ) &&
+      (lift1 seplog.prop (( (fun rho => (v rho = Vptr blk_fun Ptrofs.zero)) ))) &&
+      (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0)) ) &&
+      (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0)) ) &&
       (`(seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
                       (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) &&
       (`(seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2)
@@ -174,8 +174,8 @@ Proof.
   destruct H0. hnf in H0. subst. split;try reflexivity.
   destruct H1 as [blk_fun [gA [gP1 [gP2 [gR1 [gR2 [NEgP1 [NEgP2 [NEgR1 [NEgR2 E]]]]]]]]]].
   exists blk_fun, gA, gP2, gP1, gR2, gR1, NEgP2, NEgP1, NEgR2, NEgR1.
-  destruct E. destruct H0. destruct H0.
-  split;[split;[split|]|];auto.
+  destruct E. destruct H0. destruct H0. destruct H0.
+  split;[split;[split|]|];auto. split;auto.
 Qed.
 
 
@@ -212,4 +212,20 @@ Proof.
   pose proof funspec_rewrite CS gA gP gR NEgP NEgR argsig retsig cc A P R NEP NEQ r bl ts x ret Q Delta H.
   specialize (H3 w). apply H3.
   split;auto. split;auto.
+Qed.
+
+Lemma func_ptr_self_logic: forall gs fs v blk,
+  local (fun rho => v rho = Vptr blk Ptrofs.zero) &&
+  ` (funspec_sub_si gs fs) &&
+  ` (func_at gs (blk, 0)) |--
+  ` (func_ptr gs) v.
+Proof.
+  intros.
+  unfold local. unfold lift1.
+  unfold liftx. simpl. unfold lift.
+  intros r.
+  apply derives_rewrite. intro w.
+  intros. destruct H. destruct H.
+  pose proof func_ptr_self gs fs _ _ H w.
+  apply H2. split;auto.
 Qed.

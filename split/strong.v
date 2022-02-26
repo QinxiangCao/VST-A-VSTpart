@@ -370,7 +370,7 @@ Proof.
   destruct Q as [Qn Qb Qc Qr];unfold_der.
 
   eapply derives_trans with (Q:=
-  local (tc_environ Delta) &&
+  local (tc_environ Delta) && tc_expr Delta a && 
   (tc_exprlist Delta (snd (split argsig2)) bl &&
   ((` (func_ptr (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))  (eval_expr a) ) &&
   (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )) &&
@@ -389,12 +389,16 @@ Proof.
   subst argsig2.
   
   eapply derives_trans with (Q:=
-  local (tc_environ Delta) &&
+  local (tc_environ Delta) && tc_expr Delta a &&
+  local (fun rho : environ => eval_expr a rho = Vptr blk_fun Ptrofs.zero) &&
   (tc_exprlist Delta (snd (split argsig1)) bl &&
     (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))) (eval_expr a) &&
     (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))) (eval_expr a) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) blk_fun)) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) blk_fun))) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) &&
+    ` (funspec_sub_si (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) 
+                        (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))
+    ) &&
    (  local (tc_environ Delta) &&
       tc_exprlist Delta (snd (split argsig1)) bl &&
      ` (funspec_sub_si
@@ -420,223 +424,40 @@ Proof.
       apply andp_left2. apply funspec_rewrite_logic.
     - apply andp_left2. apply funspec_rewrite_logic.
   }
-  rewrite later_exp'. 2:{ apply nil. }
-  rewrite later_exp'. 2:{ apply nil. }
-  Intros gts1. Intros gts2.
-  rewrite later_exp'. 2:{ Search functors.MixVariantFunctor._functor.  apply TT. nil. }
-  Search later exp.
-  Intros ts1.
+  Exists argsig1 retsig2 cc2 gA gP1 gR1 NEgP1 NEgR1.
 
-
-
-
-  (* find the common subsumption used by both triples *)
-  unfold func_ptr. unfold liftx. unfold lift.
-  unfold lift_uncurry_open.
-  unfold lift. unfold lift_uncurry_open.
-
-
-  simpl. unfold lift. intros r.
-
-
-
-  unfold func_ptr_si.
-  rewrite !exp_rewrite. 
-  Intros b1. Intros b2.
-  rewrite !andp_rewrite.
-  rewrite !exp_rewrite.
-  Intros gs1. Intros gs2.
-  rewrite !andp_rewrite.
-  rewrite !prop_rewrite.
-  assert_PROP (eval_expr a r = Vptr b2 Ptrofs.zero). solve_andp.
-  assert_PROP (eval_expr a r = Vptr b1 Ptrofs.zero). solve_andp.
-  rewrite H2 in H5. inv H5.
-  rename b1 into blk_fun.
-
-  destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
-  destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
-
-  apply derives_rewrite.
-Search tc_environ ret0_tycon.
-Locate make_args0_tc_environ.
-
-Abort.
-
-  assert_PROP (gsig1 = gsig2 /\ gcc1 = gcc2 /\ gA1 = gA2).
-  { eapply derives_trans. 2:{ apply func_at_unique1_lift. }
-    solve_andp. }
-  (* rewrite !andp_rewrite. solve_andp. } *)
-  destruct H5 as [?[? ?]]. subst gsig2 gcc2 gA2.
-  destruct gsig1 as [gargsig gretsig].
-  Exists gargsig gretsig gcc1 gA1 gP1 gQ1 gNP1 gNQ1.
-  unfold funspec_sub_si at 1.
-
-  unfold funsig_of_funspec.
-  unfold funsig_tycontext.
+  eapply derives_trans with (Q:=
+  !! (classify_fun (typeof a) = fun_case_f (type_of_params argsig1) retsig2 cc2 /\
+  (retsig2 = Tvoid -> ret = None) /\ tc_fn_return Delta ret retsig2) &&
+(tc_expr Delta a && tc_exprlist Delta (snd (split argsig1)) bl) &&
+(` (func_ptr (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1))) (eval_expr a) &&
+  (EX (ts : list Type) x,
+     |> ((` (gP1 ts x : environ -> mpred)) (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+         oboxopt Delta ret (maybe_retval (gR1 ts x) retsig2 ret -* Q1 && Q2)
+     ))).
+  2:{ Intros ts' x'. Exists ts' x'. apply andp_right. 2:{ solve_andp. }
+      apply andp_right. 2:{ solve_andp. }
+      apply prop_right. split;auto. }
+  
+  apply andp_right. 
+  { apply andp_right. 
+    2:{ apply andp_left1. apply andp_left1.
+        eapply derives_trans.
+        2:{ apply ( func_ptr_self_logic _
+                     (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1) (eval_expr a) blk_fun). }
+        solve_andp.
+    }
+    apply andp_right. { apply prop_right. auto. }
+  solve_andp. }
+  rewrite andp_assoc.
+  apply andp_left2. rewrite <- later_andp.
+  (* 
   eapply derives_trans.
-  apply andp_left2.
-  apply andp_left1.
-
-  (* unfold funspec_sub_si at 1.
-  rewrite !andp_rewrite.
-
-
-  rewrite semax_switch.unfash_allp.
-  (* Locate unfash_allp.
-  rewrite unfash_allp. *)
-  eapply derives_trans.
-  { apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-    apply andp_left1;apply derives_refl|
-    apply andp_left2].
-    apply andp_right;[
-      apply andp_left1|
-      apply andp_left2;apply derives_refl].
-      apply andp_right;[
-        apply andp_left1;apply derives_refl|
-        apply andp_left2].
-  rewrite allp_rewrite.
-  apply allp_instantiate with (x:=ts1).
-  }
-
-  rewrite semax_switch.unfash_allp.
-  eapply derives_trans.
-  { apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-    apply andp_left1;apply derives_refl|
-    apply andp_left2].
-    apply andp_right;[
-      apply andp_left1|
-      apply andp_left2;apply derives_refl].
-      apply andp_right;[
-        apply andp_left1;apply derives_refl|
-        apply andp_left2].
-  rewrite allp_rewrite.
-  apply allp_instantiate with (x:=x1).
-  }
-  rewrite semax_switch.unfash_allp.
-  eapply derives_trans.
-  { apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1|
-  apply andp_left2;apply derives_refl].
-  apply andp_right;[
-  apply andp_left1;apply derives_refl|
-  apply andp_left2].
-  apply andp_right;[
-    apply andp_left1;apply derives_refl|
-    apply andp_left2].
-    apply andp_right;[
-      apply andp_left1|
-      apply andp_left2;apply derives_refl].
-      apply andp_right;[
-        apply andp_left1;apply derives_refl|
-        apply andp_left2].
-  rewrite allp_rewrite.
-  eapply derives_trans.
-  apply allp_instantiate with (x:=(make_args' (pair argsig1 retsig2)
-  (eval_exprlist (snd (split argsig2)) bl) r)).
-  apply derives_rewrite.
-  apply semax.unfash_fash.
-  }
-
-  rewrite !andp_rewrite.
-  rewrite !prop_rewrite.
-  rewrite !exp_rewrite.
-  rewrite !imp_rewrite.
-
-  assert (local (tc_environ Delta) r  |-- local (tc_environ Delta) r );auto.
-  sep_apply H5.
-
-  rewrite !andp_rewrite.
-
-  eapply derives_trans with (Q:= seplog.local
-  (seplog.tc_environ
-  (funsig_tycontext
-  (funsig_of_funspec
-      (mk_funspec (gargsig, gretsig) gcc1 gA1 gP1 gQ1 gNP1 gNQ1))))
-  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)
-  r)).
-
-
-
-  assert (local (tc_environ Delta) r |-- seplog.local
-  (seplog.tc_environ
-      (funsig_tycontext
-        (funsig_of_funspec
-            (mk_funspec (gargsig, gretsig) gcc1 gA1 gP1 gQ1 gNP1 gNQ1))))
-  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)
-      r)).
-
-
-
-  { unfold seplog.local. unfold local. unfold lift1.
-  unfold seplog.tc_environ. unfold tc_environ.
-  unfold funsig_tycontext. unfold funsig_of_funspec.
-  unfold make_args'. simpl.
-  unfold typecheck_environ. simpl.
-  rewrite prop_rewrite.
-  apply prop_derives.
-  intros [E1 [E2 E3]]. split.
-  - hnf. hnf in E1. intros.
-  Search typecheck_var_environ.
-
-
-
-  unfold make_tycontext_t in H5.
-
-  Search prop derives.
-
-  unfold typecheck_var_environ.
-  unfold make_args.
-  unfold te_of.
-
-  Search make_args'.
-  Search typecheck_environ.
-  unfold fst, snd.
-  simpl. }
-
-
-
-
-
-
-  Intros.
-
-  Search andp derives eq.
-
-
-
-Admitted. *)
-
-Abort.
+  { rewrite exp_andp1. apply seplog.later_exp''. }
+  apply orp_left.
+  2:{  unfold later. Search later FF.  } *)
+  (* TODO: how to deal with later? *)
+Admitted.
 
 Lemma sepcon_rewrite: forall A B,
 predicates_sl.sepcon A B = sepcon A B.
@@ -654,7 +475,7 @@ repeat (try rewrite !andp_rewrite;
    try rewrite !sepcon_rewrite
 ).
 
-Lemma imp_andp_elim: 
+(* Lemma imp_andp_elim: 
 forall (A : Type) (ND : NatDed A) (P Q R : A), Q && (P && Q --> R) |-- Q && (P --> R).
 Proof.
 intros.
@@ -709,121 +530,7 @@ eapply derives_trans.
 - apply modus_ponens.
 }
 apply wand_frame_elim''.
-Qed.
-
-
-Lemma rewrite_corable: forall P,
-(@corable mpred Nveric Sveric CSLveric) P = corable.corable P.
-reflexivity.
-Qed.
-
-Lemma funspec_sub_sem: forall CS gargsig gretsig gcc gA gP gR 
-(gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
-argsig retsig cc A P R 
-(NEP: super_non_expansive P)
-(NER: super_non_expansive R)
-r bl ts1 x1 ret Q Delta
-, 
-(* ret a bl P Q R r ts1 x1, *)
-local (tc_environ Delta) r && (tc_exprlist Delta (snd (split argsig)) bl r )&&
-(funspec_sub_si (mk_funspec (gargsig, gretsig) gcc gA gP gR gNP gNR)
-(mk_funspec (argsig, retsig) cc A P R NEP NER))
-&& |> (P ts1 x1
-(make_args' (argsig, retsig)
-   (@eval_exprlist CS (snd (split argsig)) bl) r) *
-oboxopt Delta ret
-(fun rho : environ =>
- maybe_retval (R ts1 x1) retsig ret rho -* Q rho) r)
-|-- |> (
-(EX ts' x',
-(gP ts' x' 
-(make_args' (argsig, retsig)
- (@eval_exprlist CS (snd (split argsig)) bl) r))
-* (oboxopt Delta ret 
-(fun rho : environ =>
-maybe_retval (gR ts' x') retsig ret rho -* Q rho) r)
-)).
-(* |-- |> (
-(EX ts2 x2 (F: predicates_hered.pred compcert_rmaps.RML.R.rmap),
-F * (gP ts2 x2 r) &&
-ALL r', ((local (tc_environ (ret0_tycon Delta)) rho') && 
-   F * (gR ts2 x2 r'))  --> R ts1 x1 r'
-) *
-oboxopt Delta ret
-(fun rho : environ =>
- maybe_retval (R ts1 x1) retsig2 ret rho -* Q rho) r)
-|-- |> (
-(EX ts2 x2 F,
-F * (gP ts2 x2 r) &&
-(local (tc_environ r)) && 
-   F * (gR ts2 x2 r)  --> R ts1 x1 r
-) *
-oboxopt Delta ret
-(fun rho : environ =>
-maybe_retval (R ts1 x1) retsig2 ret rho -* Q rho) r)
-|-- |> (
-(EX ts2 x2 F,
-F * (gP ts2 x2 r) &&
-(local (tc_environ r)) && 
-     --> R ts1 x1 r
-) *
-oboxopt Delta ret
-(fun rho : environ =>
-F * (gR ts2 x2 r) -* Q rho) r)     
-|-- |> (
-(EX ts2 x2 F,
-F * (gP ts2 x2 r)
-) * 
-(local (tc_environ r)) && F * (gR ts2 x2 r) -* Q r) )     
-
-)
-) *)
-Proof.
-
-(* Program Definition unfash {A} `{agA: ageable A} (P: pred nat) : pred A :=
-fun x => P (level x).
-Next Obligation.
-apply age_level in H.
-rewrite H in H0.
-eapply pred_hereditary; eauto. unfold age;  simpl. auto.
-Qed.
-
-
-Program Definition fash {A: Type} `{NA: ageable A} (P: pred A): pred nat :=
-fun n => forall y, n >= level y -> P y.
-Next Obligation.
-destruct P as [P HP].
-simpl in *.
-apply H0.
-unfold age, age1, ag_nat,natAge1 in H.
-destruct a; inv H.
-omega.
 Qed. *)
-
-
-Print prop_ext.
-Print corable.
-unfold corable. simpl.
-unfold corable.
-
-unfold subtypes.unfash. unfold subtypes.fash. simpl.
-unfold exist.
-Search corable.
-apply prop_ext.
-
-intro w. apply prop_ext; split; intro Hx.
-- apply Hx.
-- apply Hx. }
-
-
-apply H1.
-admit.
-}
-Admitted.
-
-
-
-
 
 
 Lemma semax_aux_seq_inv: forall CS Espec (Delta : tycontext) (P : environ -> mpred) 

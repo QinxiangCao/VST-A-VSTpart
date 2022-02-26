@@ -1533,12 +1533,13 @@ Lemma func_ptr_der: forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER
 ((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v)
 |--
 !! (argsig1 = argsig2) &&
-(EX (blk_fun: address) (gA : rmaps.TypeTree)
+(EX (blk_fun: block) (gA : rmaps.TypeTree)
       (gP1 gP2 gR1 gR2 : forall ts : list Type,
       functors.MixVariantFunctor._functor
         (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
-      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) blk_fun) ) &&
-      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) blk_fun) ) &&
+      !! (v = Vptr blk_fun Ptrofs.zero) &&
+      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0)) ) &&
+      ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0)) ) &&
       ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
                       (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) &&
       ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2)
@@ -1566,10 +1567,11 @@ Proof.
   hnf in E3'. destruct E3' as [Heq' E3']. clear E3'.
   destruct Heq. destruct Heq'. destruct gsig1. inv H.
   inv H1. subst. split. { reflexivity. }
-  exists (blk2, 0).
+  exists blk2.
   exists gA1, gP1, gP2, gQ1, gQ2.
   exists gNP1, gNP2, gNQ1, gNQ2.
-  split;[split|];[split| |];auto.
+  split;[split|];[split| |];auto. split;auto.
+  reflexivity.
 Qed.
 
 
@@ -1752,6 +1754,8 @@ Proof.
   apply H.
 Qed.
 
+
+
 Lemma funspec_rewrite:  forall CS  gA gP gR 
 (gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
 argsig retsig cc A P R 
@@ -1768,7 +1772,7 @@ r bl ts1 x1 ret Q Delta,
    (@expr.eval_exprlist CS (snd (split argsig)) bl) r) *
    SeparationLogicFacts.oboxopt Delta ret
    (fun rho : environ =>
-    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)
+    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)    
 |-- |> ((EX ts' x',
   (gP ts' x' 
     (SeparationLogic.make_args' (argsig, retsig)
@@ -2060,3 +2064,97 @@ Qed.
      ]
      are similar
 *)
+
+
+Lemma func_ptr_self: forall gs fs v blk,
+  v = Vptr blk Ptrofs.zero ->
+  seplog.funspec_sub_si gs fs &&
+  seplog.func_at gs (blk, 0) |--
+  SeparationLogic.func_ptr gs v.
+Proof.
+  intros. intro w.
+  intros [E1 E2].
+  hnf. exists blk.
+  split;auto.
+  exists gs.
+  split;auto.
+  apply seplog.funspec_sub_si_refl.
+  auto.
+Qed.
+
+(* Lemma funspec_rewrite':  forall CS  gA gP gR 
+(gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
+argsig retsig cc A P R 
+(NEP: super_non_expansive P)
+(NER: super_non_expansive R)
+r bl ts1 x1 ret Q Delta, 
+(* ret a bl P Q R r ts1 x1, *)
+ seplog.tc_environ Delta r ->
+ SeparationLogic.tc_exprlist Delta (snd (split argsig)) bl r  &&
+(seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
+(mk_funspec (argsig, retsig) cc A P R NEP NER))
+&& |> (P ts1 x1
+(SeparationLogic.make_args' (argsig, retsig)
+   (@expr.eval_exprlist CS (snd (split argsig)) bl) r) *
+   SeparationLogicFacts.oboxopt Delta ret
+   (fun rho : environ =>
+    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)    
+|-- EX ts' x', |> ((
+  (gP ts' x' 
+    (SeparationLogic.make_args' (argsig, retsig)
+    (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
+  SeparationLogicFacts.oboxopt Delta ret
+    (fun rho : environ => 
+      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)).
+Proof.
+  intros.
+  eapply derives_trans with (Q0:=
+  (|> ((EX ts' x',
+  (gP ts' x' 
+    (SeparationLogic.make_args' (argsig, retsig)
+    (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
+  SeparationLogicFacts.oboxopt Delta ret
+    (fun rho : environ => 
+      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)))%pred).
+  { apply funspec_rewrite. auto. }
+  eapply derives_trans.
+  { apply later_exp.
+
+  }
+  
+  )
+
+  intro w.
+  intros [[E1 E2] E4].
+  simpl in E4.
+
+  pose proof assert_lemmas.corable_funspec_sub_si
+    (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
+    (mk_funspec (argsig, retsig) cc A P R NEP NER) as Ecor.
+  rewrite corable_spec in Ecor.
+
+  pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H _ E1 as Et.
+  simpl in Et. 
+  
+  destruct E2 as [_ E3].
+  rewrite semax.unfash_allp in E3. specialize (E3 ts1).
+  rewrite fun_beta in E3.
+  rewrite semax.unfash_allp in E3. specialize (E3 x1).
+  rewrite fun_beta in E3.
+  rewrite semax.unfash_allp in E3. 
+  specialize (E3 ((SeparationLogic.make_args' (argsig, retsig)
+                (expr.eval_exprlist (snd (split argsig)) bl) r))).
+  rewrite fun_beta in E3.
+  apply semax.unfash_fash in E3.
+  unfold imp in E3. 
+  specialize (E3 w1 (necR_refl _)).
+  destruct E3 as [ts' [x' [F [E3a E3b]]]].
+  { split;auto. }
+  
+  destruct E4 as [w1 [w2 [Ejoin [E4 E5]]]].
+
+  Print laterR.
+  destruct E2.
+
+Admitted. *)
+      
