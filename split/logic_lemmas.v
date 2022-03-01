@@ -190,13 +190,13 @@ Lemma funspec_rewrite_logic: forall (CS: compspecs) Delta argsig bl retsig cc gA
   (gP gR: forall ts : list Type, functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred) 
   NEgP NEgR A 
   (P R: forall ts : list Type, functors.MixVariantFunctor._functor (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred) 
-  NEP NEQ Q ret ts x,
+  NEP NEQ Q ret,
 local (tc_environ Delta) &&
 tc_exprlist Delta (snd (split argsig)) bl &&
 ` (funspec_sub_si
      (mk_funspec (argsig, retsig) cc gA gP gR NEgP NEgR)
      (mk_funspec (argsig, retsig) cc A P R NEP NEQ)) &&
-|> ((` (P ts x : environ -> mpred))
+|> (EX ts x, (` (P ts x : environ -> mpred))
           (make_args' (argsig, retsig) (@expr.eval_exprlist CS (snd (split argsig)) bl)) *
     oboxopt Delta ret (maybe_retval (R ts x) retsig ret -* Q))
 |-- |> (EX ts' x',
@@ -204,12 +204,19 @@ tc_exprlist Delta (snd (split argsig)) bl &&
     (make_args' (argsig, retsig) (@expr.eval_exprlist CS (snd (split argsig)) bl)) *
     oboxopt Delta ret (maybe_retval (gR ts' x') retsig ret -* (Q))).
 Proof.
-  intros. intro r.
+  intros.
+  eapply derives_trans.
+  { apply andp_right.
+    { apply andp_left1. apply now_later. }
+    { apply andp_left2. apply derives_refl. }
+  }
+  rewrite <- later_andp. apply later_derives.
+  intros. normalize. intro r.
   apply derives_rewrite. intro w.
   intros. destruct H.
   destruct H. destruct H.
   unfold local in H. unfold lift1 in H.
-  pose proof funspec_rewrite CS gA gP gR NEgP NEgR argsig retsig cc A P R NEP NEQ r bl ts x ret Q Delta H.
+  pose proof funspec_rewrite CS gA gP gR NEgP NEgR argsig retsig cc A P R NEP NEQ r bl ret ts x  Q Delta H.
   specialize (H3 w). apply H3.
   split;auto. split;auto.
 Qed.

@@ -103,10 +103,7 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
     @semax_aux CS Espec Delta
         (EX argsig: _, EX retsig: _, EX cc: _,
         EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _,
-        
-        
-        EX ts: _, EX x: _,
-        (* make rule stronger  *)
+        (* different from standard VST rule  *)
 
         !! (Cop.classify_fun (typeof a) =
             Cop.fun_case_f (type_of_params argsig) retsig cc /\ 
@@ -118,7 +115,7 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
         (* argument-expressions must typecheck *)
         `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
         (* evaluate to an actual function with specification [A]{P}{Q} *)
-        |>((`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
+        |>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
         (Clight.Scall ret a bl)
         (* ret = a(bl) *)
         (normal_ret_assert R)
@@ -196,14 +193,14 @@ Delta ret a bl Pre Post,
 @semax_aux CS Espec Delta Pre (Clight.Scall ret a bl) Post ->
 local (tc_environ Delta) && (allp_fun_id Delta && Pre) |-- 
 (EX argsig: _, EX retsig: _, EX cc: _,
-EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, EX ts: _, EX x: _,
+EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, 
 !! (Cop.classify_fun (typeof a) =
  Cop.fun_case_f (type_of_params argsig) retsig cc /\
  (retsig = Tvoid -> ret = None) /\
  tc_fn_return Delta ret retsig) &&
 ((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
 `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
-|>((`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
+|>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
 Proof.
 intros. 
 remember (Clight.Scall ret a bl) as c1.
@@ -229,15 +226,15 @@ apply exp_ENTAILL; intro P.
 apply exp_ENTAILL; intro Q.
 apply exp_ENTAILL; intro NEP.
 apply exp_ENTAILL; intro NEQ.
-apply exp_ENTAILL; intro ts.
-apply exp_ENTAILL; intro x.
 normalize.
 apply andp_right. { apply prop_right. auto. }
 apply andp_ENTAILL; [reduceLL;solve_andp|].
 apply later_ENTAILL.
+apply exp_ENTAILL; intro ts.
+apply exp_ENTAILL; intro x.
 apply sepcon_ENTAILL; [reduceLL; solve_andp |].
 eapply oboxopt_ENTAILL; eauto.
-apply wand_ENTAILL; [reduceL; solve_andp |]. Check `(P ts x: environ -> mpred). Locate Tarrow.
+apply wand_ENTAILL; [reduceL; solve_andp |].
 auto.
 - solve_andp.
 Qed.
@@ -361,63 +358,6 @@ forall (R1 R2:
     functors.MixVariantFunctorGenerator.fidentity) mpred))
 end.
 
-Require Import Coq.Program.Equality.
-
-Lemma wand_andp: forall (A:Type) (NatDed:NatDed A) (SepLog: SepLog A) (P Q R:A),
-  P -* (Q && R) |-- (P -* Q) && (P -* R) .
-Proof.
-  intros.
-  apply andp_right.
-  { apply wand_derives;solve_andp. }
-  { apply wand_derives;solve_andp. }
-Qed.
-
-Lemma precise_comb: forall CS Espec Delta A P Q c ts x,
-  @semax_aux CS Espec Delta (P ts x) c (normal_ret_assert (Q ts x)) ->
-  precise_pre_post A P Q.
-Proof.
-  intros.
-  dependent induction H.
-  - admit.
-  - specialize (IHsemax_aux1 P (fun _ _ => Q0) ts x eq_refl eq_refl).
-    specialize (IHsemax_aux2 (fun _ _ => Q0) Q ts x eq_refl eq_refl).
-    hnf in IHsemax_aux1. hnf in IHsemax_aux2.
-    hnf. intros R1 R2.
-    
-    (* specialize (IHsemax_aux1 
-        (fun ts x => (Q0 * (Q ts x -* R1 ts x)) &&(Q0 * (Q ts x -* R2 ts x)))
-        (fun ts x => (Q0 * (Q ts x -* R1 ts x)) &&(Q0 * (Q ts x -* R2 ts x)))). *)
-    specialize (IHsemax_aux1 
-                  (fun ts x => Q0 * (Q ts x -* R1 ts x))
-                  (fun ts x => Q0 * (Q ts x -* R2 ts x))).
-    specialize (IHsemax_aux2 R1 R2).
-
-    eapply derives_trans. eapply derives_trans.
-    2:{ apply IHsemax_aux1. }
-    { Intros ts1 x1. Intros ts2 x2.
-      Exists ts1 x1. Exists ts2 x2.
-      apply andp_derives.
-      { 
-         apply sepcon_derives;[apply derives_refl|].
-        apply wand_frame_intro. }
-      { apply sepcon_derives;[apply derives_refl|].
-        apply wand_frame_intro. }
-    }
-
-    normalize. rename x0 into ts'. rename a into x'.
-    Exists ts' x'.
-    apply sepcon_derives;[apply derives_refl|].
-    eapply derives_trans.
-    { apply wand_andp. }
-    apply wand_frame_intro'.
-    eapply derives_trans.
-    { apply distrib_sepcon_andp. }
-    apply andp_derives.
-
-    Search wand eq.
-Admitted.
-
-
 Definition all_precise_fun (Delta:tycontext) : Prop := 
 forall x phi, 
 (glob_specs Delta) ! x =  Some phi ->
@@ -444,8 +384,8 @@ Proof.
   try solve [repeat apply andp_left2;apply FF_left]).
   2:{ destruct Q;unfold_der. solve_andp. }
   eapply ENTAIL_trans;[apply H1|]. clear H1.
-  Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1 ts1 x1.
-  Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2 ts2 x2.
+  Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1.
+  Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2.
   rewrite H in H2. inv H2.
   apply typ_of_params_eq_inv in H6.
   rewrite H6 in *.
@@ -457,10 +397,10 @@ Proof.
   (tc_exprlist Delta (snd (split argsig2)) bl &&
   ((` (func_ptr (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))  (eval_expr a) ) &&
   (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )) &&
-|> ((` (P1 ts1 x1 : environ -> mpred))
+|> (EX (ts1:_) (x1:_), (` (P1 ts1 x1 : environ -> mpred))
       (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig2)) bl)) *
     oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1)) &&
- |> ((` (P2 ts2 x2 : environ -> mpred))
+ |> (EX (ts2:_) (x2:_),  (` (P2 ts2 x2 : environ -> mpred))
        (make_args' (argsig2, retsig2)
           (eval_exprlist (snd (split argsig2)) bl)) *
      oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
@@ -487,7 +427,7 @@ Proof.
      ` (funspec_sub_si
         (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1)
         (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1)) &&
-      |> ((` (P1 ts1 x1 : environ -> mpred))
+      |> (EX (ts1:_) (x1:_), (` (P1 ts1 x1 : environ -> mpred))
           (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
         oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1))) &&   
    (  local (tc_environ Delta) &&
@@ -495,7 +435,7 @@ Proof.
      ` (funspec_sub_si
         (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)
         (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)) &&
-     |> ((` (P2 ts2 x2 : environ -> mpred))
+     |> (EX (ts2:_) (x2:_), (` (P2 ts2 x2 : environ -> mpred))
           (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
         oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
   { solve_andp. }
@@ -504,43 +444,28 @@ Proof.
   { apply andp_right.
     - apply andp_left1.
       apply andp_right. { apply andp_left1. apply derives_refl. }
-      apply andp_left2. apply funspec_rewrite_logic.
+      apply andp_left2. Search later exp.  apply funspec_rewrite_logic.
     - apply andp_left2. apply funspec_rewrite_logic.
   }
   Exists argsig1 retsig2 cc2 gA gP1 gR1 NEgP1 NEgR1.
 
-  eapply derives_trans with (Q:=
-  !! (classify_fun (typeof a) = fun_case_f (type_of_params argsig1) retsig2 cc2 /\
-  (retsig2 = Tvoid -> ret = None) /\ tc_fn_return Delta ret retsig2) &&
-(tc_expr Delta a && tc_exprlist Delta (snd (split argsig1)) bl) &&
-(` (func_ptr (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1))) (eval_expr a) &&
-  (EX (ts : list Type) x,
-     |> ((` (gP1 ts x : environ -> mpred)) (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
-         oboxopt Delta ret (maybe_retval (gR1 ts x) retsig2 ret -* Q1 && Q2)
-     ))).
-  2:{ Intros ts' x'. Exists ts' x'. apply andp_right. 2:{ solve_andp. }
-      apply andp_right. 2:{ solve_andp. }
-      apply prop_right. split;auto. }
-  
-  apply andp_right. 
-  { apply andp_right. 
-    2:{ apply andp_left1. apply andp_left1.
-        eapply derives_trans.
-        2:{ apply ( func_ptr_self_logic _
-                     (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1) (eval_expr a) blk_fun). }
-        solve_andp.
-    }
-    apply andp_right. { apply prop_right. auto. }
-  solve_andp. }
+  apply andp_right.
+  { apply andp_right.
+    + apply andp_right.
+      - apply prop_right. auto.
+      - solve_andp.
+    + eapply derives_trans.
+      2:{ apply ( func_ptr_self_logic _
+                (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1)
+                (eval_expr a) blk_fun). }
+      solve_andp.
+  }
   rewrite andp_assoc.
-  apply andp_left2. rewrite <- later_andp.
-
-  (* 
-  eapply derives_trans.
-  { rewrite exp_andp1. apply seplog.later_exp''. }
-  apply orp_left.
-  2:{  unfold later. Search later FF.  } *)
-  (* TODO: how to deal with later? *)
+  apply andp_left2.
+  rewrite <- later_andp.
+  apply later_derives.
+  Intros ts1 x1. Intros ts2 x2.
+  
 Admitted.
 
 Lemma sepcon_rewrite: forall A B,

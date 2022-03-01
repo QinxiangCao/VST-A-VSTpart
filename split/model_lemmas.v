@@ -1761,19 +1761,19 @@ Lemma funspec_rewrite:  forall CS  gA gP gR
 argsig retsig cc A P R 
 (NEP: super_non_expansive P)
 (NER: super_non_expansive R)
-r bl ts1 x1 ret Q Delta, 
+r bl ret ts1 x1 Q Delta, 
 (* ret a bl P Q R r ts1 x1, *)
  seplog.tc_environ Delta r ->
  SeparationLogic.tc_exprlist Delta (snd (split argsig)) bl r  &&
 (seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
 (mk_funspec (argsig, retsig) cc A P R NEP NER))
-&& |> (P ts1 x1
+&& (P ts1 x1
 (SeparationLogic.make_args' (argsig, retsig)
    (@expr.eval_exprlist CS (snd (split argsig)) bl) r) *
    SeparationLogicFacts.oboxopt Delta ret
    (fun rho : environ =>
     wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)    
-|-- |> ((EX ts' x',
+|-- ((EX ts' x',
   (gP ts' x' 
     (SeparationLogic.make_args' (argsig, retsig)
     (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
@@ -1782,12 +1782,7 @@ r bl ts1 x1 ret Q Delta,
       wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)).
 Proof.
   intros.
-  eapply derives_trans.
-  { apply andp_right.
-    { apply andp_left1. apply now_later. }
-    { apply andp_left2. apply derives_refl. }
-  }
-  rewrite <- later_andp. apply later_derives.
+  
   intro w.
   
   
@@ -2082,80 +2077,3 @@ Proof.
   apply seplog.funspec_sub_si_refl.
   auto.
 Qed.
-
-(* Lemma funspec_rewrite':  forall CS  gA gP gR 
-(gNP: super_non_expansive gP) (gNR: super_non_expansive gR)
-argsig retsig cc A P R 
-(NEP: super_non_expansive P)
-(NER: super_non_expansive R)
-r bl ts1 x1 ret Q Delta, 
-(* ret a bl P Q R r ts1 x1, *)
- seplog.tc_environ Delta r ->
- SeparationLogic.tc_exprlist Delta (snd (split argsig)) bl r  &&
-(seplog.funspec_sub_si (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
-(mk_funspec (argsig, retsig) cc A P R NEP NER))
-&& |> (P ts1 x1
-(SeparationLogic.make_args' (argsig, retsig)
-   (@expr.eval_exprlist CS (snd (split argsig)) bl) r) *
-   SeparationLogicFacts.oboxopt Delta ret
-   (fun rho : environ =>
-    wand (maybe_retval (R ts1 x1) retsig ret rho)  (Q rho)) r)    
-|-- EX ts' x', |> ((
-  (gP ts' x' 
-    (SeparationLogic.make_args' (argsig, retsig)
-    (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
-  SeparationLogicFacts.oboxopt Delta ret
-    (fun rho : environ => 
-      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)).
-Proof.
-  intros.
-  eapply derives_trans with (Q0:=
-  (|> ((EX ts' x',
-  (gP ts' x' 
-    (SeparationLogic.make_args' (argsig, retsig)
-    (@expr.eval_exprlist CS (snd (split argsig)) bl) r)) *
-  SeparationLogicFacts.oboxopt Delta ret
-    (fun rho : environ => 
-      wand (maybe_retval (gR ts' x') retsig ret rho)  (Q rho)) r)))%pred).
-  { apply funspec_rewrite. auto. }
-  eapply derives_trans.
-  { apply later_exp.
-
-  }
-  
-  )
-
-  intro w.
-  intros [[E1 E2] E4].
-  simpl in E4.
-
-  pose proof assert_lemmas.corable_funspec_sub_si
-    (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
-    (mk_funspec (argsig, retsig) cc A P R NEP NER) as Ecor.
-  rewrite corable_spec in Ecor.
-
-  pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H _ E1 as Et.
-  simpl in Et. 
-  
-  destruct E2 as [_ E3].
-  rewrite semax.unfash_allp in E3. specialize (E3 ts1).
-  rewrite fun_beta in E3.
-  rewrite semax.unfash_allp in E3. specialize (E3 x1).
-  rewrite fun_beta in E3.
-  rewrite semax.unfash_allp in E3. 
-  specialize (E3 ((SeparationLogic.make_args' (argsig, retsig)
-                (expr.eval_exprlist (snd (split argsig)) bl) r))).
-  rewrite fun_beta in E3.
-  apply semax.unfash_fash in E3.
-  unfold imp in E3. 
-  specialize (E3 w1 (necR_refl _)).
-  destruct E3 as [ts' [x' [F [E3a E3b]]]].
-  { split;auto. }
-  
-  destruct E4 as [w1 [w2 [Ejoin [E4 E5]]]].
-
-  Print laterR.
-  destruct E2.
-
-Admitted. *)
-      
