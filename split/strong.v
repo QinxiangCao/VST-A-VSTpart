@@ -22,8 +22,6 @@ Require Import Split.vst_ext.
 Require Import Split.model_lemmas.
 Require Import Split.logic_lemmas.
 
-Locate LiftNotation.
-Locate eval_expr.
 
 Definition numeric_type (t: type) : bool :=
   match t with
@@ -104,7 +102,12 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
 | semax_aux_call: forall ret a bl R,
     @semax_aux CS Espec Delta
         (EX argsig: _, EX retsig: _, EX cc: _,
-        EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, EX ts: _, EX x: _,
+        EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _,
+        
+        
+        EX ts: _, EX x: _,
+        (* make rule stronger  *)
+
         !! (Cop.classify_fun (typeof a) =
             Cop.fun_case_f (type_of_params argsig) retsig cc /\ 
             (* type of a must match argsig/retsig *)
@@ -308,6 +311,34 @@ apply E.
 Qed. *)
 
 
+Definition precise_pre_post A P Q : Prop :=
+forall (R1 R2:
+ forall ts : list Type,
+ functors.MixVariantFunctor._functor
+   (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
+ (EX ts1 a1, ((P ts1 a1) * ((Q ts1 a1) -* R1 ts1 a1) :functors.MixVariantFunctor._functor
+ (functors.MixVariantFunctorGenerator.ffunc
+    (functors.MixVariantFunctorGenerator.fconst environ)
+    functors.MixVariantFunctorGenerator.fidentity) mpred )) &&
+ (EX ts2 a2, ((P ts2 a2) * ((Q ts2 a2) -* R2 ts2 a2) :functors.MixVariantFunctor._functor
+ (functors.MixVariantFunctorGenerator.ffunc
+    (functors.MixVariantFunctorGenerator.fconst environ)
+    functors.MixVariantFunctorGenerator.fidentity) mpred )) |--
+ (EX ts a, ((P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)) : functors.MixVariantFunctor._functor
+ (functors.MixVariantFunctorGenerator.ffunc
+    (functors.MixVariantFunctorGenerator.fconst environ)
+    functors.MixVariantFunctorGenerator.fidentity) mpred)).
+
+    (* If traditional precise for P then always hold for Q R
+        If with permission:
+          graph ~ P && graph ~ Q && graph ~ R
+
+          find examples in permission, and prove that they are precise.
+
+          readony permission & partial permission
+          SPLAY tree
+          
+    *)
 
 Definition precise_funspec (f:funspec) : Prop :=
 match f with
@@ -330,15 +361,67 @@ forall (R1 R2:
     functors.MixVariantFunctorGenerator.fidentity) mpred))
 end.
 
+Require Import Coq.Program.Equality.
+
+Lemma wand_andp: forall (A:Type) (NatDed:NatDed A) (SepLog: SepLog A) (P Q R:A),
+  P -* (Q && R) |-- (P -* Q) && (P -* R) .
+Proof.
+  intros.
+  apply andp_right.
+  { apply wand_derives;solve_andp. }
+  { apply wand_derives;solve_andp. }
+Qed.
+
+Lemma precise_comb: forall CS Espec Delta A P Q c ts x,
+  @semax_aux CS Espec Delta (P ts x) c (normal_ret_assert (Q ts x)) ->
+  precise_pre_post A P Q.
+Proof.
+  intros.
+  dependent induction H.
+  - admit.
+  - specialize (IHsemax_aux1 P (fun _ _ => Q0) ts x eq_refl eq_refl).
+    specialize (IHsemax_aux2 (fun _ _ => Q0) Q ts x eq_refl eq_refl).
+    hnf in IHsemax_aux1. hnf in IHsemax_aux2.
+    hnf. intros R1 R2.
+    
+    (* specialize (IHsemax_aux1 
+        (fun ts x => (Q0 * (Q ts x -* R1 ts x)) &&(Q0 * (Q ts x -* R2 ts x)))
+        (fun ts x => (Q0 * (Q ts x -* R1 ts x)) &&(Q0 * (Q ts x -* R2 ts x)))). *)
+    specialize (IHsemax_aux1 
+                  (fun ts x => Q0 * (Q ts x -* R1 ts x))
+                  (fun ts x => Q0 * (Q ts x -* R2 ts x))).
+    specialize (IHsemax_aux2 R1 R2).
+
+    eapply derives_trans. eapply derives_trans.
+    2:{ apply IHsemax_aux1. }
+    { Intros ts1 x1. Intros ts2 x2.
+      Exists ts1 x1. Exists ts2 x2.
+      apply andp_derives.
+      { 
+         apply sepcon_derives;[apply derives_refl|].
+        apply wand_frame_intro. }
+      { apply sepcon_derives;[apply derives_refl|].
+        apply wand_frame_intro. }
+    }
+
+    normalize. rename x0 into ts'. rename a into x'.
+    Exists ts' x'.
+    apply sepcon_derives;[apply derives_refl|].
+    eapply derives_trans.
+    { apply wand_andp. }
+    apply wand_frame_intro'.
+    eapply derives_trans.
+    { apply distrib_sepcon_andp. }
+    apply andp_derives.
+
+    Search wand eq.
+Admitted.
+
 
 Definition all_precise_fun (Delta:tycontext) : Prop := 
 forall x phi, 
 (glob_specs Delta) ! x =  Some phi ->
 precise_funspec phi.
-
-Set Nested Proofs Allowed.
-
-Locate liftx.
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
 all_precise_fun Delta ->
@@ -451,6 +534,7 @@ Proof.
   solve_andp. }
   rewrite andp_assoc.
   apply andp_left2. rewrite <- later_andp.
+
   (* 
   eapply derives_trans.
   { rewrite exp_andp1. apply seplog.later_exp''. }
@@ -2399,11 +2483,14 @@ Proof.
     eapply semax_aux_conseq;
     [..|eapply semax_aux_conj_set_ret with (Q1:=Q1) (Q2:=Q2);eassumption]; try solve_andp.
     intros. solve_andp.
-  - intros. apply semax_aux_call_inv in H0.
+  - intros. unfold ret_assert_andp.
+    admit.
+    (* pose proof semax_aux_conj_call.
+  
+  apply semax_aux_call_inv in H0. *)
     (* eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
       unfold FF. apply aux_semax_extract_prop. intros. destruct H1. *)
-      admit.
   - intros. apply semax_aux_builtin_inv in H0.
     eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).

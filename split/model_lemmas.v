@@ -1795,6 +1795,7 @@ Proof.
   pose proof assert_lemmas.corable_funspec_sub_si
     (mk_funspec (argsig, retsig) cc gA gP gR gNP gNR)
     (mk_funspec (argsig, retsig) cc A P R NEP NER) as Ecor.
+
   rewrite corable_spec in Ecor.
 
   pose proof semax_call.tc_environ_make_args' argsig retsig bl r Delta H _ E1 as Et.
