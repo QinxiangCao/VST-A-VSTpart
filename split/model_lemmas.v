@@ -2077,3 +2077,12 @@ Proof.
   apply seplog.funspec_sub_si_refl.
   auto.
 Qed.
+
+Lemma obox_sepcon2: forall Delta i P Q r,
+  SeparationLogic.closed_wrt_vars (eq i) P -> 
+  SeparationLogicFacts.obox Delta i (fun rho => sepcon (P rho) (Q rho)) r |-- sepcon (P r) (SeparationLogicFacts.obox Delta i Q r).
+Proof.
+  intros. intro w.
+  intros. unfold SeparationLogicFacts.obox in *.
+  destruct ((seplog.temp_types Delta) ! i ) eqn:E.
+Abort.

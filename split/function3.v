@@ -366,7 +366,7 @@ Notation "a ++ b" := (option_app a b)
 Fixpoint make_bind_pre (A : Type) (a: A) (c: Clight.statement) (a_stm': A -> statement c) : option (list partial_pre_statement) :=
        *)
 
-Inductive basic_result : Type :=.
+Definition basic_result : Type := unit.
 
 Inductive result : basic_result -> Type :=
 | result_intro (x:basic_result) : result x
@@ -391,11 +391,12 @@ Definition foo_snd {A:Type} x xs (res' : A -> binded_results (x::xs)) : A -> bin
     | binded_results_cons x x' xs xsb => xsb
     end.
 
-Program Fixpoint foo {A:Type} (res: list basic_result) (res' : A -> binded_results res)
-  : binded_results res :=
+Fixpoint foo {A:Type} (res: list basic_result):
+  (A -> binded_results res) -> binded_results res :=
   match res with
-  | nil => binded_results_nil
+  | nil => fun res' => binded_results_nil
   | x::xs =>
+     fun res' =>
       binded_results_cons 
         x (result_binded A x (foo_fst x xs res'))
         xs (foo xs (foo_snd x xs res'))
