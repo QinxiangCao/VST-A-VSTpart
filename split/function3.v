@@ -48,42 +48,64 @@ Given x...
 
 *)
 
+Inductive binded_of {R : Type} : R -> Type :=
+| binded_basic (r:R) : binded_of r
+| binded_intro (A: Type) (HA: inhabited A) (r:R): 
+    (A -> binded_of r) -> binded_of r.
+
+
+
+Inductive list_binded_of {R : Type} : list R -> Type :=
+| list_binded_nil : list_binded_of []
+| list_binded_cons (r:R) (r': binded_of r) (l: list R)
+                   (l':list_binded_of l) : list_binded_of (r::l).
+
 Inductive path_statement : Type :=
 | path_intro (pre:assert) (path:path) (post:assert)
-| path_binded (A:Type) (HA: inhabited A) : (A -> path_statement) -> path_statement.
+| binded_path (A:Type) (HA:inhabited A) (path': A -> path_statement) : path_statement.
 
-
-
-Inductive path_statements : Type :=
-| path_statements_nil
-| path_statements_cons (st:path_statement) (sts:path_statements)
-| path_statementsbinded (A:Type) (HA: inhabited A) : (A -> path_statements) -> path_statements.
-
-      
-
+Notation path_statement_binded := (binded_of path_statement).
+Notation path_statements := (list path_statement).
+Notation path_statements_binded := (list_binded_of path_statement).
 
 
 Inductive partial_pre_statement : Type :=
 | partial_pre_intro (path:path) (post:assert)
-| partial_pre_binded (A:Type) (HA: inhabited A) : (A -> partial_pre_statement) -> partial_pre_statement.
+.
+
+Notation partial_pre_statement_binded := (binded_of partial_pre_statement).
+Notation partial_pre_statements := (list partial_pre_statement).
+Notation partial_pre_statements_binded := (list_binded_of partial_pre_statement).
+
 
 Inductive partial_post_statement : Type :=
 | partial_post_intro (pre:assert) (path:path)
-| partial_post_binded (A:Type) (HA: inhabited A) : (A -> partial_post_statement) -> partial_post_statement.
+.
+
+Notation partial_post_statement_binded := (binded_of partial_post_statement).
+Notation partial_post_statements := (list partial_post_statement).
+Notation partial_post_statements_binded := (list_binded_of partial_post_statement).
 
 Inductive partial_return_statement : Type :=
 | partial_return_intro (pre:assert) (path:path) (retval: option expr)
-| partial_return_binded (A:Type) (HA: inhabited A) : (A -> partial_return_statement) -> partial_return_statement.
+.
+
+Notation partial_return_statement_binded := (binded_of partial_post_statement).
+Notation partial_return_statements := (list partial_return_statement).
+Notation partial_return_statements_binded := (list_binded_of partial_return_statement).
 
 Inductive atom_normal_statement: Type :=
 | atom_normal_intro (path: path).
 
+Notation atom_normal_statements := (list atom_normal_statement).
+
 Inductive atom_return_statement: Type :=
 | atom_return_intro (path: path) (retval: option expr).  
 
+Notation atom_return_statements := (list atom_return_statement).
 
-Record split_result_basic: Type := Pack{
-  pre   : list partial_pre_statement; (* no more binded pres with ex-given *)
+Record split_result_basic: Type := Bres_Pack {
+  pre   : list partial_pre_statement;
   paths : list path_statement;
   normal_post  : list partial_post_statement;
   continue_post: list partial_post_statement;
@@ -96,20 +118,97 @@ Record split_result_basic: Type := Pack{
 }.
 
 
+
+
+(* Inductive result : basic_result -> Type :=
+| result_intro (x:basic_result) : result x
+| result_binded (A:Type) (x: basic_result) (res' : A -> result x) : result x.
+
+Inductive binded_results : list basic_result -> Type :=
+| binded_results_nil : binded_results []
+| binded_results_cons : 
+    forall (x:basic_result) (x':result x) xs (xsb: binded_results xs),
+      binded_results (x::xs). *)
+
+Definition hd_of {R A:Type} (x: R) (xs: list R) 
+  (res' : A -> list_binded_of (x::xs)) : A -> binded_of x :=
+  fun a => 
+    match (res' a) with
+    | list_binded_cons x x' xs xsb => x'
+    end.
+
+
+Definition tl_of {R A:Type} (x: R) (xs: list R)
+  (res' : A -> list_binded_of (x::xs)) : A -> list_binded_of xs :=
+  fun a => 
+    match (res' a) with
+    | list_binded_cons x x' xs xsb => xsb
+    end.
+
+
+Fixpoint flatten_given {R A:Type} (res: list R) (HA: inhabited A):
+(A -> list_binded_of res) -> list_binded_of res :=
+match res with
+| nil => fun res' => (list_binded_nil)
+| x::xs =>
+    fun res' =>
+    list_binded_cons
+      x (binded_intro A HA x (hd_of x xs res'))
+      xs (flatten_given xs HA (tl_of x xs res'))
+end.
+
+(* Fixpoint binded_map {R1 R2: Type} 
+  (f_basic: R1 -> R2)
+  (f: forall (r1:R1), binded_of r1 -> binded_of (f_basic r1)) 
+  (res_basic: list R1)
+  (res: list_binded_of res_basic) : list_binded_of (map f_basic res_basic) :=
+match res with
+| list_binded_nil => list_binded_nil
+| list_binded_cons x x' xs xs' =>
+  list_binded_cons x (f x x') xs (binded_map f xs xs')
+end. *)
+
+
 (*****************************)
 (*****************************)
 (* Basic Operations on paths *)
 (*****************************)
 (*****************************)
-Fixpoint add_P_to_partial_pre P pre := match pre with
-| partial_pre_intro path Q => path_intro P path Q
-| partial_pre_binded A HA pre' =>
-    path_binded A HA (fun x =>
-      add_P_to_partial_pre P (pre' x)
-    )
-end.
+Fixpoint add_P_to_partial_pre P path Q (pre: binded_of (partial_pre_intro path Q)) : path_statement :=
+  match pre with
+  | binded_basic (partial_pre_intro path Q) =>
+      (path_intro P path Q)
+  | binded_intro A HA (partial_pre_intro path Q) pre' =>
+      binded_path A HA (fun x => add_P_to_partial_pre P path Q (pre' x))
+  end.
 
-Definition add_P_to_partial_pres P := map (add_P_to_partial_pre P).
+(* Fixpoint add_P_to_partial_pres_basic P pres_basic :=
+  match pres_basic with
+  | [] => []
+  | (partial_pre_intro path Q)::xs => 
+        (path_intro P path Q) :: add_P_to_partial_pres_basic P xs
+  end. *)
+
+Fixpoint add_P_to_partial_pres P pres_basic (pres:list_binded_of pres_basic) : list path_statement:=
+  match pres with
+  | list_binded_nil => []
+  | list_binded_cons (partial_pre_intro path Q) x' xs xs' =>
+      (add_P_to_partial_pre P path Q x') :: add_P_to_partial_pres P xs xs'
+  end.
+
+  (* match pres_basic with
+  | [] => fun pres => list_binded_nil
+  | (partial_pre_intro path Q)::xs =>
+      fun pres => match pres with
+      | list_binded_cons (partial_pre_intro path Q) x'
+                          xs pres' =>
+       list_binded_cons 
+        (path_intro P path Q)
+        (add_P_to_partial_pre P path Q x')
+        (add_P_to_partial_pres_basic P xs)
+        (add_P_to_partial_pres P xs pres')
+      end
+  end. *)
 
 Definition add_P_to_normal_atom P atom := match atom with
 | atom_normal_intro path => partial_post_intro P path end.
@@ -365,42 +464,6 @@ Notation "a ++ b" := (option_app a b)
 
 Fixpoint make_bind_pre (A : Type) (a: A) (c: Clight.statement) (a_stm': A -> statement c) : option (list partial_pre_statement) :=
        *)
-
-Definition basic_result : Type := unit.
-
-Inductive result : basic_result -> Type :=
-| result_intro (x:basic_result) : result x
-| result_binded (A:Type) (x: basic_result) (res' : A -> result x) : result x.
-
-Inductive binded_results : list basic_result -> Type :=
-| binded_results_nil : binded_results []
-| binded_results_cons : 
-    forall (x:basic_result) (x':result x) xs (xsb: binded_results xs),
-      binded_results (x::xs).
-
-Definition foo_fst {A:Type} x xs (res' : A -> binded_results (x::xs)) : A -> result x :=
-  fun a => 
-    match (res' a) with
-    | binded_results_cons x x' xs xsb => x'
-    end.
-
-
-Definition foo_snd {A:Type} x xs (res' : A -> binded_results (x::xs)) : A -> binded_results xs :=
-  fun a => 
-    match (res' a) with
-    | binded_results_cons x x' xs xsb => xsb
-    end.
-
-Fixpoint foo {A:Type} (res: list basic_result):
-  (A -> binded_results res) -> binded_results res :=
-  match res with
-  | nil => fun res' => binded_results_nil
-  | x::xs =>
-     fun res' =>
-      binded_results_cons 
-        x (result_binded A x (foo_fst x xs res'))
-        xs (foo xs (foo_snd x xs res'))
-  end.
 
 
 Fixpoint split_normal_atom c_stm ss (stm: statement c_stm ss) : option (list atom_normal_statement) :=
