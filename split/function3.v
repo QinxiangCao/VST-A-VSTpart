@@ -210,8 +210,38 @@ Fixpoint add_P_to_partial_pres P pres_basic (pres:list_binded_of pres_basic) : l
       end
   end. *)
 
-Definition add_P_to_normal_atom P atom := match atom with
+Definition add_P_to_normal_atom_basic P atom := match atom with
+  | atom_normal_intro path => partial_post_intro P path end.
+
+(* how to define the function when the output type is a dependent type ? *)
+
+
+Fixpoint add_P_to_normal_atoms
+  (P: assert) 
+  (atoms: list atom_normal_statement)
+  :  { posts : partial_post_statements & list_binded_of posts } :=
+  match atoms with
+  | [] => existT (fun posts => list_binded_of posts) nil (list_binded_nil)
+  | (atom_normal_intro path)::atoms' =>
+    match add_P_to_normal_atoms P atoms' with
+    | existT posts_basic' posts' =>
+      existT (fun posts => list_binded_of posts)
+      ((partial_post_intro P path):: posts_basic')
+      (list_binded_cons 
+          (partial_post_intro P path)
+          (binded_basic (partial_post_intro P path))
+          posts_basic'
+          posts')
+    end
+  end.
+
+  
+
+Definition add_P_to_normal_atom_basic P atom := match atom with
 | atom_normal_intro path => partial_post_intro P path end.
+
+Definition add_P_to_normal_atom P atom := 
+  (binded_basic (add_P_to_normal_atom_basic P atom)).
 
 Definition add_P_to_normal_atoms P := map (add_P_to_normal_atom P).
 
