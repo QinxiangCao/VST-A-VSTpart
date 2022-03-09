@@ -11,115 +11,6 @@ Local Open Scope logic.
 Require Import VST.veric.SeparationLogic.
 Require Import VST.floyd.SeparationLogicFacts.
 
-(* Lemma exp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
-@predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
-  (algNatDed T) B x.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma allp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
-@predicates_hered.allp T H B x = @allp (predicates_hered.pred T) 
-  (algNatDed T) B x.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma andp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
-@predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
-    (algNatDed T) x y).
-Proof.
-    reflexivity.
-Qed.
-
-
-Lemma imp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
-@predicates_hered.imp T H x y = @imp (predicates_hered.pred T) 
-    (algNatDed T) x y).
-Proof.
-    reflexivity.
-Qed.
-
-
-
-Lemma derives_rewrite: forall P Q,
-  predicates_hered.derives P Q ->
-  @derives
-  (@predicates_hered.pred compcert_rmaps.RML.R.rmap
-     compcert_rmaps.RML.R.ag_rmap) Nveric P Q.
-Proof.
-  intros.
-  auto.
-Qed. *)
-
-
-(* Lemma func_at_unique1_lift: forall
-  fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
-  fsig2 cc2 A2 P2 Q2 NEP2 NEQ2 l,
-  func_at (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2) l
-  |-- !! (fsig1 = fsig2 /\ cc1 = cc2 /\ A1 = A2).
-Proof.
-  intros. intros. destruct H.
-  eapply func_at_unique1.
-  - apply H.
-  - apply H0.
-Qed. *)
-
-(* Lemma func_at_unique2_logic: forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 l ts x vl,
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
-|--  
-  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
-  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
-     (|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
-.
-intros.
-intro r. intros.
-destruct H. pose proof H0 as H0'.
- eapply func_at_unique2 in H0. 2:{ apply H. }
- destruct H0.
- pose proof H0 ts x vl.
- pose proof H1 ts x vl.
-rewrite <- later_unfash in H2, H3.
-clear H0 H1.
-assert (
-  (|> ! (P2 ts x vl <=> P1 ts x vl)) |-- 
-  (|> (P2 ts x vl <--> P1 ts x vl)))%pred.
-Check log_normalize.later_derives.
-Search box laterM.
-apply semax.unfash_fash.
-assert (
-  (|> ! (Q2 ts x vl <=> Q1 ts x vl)) |-- 
-  (|> (Q2 ts x vl <--> Q1 ts x vl))).
-apply later_derives.
-apply semax.unfash_fash.
-split;auto. split;auto.
-split;auto.
-Qed.
-
-Lemma func_at_unique2_logic': forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 l ts x vl,
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
-|--  
-  func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-  func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
-  (|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
-     (|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
-.
-Proof.
-  intros. Locate derives.
-  pose proof func_at_unique2_logic fsig. cc A P1 Q1 NEP1 NEQ1
-  P2 Q2 NEP2 NEQ2 l ts x vl as E.
-  rewrite !andp_rewrite in E.
-  apply E.
-Qed. *)
-
 
 Lemma typ_of_params_eq_inv:
 forall argsig1 argsig2,
@@ -150,16 +41,74 @@ Proof.
 Qed.
 
 
-Lemma func_ptr_der_logic: forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
+
+Lemma allp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
+@predicates_hered.allp T H B x = @allp (predicates_hered.pred T) 
+(algNatDed T) B x.
+Proof.
+reflexivity.
+Qed.
+
+
+
+Lemma func_at_unique2_logic: forall
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 (l: address),
+`(func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l) &&
+`(func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)
+|--  (( (|> (ALL ts x (vl: environ -> environ),  `(P2 ts x : environ -> mpred) vl <--> `(P1 ts x: environ -> mpred) vl)))) &&
+      (( (|> (ALL ts x (vl: environ -> environ),  `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl)))).
+Proof.
+  intros.
+  eapply derives_trans with (Q:=
+    ((ALL ts x vl,   (|> (`(P2 ts x : environ -> mpred) vl <--> `(P1 ts x: environ -> mpred) vl)))) &&
+        ((ALL ts x vl,  (|> ( `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl))))
+  ).
+  2:{ apply andp_derives.
+  + rewrite later_allp. apply allp_derives.
+    intros ts. rewrite later_allp. apply allp_derives.
+    intros x. rewrite later_allp. apply allp_derives.
+    intros vl. apply derives_refl.
+  + rewrite later_allp. apply allp_derives.
+    intros ts. rewrite later_allp. apply allp_derives.
+    intros x. rewrite later_allp. apply allp_derives.
+    intros vl. apply derives_refl.
+  }
+  apply andp_right.
+  { apply allp_right. intros ts.
+    apply allp_right. intros x.
+    apply allp_right. intros vl.
+    intro r.
+    apply derives_rewrite.
+    intros rho. intros [E1 E2].
+    pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
+    destruct H.
+    specialize (H ts x (vl r)). auto.
+  }
+  { apply allp_right. intros ts.
+    apply allp_right. intros x.
+    apply allp_right. intros vl.
+    intro r.
+    apply derives_rewrite.
+    intros rho. intros [E1 E2].
+    pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
+    destruct H.
+    specialize (H0 ts x (vl r)). auto.
+  }
+Qed.
+
+Lemma func_ptr_der_logic: forall Delta argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
 (` (func_ptr (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v &&
- (` (func_ptr (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v
+ (` (func_ptr (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
+ `(precise_fun_at_ptr Delta) v
 |--
 !! (argsig1 = argsig2) &&
 (EX (blk_fun: block) (gA : rmaps.TypeTree)
       (gP1 gP2 gR1 gR2 : forall ts : list Type,
       functors.MixVariantFunctor._functor
         (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
-      (lift1 seplog.prop (( (fun rho => (v rho = Vptr blk_fun Ptrofs.zero)) ))) &&
+      seplog.prop (precise_funspec Delta (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2)) &&
+      (lift1 seplog.prop (( (fun rho => (v rho = Vptr blk_fun Ptrofs.zero))))) &&
       (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0)) ) &&
       (`(seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0)) ) &&
       (`(seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
@@ -170,12 +119,14 @@ Proof.
   intros. intro r.
   apply derives_rewrite. intro w.
   intros. simpl in H.
-  pose proof func_ptr_der _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H.
+  pose proof func_ptr_der _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H.
   destruct H0. hnf in H0. subst. split;try reflexivity.
   destruct H1 as [blk_fun [gA [gP1 [gP2 [gR1 [gR2 [NEgP1 [NEgP2 [NEgR1 [NEgR2 E]]]]]]]]]].
   exists blk_fun, gA, gP2, gP1, gR2, gR1, NEgP2, NEgP1, NEgR2, NEgR1.
   destruct E. destruct H0. destruct H0. destruct H0.
   split;[split;[split|]|];auto. split;auto.
+  destruct H0.
+  split;auto.
 Qed.
 
 

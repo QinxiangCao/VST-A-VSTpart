@@ -16,6 +16,47 @@ Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_Sound.DeepEmbedded.
 Require Import VST.floyd.proofauto.
 
 
+(* 
+moved away
+
+Require Export VST.veric.seplog.
+
+Require Export VST.veric.SeparationLogic.
+
+
+Require Export VST.floyd.SeparationLogicFacts.
+
+
+
+Definition precise_funspec Delta (f:funspec) : Prop :=
+match f with
+| mk_funspec fsig cc A P R _ _ =>
+forall bl Q1 Q2 ret,
+((snd fsig) = Tvoid <-> ret = None) ->
+tc_fn_return Delta ret (snd fsig) ->
+((EX ts1 x1, (lift.liftx (P ts1 x1 : environ -> mpred) ) (make_args' fsig bl) *
+oboxopt Delta ret (maybe_retval (R ts1 x1) (snd fsig) ret -* Q1)) &&
+(EX ts2 x2, ((lift.liftx (P ts2 x2: environ -> mpred)) (make_args' fsig bl) *
+ oboxopt Delta ret (maybe_retval (R ts2 x2) (snd fsig) ret -* Q2)))
+|-- EX (ts : list Type)
+    (x : functors.MixVariantFunctor._functor
+           ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
+               match T with
+               | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
+               | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+               | rmaps.DependentType n => functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
+               | rmaps.ProdType T1 T2 => functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
+               | rmaps.ArrowType T1 T2 => functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
+               | rmaps.SigType I0 f => functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
+               | rmaps.PiType I0 f => functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
+               | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
+               end) A) mpred),
+    (lift.liftx (P ts x: environ -> mpred)) (make_args' fsig bl) *
+    oboxopt Delta ret (maybe_retval (R ts x) (snd fsig) ret -* Q1 && Q2))%logic
+end. *)
+
+
+
 Lemma nil_cons {A:Type} {a:A} {b: list A}: a :: b <> [].
 Proof. intros C. inv C. Qed.
 

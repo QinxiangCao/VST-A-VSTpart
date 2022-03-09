@@ -32,6 +32,7 @@ Definition numeric_type (t: type) : bool :=
   | _ => false
   end.
 
+
 Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ -> mpred) -> Clight.statement -> ret_assert -> Prop :=
 | semax_aux_ifthenelse :
    forall P (b: expr) c d R,
@@ -114,6 +115,7 @@ Inductive semax_aux {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (env
         (tc_exprlist Delta (snd (split argsig)) bl)))  &&
         (* argument-expressions must typecheck *)
         `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+        `(precise_fun_at_ptr Delta) (eval_expr a) &&
         (* evaluate to an actual function with specification [A]{P}{Q} *)
         |>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
         (Clight.Scall ret a bl)
@@ -176,7 +178,7 @@ Ltac unfold_der := unfold normal_ret_assert,
 
 
 
-  Lemma oboxopt_ENTAIL: forall (Delta : tycontext) (ret : option ident) 
+Lemma oboxopt_ENTAIL: forall (Delta : tycontext) (ret : option ident) 
   (retsig : type) (P Q : environ -> mpred),
 tc_fn_return Delta ret retsig ->
 ENTAIL Delta,  P |-- Q ->
@@ -199,7 +201,8 @@ EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _,
  (retsig = Tvoid -> ret = None) /\
  tc_fn_return Delta ret retsig) &&
 ((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&  
+`(precise_fun_at_ptr Delta) (eval_expr a) &&
 |>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
 Proof.
 intros. 
@@ -285,129 +288,49 @@ intros.
 auto.
 Qed.
 
-
-
-
-(* Lemma func_at_unique2_logic': forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 l ts x vl,
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l 
-|--  
-func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l &&
-func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l &&
-(|> ((P2 ts x : environ -> mpred) vl <--> P1 ts x vl)) &&
-(|> ((Q2 ts x : environ -> mpred) vl <--> Q1 ts x vl))
-.
-Proof.
-intros. Locate derives.
-pose proof func_at_unique2_logic fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 l ts x vl as E.
-rewrite !andp_rewrite in E.
-apply E.
-Qed. *)
-
-
-Definition precise_pre_post A P Q : Prop :=
-forall (R1 R2:
- forall ts : list Type,
- functors.MixVariantFunctor._functor
-   (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
- (EX ts1 a1, ((P ts1 a1) * ((Q ts1 a1) -* R1 ts1 a1) :functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred )) &&
- (EX ts2 a2, ((P ts2 a2) * ((Q ts2 a2) -* R2 ts2 a2) :functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred )) |--
- (EX ts a, ((P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)) : functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred)).
-
-Definition precise_pre_post' A P Q : Prop :=
-  forall (R1 R2:
-    forall ts : list Type,
-    functors.MixVariantFunctor._functor
-      (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred) ts1 a1 ts2 a2,
-    ( ((P ts1 a1) * ((Q ts1 a1) -* R1 ts1 a1) :functors.MixVariantFunctor._functor
-    (functors.MixVariantFunctorGenerator.ffunc
-      (functors.MixVariantFunctorGenerator.fconst environ)
-      functors.MixVariantFunctorGenerator.fidentity) mpred )) &&
-    (((P ts2 a2) * ((Q ts2 a2) -* R2 ts2 a2) :functors.MixVariantFunctor._functor
-    (functors.MixVariantFunctorGenerator.ffunc
-      (functors.MixVariantFunctorGenerator.fconst environ)
-      functors.MixVariantFunctorGenerator.fidentity) mpred )) |--
-    (EX ts a, ((P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)) : functors.MixVariantFunctor._functor
-    (functors.MixVariantFunctorGenerator.ffunc
-      (functors.MixVariantFunctorGenerator.fconst environ)
-      functors.MixVariantFunctorGenerator.fidentity) mpred)).
-
-Lemma precise_pp_to_pp' : forall A P Q,
-precise_pre_post A P Q -> precise_pre_post' A P Q.
+Lemma semax_aux_fun_id:
+  forall {CS: compspecs} {Espec: OracleKind},
+      forall id f Delta P Q c,
+    (var_types Delta) ! id = None ->
+    (glob_specs Delta) ! id = Some f ->
+    (glob_types Delta) ! id = Some (type_of_funspec f) ->
+    @semax_aux CS Espec Delta (P && `(func_ptr f) (eval_var id (type_of_funspec f)))
+                  c Q ->
+    @semax_aux CS Espec Delta P c Q.
 Proof.
   intros.
-  hnf. intros. eapply derives_trans.
-  2:{ apply H. }
-  Exists ts1 a1. Exists ts2 a2. solve_andp.
+  eapply semax_aux_conseq;[..|apply H2]; try solve [intros; solve_andp].
+  apply andp_right; [solve_andp |].
+  rewrite andp_comm.
+  rewrite imp_andp_adjoint.
+  rewrite imp_andp_adjoint.
+  intros rho.
+  apply (allp_left _ id).
+  apply (allp_left _ f).
+  rewrite log_normalize.prop_imp by auto.
+  apply exp_left; intros b.
+  unfold local, lift1; unfold_lift; simpl. normalize.
+  rewrite <- imp_andp_adjoint.
+  rewrite <- imp_andp_adjoint. normalize. 
+  unfold derives. apply predicates_hered.exp_right with (x:=b). eapply predicates_hered.prop_andp_right.
+  - unfold eval_var. rewrite H3.
+    destruct H4 as [_ [? _]].
+    specialize (H4 id).
+    rewrite H in H4.
+    destruct (Map.get (ve_of rho) id) as [[? ?] |]; [exfalso | auto].
+    specialize (H4 t).
+    destruct H4 as [_ ?].
+    specialize (H4 ltac:(eexists; eauto)). congruence.
+  - unfold func_ptr, seplog.func_ptr. (* apply predicates_hered.exp_right with (x:=f). *)
+    apply predicates_hered.andp_left1. 
+    apply predicates_hered.exp_left; intros bb.
+    apply normalize.derives_extract_prop; intros X; inv X. trivial.
 Qed.
 
-    (* If traditional precise for P then always hold for Q R
-        If with permission:
-          graph ~ P && graph ~ Q && graph ~ R
-
-          find examples in permission, and prove that they are precise.
-
-          readony permission & partial permission
-          SPLAY tree
-          
-    *)
-
-Definition precise_funspec (f:funspec) : Prop :=
-match f with
-| mk_funspec fsig cc A P Q _ _ =>
-forall (R1 R2:
- forall ts : list Type,
- functors.MixVariantFunctor._functor
-   (rmaps.dependent_type_functor_rec ts (AssertTT A)) mpred),
- (EX ts1 a1, ((P ts1 a1) * ((Q ts1 a1) -* R1 ts1 a1) :functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred )) &&
- (EX ts2 a2, ((P ts2 a2) * ((Q ts2 a2) -* R2 ts2 a2) :functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred )) |--
- (EX ts a, ((P ts a) * ((Q ts a) -* (R1 ts a && R2 ts a)) : functors.MixVariantFunctor._functor
- (functors.MixVariantFunctorGenerator.ffunc
-    (functors.MixVariantFunctorGenerator.fconst environ)
-    functors.MixVariantFunctorGenerator.fidentity) mpred))
-end.
-
-Definition all_precise_fun (Delta:tycontext) : Prop := 
-forall x phi, 
-(glob_specs Delta) ! x =  Some phi ->
-precise_funspec phi.
-
-
-(* Lemma allp_sepcon3:
-forall (A : Type) (ND : NatDed A) (SL : SepLog A) 
-(T : Type) (P : A) (Q : T -> A), ALL x : T, P * Q x |--  P * (ALL y, Q y).
-Proof.
-  intros. *)
-
-(* 
-
-  Search sepcon allp.  *)
-
-  Print obox.
-  Print oboxopt.
 
 
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
-all_precise_fun Delta ->
 @semax_aux CS Espec Delta P 
 (Clight.Scall ret a bl) (overridePost Q2 Q) ->
 @semax_aux CS Espec Delta P 
@@ -415,7 +338,7 @@ all_precise_fun Delta ->
 @semax_aux CS Espec Delta P 
 (Clight.Scall ret a bl) (overridePost (Q1 && Q2) Q).
 Proof.
-  intros CS Espec Delta ret a bl P Q Q1 Q2 Hprecise.
+  intros CS Espec Delta ret a bl P Q Q1 Q2.
   intros.
   apply semax_aux_call_inv in H.
   apply semax_aux_call_inv in H0.
@@ -436,23 +359,28 @@ Proof.
   destruct Q as [Qn Qb Qc Qr];unfold_der.
 
   eapply derives_trans with (Q:=
-  local (tc_environ Delta) && tc_expr Delta a && 
+  local (tc_environ Delta) && tc_expr Delta a &&
   (tc_exprlist Delta (snd (split argsig2)) bl &&
   ((` (func_ptr (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))  (eval_expr a) ) &&
-  (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )) &&
+  (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )  &&
+  ((` (precise_fun_at_ptr Delta)) (eval_expr a))) &&
 |> (EX (ts1:_) (x1:_), (` (P1 ts1 x1 : environ -> mpred))
       (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig2)) bl)) *
     oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1)) &&
  |> (EX (ts2:_) (x2:_),  (` (P2 ts2 x2 : environ -> mpred))
        (make_args' (argsig2, retsig2)
           (eval_exprlist (snd (split argsig2)) bl)) *
-     oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
+     oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))
+     ).
   { solve_andp. }
   
-  rewrite (add_andp _ _ (func_ptr_der_logic _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
+  rewrite (add_andp _ _ (func_ptr_der_logic _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
   Intros blk_fun gA gP1 gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2.
   assert_PROP (argsig1 = argsig2). { solve_andp. }
   subst argsig2.
+  assert_PROP (
+    precise_funspec Delta (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)).
+  { solve_andp. }
   
   eapply derives_trans with (Q:=
   local (tc_environ Delta) && tc_expr Delta a &&
@@ -462,10 +390,14 @@ Proof.
     (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))) (eval_expr a) &&
     (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
     (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) &&
+    ((` (precise_fun_at_ptr Delta)) (eval_expr a)) &&
     ` (funspec_sub_si (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) 
                         (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))
     ) &&
-   (  local (tc_environ Delta) &&
+   ( 
+    ((` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) ) &&
+    (local (tc_environ Delta) &&
       tc_exprlist Delta (snd (split argsig1)) bl &&
      ` (funspec_sub_si
         (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1)
@@ -480,38 +412,90 @@ Proof.
         (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)) &&
      |> (EX (ts2:_) (x2:_), (` (P2 ts2 x2 : environ -> mpred))
           (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
-        oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))).
+        oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2))))).
   { solve_andp. }
   
   eapply derives_trans.
-  { apply andp_right.
-    - apply andp_left1.
-      apply andp_right. { apply andp_left1. apply derives_refl. }
-      apply andp_left2. Search later exp.  apply funspec_rewrite_logic.
-    - apply andp_left2. apply funspec_rewrite_logic.
+  { apply andp_derives.
+    { apply derives_refl. }
+    apply andp_derives. 
+    * apply andp_derives.
+      { apply derives_refl. } 
+      apply funspec_rewrite_logic.
+    * apply funspec_rewrite_logic.
   }
   Exists argsig1 retsig2 cc2 gA gP1 gR1 NEgP1 NEgR1.
+
+  rewrite (add_andp _ _ (
+    func_at_unique2_logic (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1
+    gP2 gR2 NEgP2 NEgR2 (blk_fun, 0)
+    )).
 
   apply andp_right.
   { apply andp_right.
     + apply andp_right.
-      - apply prop_right. auto.
-      - solve_andp.
-    + eapply derives_trans.
-      2:{ apply ( func_ptr_self_logic _
+      - apply andp_right.
+        * apply prop_right. auto.
+        * solve_andp.
+      - eapply derives_trans.
+        2:{ apply ( func_ptr_self_logic _
                 (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1)
                 (eval_expr a) blk_fun). }
-      solve_andp.
+        solve_andp.
+    + solve_andp.
   }
-  rewrite andp_assoc.
   apply andp_left2.
-  rewrite <- later_andp.
+  rewrite <- !later_andp.
+  rewrite andp_assoc. rewrite <- !later_andp.
+  rewrite andp_assoc. rewrite <- !later_andp.
+  apply andp_left2.
+
   apply later_derives.
   Intros ts1 x1. Intros ts2 x2.
-  
 
+Check (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)).
 
+  eapply derives_trans.
+  { apply andp_derives.
+    2:{ apply derives_refl. }
+    apply andp_derives.
+    - eapply derives_trans;[apply allp_instantiate with (x:=ts1)|].
+      eapply derives_trans;[apply allp_instantiate with (x:=x1)|].
+      apply allp_instantiate 
+        with (x:=make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)).
+    - eapply derives_trans;[apply allp_instantiate with (x:=ts1)|].
+      eapply derives_trans;[apply allp_instantiate with (x:=x1)|].
+      apply derives_refl.
+      (* apply allp_instantiate 
+        with (x:=make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)). *)
+  }
 
+  rewrite <- !andp_assoc. eapply derives_trans with
+  (Q:= 
+  (` (gP2 ts1 x1 : environ -> mpred))
+  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+oboxopt Delta ret (maybe_retval (gR2 ts1 x1) retsig2 ret -* Q1) &&
+((` (gP2 ts2 x2: environ -> mpred))
+   (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+ oboxopt Delta ret (maybe_retval (gR2 ts2 x2) retsig2 ret -* Q2)
+  )).
+  { apply andp_derives;[|apply derives_refl].
+    admit. }
+
+  eapply derives_trans with (Q:=
+  (EX ts1 x1, (` (gP2 ts1 x1: environ -> mpred))
+  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+oboxopt Delta ret (maybe_retval (gR2 ts1 x1) retsig2 ret -* Q1)) &&
+(EX ts2 x2, (` (gP2 ts2 x2: environ -> mpred))
+   (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
+ oboxopt Delta ret (maybe_retval (gR2 ts2 x2) retsig2 ret -* Q2))
+  ).
+  { Exists ts1 x1 ts2 x2. solve_andp. }
+
+  unfold precise_funspec in H2.
+  specialize (H2 ((eval_exprlist (snd (split argsig1)) bl)) Q1 Q2 ret).
+  intro r. specialize (H2 r H3 H4).
+  (* apply H2. *)
 Admitted.
 
 Lemma obox_andp: forall Delta i P Q,
@@ -554,79 +538,6 @@ Proof.
     rewrite subst_andp. solve_andp.
 Qed.
 
-Lemma obox_sepcon2: forall Delta i P Q,
-  closed_wrt_vars (eq i) P -> 
-  obox Delta i (P * Q) |-- P * obox Delta i Q.
-Proof.
-  intros.
-  unfold obox.
-
-Locate closed_wrt_vars.
-
-Search closed_wrt_vars obox.
-
-Locate obox_closed.
-
-Check closed_wrt_subst.
-
-
-  Search wand sepcon.
-
-  Search sepcon allp.
-  Locate allp_sepcon2.
-
-    
-Search obox.
-
-
-Abort.
-
-
-Lemma precise_funspec_ret: forall Delta A P R arglist retsig ret Q1 Q2 ts1 x1 ts2 x2,
-precise_pre_post A P R ->
-(retsig = Tvoid <-> ret = None) ->
-( (` (P ts1 x1)) arglist * oboxopt Delta ret (maybe_retval (R ts1 x1) retsig ret -* Q1)) &&
-((` (P ts2 x2)) arglist * oboxopt Delta ret (maybe_retval (R ts2 x2) retsig ret -* Q2))
-|-- EX ts x,
-((` (P ts x)) arglist * oboxopt Delta ret (maybe_retval (R ts x) retsig ret -* Q1 && Q2 ):functors.MixVariantFunctor._functor
-(functors.MixVariantFunctorGenerator.ffunc
-   (functors.MixVariantFunctorGenerator.fconst environ)
-   functors.MixVariantFunctorGenerator.fidentity) mpred).
-Proof.
-  intros.
-  pose proof precise_pp_to_pp' _ _ _ H as H'.
-  specialize (H' (fun _ _ => Q1) (fun _ _ => Q2) ts1 x1 ts2 x2). simpl in H'.
-  
-  
-  destruct ret eqn:Eret.
-  - (* ret = Some i *)
-    destruct ((temp_types Delta) ! i) eqn:Eguard.
-    { (* temp_types Delta ! i = Some t *)
-      assert (temp_guard Delta i). { hnf. rewrite Eguard. intros C. inv C. }
-      assert ((` (P ts1 x1)) arglist = obox Delta i (fun rho => (` (P ts1 x1)) arglist rho)).
-      { pose proof obox_closed Delta i (fun rho : environ => (` (P ts1 x1)) arglist rho) H1.
-        rewrite H2;auto. admit. }
-      assert ((` (P ts2 x2)) arglist = obox Delta i (fun rho => (` (P ts2 x2)) arglist rho)).
-      { pose proof obox_closed Delta i (fun rho : environ => (` (P ts2 x2)) arglist rho) H1.
-        rewrite H3;auto. admit. }
-      unfold oboxopt.
-      rewrite H2. rewrite H3.
-      eapply derives_trans.
-      { apply andp_derives;apply obox_sepcon. }
-      eapply derives_trans.
-      { apply obox_andp. }
-      admit.
-    }
-    { (* temp_types Delta ! i = None *)
-      unfold oboxopt. unfold obox. rewrite Eguard.
-      unfold temp_types in Eguard.
-      Exists ts1 x1. solve_andp.
-    }
-  - (* ret = None *)
-    unfold oboxopt. unfold maybe_retval.
-    replace (retsig) with (Tvoid). 2:{ symmetry. apply H0. auto. }
-
-Admitted.
 
 
 Lemma sepcon_rewrite: forall A B,
