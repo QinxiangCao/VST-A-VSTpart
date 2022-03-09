@@ -51,17 +51,16 @@ Inductive split_statement : Type :=
 
 
 
-Inductive statement : Clight.statement -> split_statement -> Type :=
+Inductive statement : Clight.statement -> Type :=
 | Ssequence: forall (s1: Clight.statement) (s2: Clight.statement)
-      (ss1: split_statement) (ss2: split_statement)
-      (c1: statement s1 ss1) (c2: statement s2 ss2),
-    statement (Clight.Ssequence s1 s2) (SSsequence ss1 ss2)
+      (c1: statement s1) (c2: statement s2),
+    statement (Ssequence s1 s2)
 | Sassert: forall (a: assert),
-    statement (Clight.Sskip) SSassert
-| Sskip: statement (Clight.Sskip) SSatom
-| Sgiven : forall (A:Type) (a:A) (c: Clight.statement) (ss: split_statement)
-    (a_stm': A -> statement c ss),
-    statement c ss.
+    statement (Clight.Sskip)
+| Sskip: statement (Clight.Sskip)
+| Sgiven : forall (A:Type) (a:A) (c: Clight.statement)
+    (a_stm': A -> statement c),
+    statement c.
 
 (* | Sexgiven:  forall (A:Type) (a:A) (ass: A -> assert)  (c: Clight.statement) (a_stm': A -> statement c),
     statement c

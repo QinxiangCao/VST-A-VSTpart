@@ -15,6 +15,38 @@ Require Import VST.veric.mpred.
 Require Import VST.veric.mapsto_memory_block.
 
 
+(* match f with
+| mk_funspec fsig cc A P R _ _ =>
+forall bl Q1 Q2 ret,
+(snd fsig) = Tvoid -> ret = None ->
+tc_fn_return Delta ret (snd fsig) ->
+(EX ts1 x1, (lift.liftx (P ts1 x1 : environ -> mpred) ) (make_args' fsig bl) *
+oboxopt Delta ret (maybe_retval (R ts1 x1) (snd fsig) ret -* Q1)) &&
+(EX ts2 x2, ((lift.liftx (P ts2 x2: environ -> mpred)) (make_args' fsig bl) *
+ oboxopt Delta ret (maybe_retval (R ts2 x2) (snd fsig) ret -* Q2)))
+|-- EX (ts : list Type)
+    (x : functors.MixVariantFunctor._functor
+           ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
+               match T with
+               | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
+               | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+               | rmaps.DependentType n => functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
+               | rmaps.ProdType T1 T2 => functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
+               | rmaps.ArrowType T1 T2 => functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
+               | rmaps.SigType I0 f => functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
+               | rmaps.PiType I0 f => functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
+               | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
+               end) A) mpred),
+    (lift.liftx (P ts x: environ -> mpred)) (make_args' fsig bl) *
+    oboxopt Delta ret (maybe_retval (R ts x) (snd fsig) ret -* Q1 && Q2)
+end. *)
+
+
+
+(* Definition all_precise_fun (Delta:seplog.tycontext) : Prop := 
+forall x phi, 
+(seplog.glob_specs Delta) ! x =  Some phi ->
+precise_funspec Delta phi. *)
 
 
 Lemma relation_power_level: forall n x y,
@@ -1489,7 +1521,6 @@ Qed.
 Require Import VST.veric.semax_call.
 
 
-
 (* for some reason when p is too complicated, coq will not inversion it *)
 Lemma pure_eq_inv: forall p1 p2 k1 k2,
  PURE k1 p1 = PURE k2 p2 -> k1 = k2 /\ p1 = p2.
@@ -1503,17 +1534,27 @@ fsig cc A P1 Q1 NEP1 NEQ1
 P2 Q2 NEP2 NEQ2 l,
 seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
 seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
-((forall ts x vl, unfash (|> (P2 ts x vl <=> P1 ts x vl)) r ) /\
-(forall ts x vl, unfash (|> (Q2 ts x vl <=> Q1 ts x vl)) r )).
+((forall ts x vl,  (box laterM (P2 ts x vl <--> P1 ts x vl)) r ) /\
+(forall ts x vl,  (box laterM (Q2 ts x vl <--> Q1 ts x vl)) r )).
 Proof.
   intros.
   unfold seplog.func_at in *. unfold pureat in *.
   simpl in H, H0. rewrite H in H0.
   apply pure_eq_inv in H0. destruct H0.
   apply function_pointer_aux in H1;auto.
+  destruct H1.
+  split. 
+  { intros ts x vl. specialize (H1 ts x vl).
+    rewrite <- later_unfash in H1.
+    eapply later_derives. 2:{ apply H1. }
+    apply semax.unfash_fash.
+  }
+  { intros ts x vl. specialize (H2 ts x vl).
+    rewrite <- later_unfash in H2.
+    eapply later_derives. 2:{ apply H2. }
+    apply semax.unfash_fash.
+  }
 Qed.
-
-
 
 Lemma func_at_unique1: forall r
     { fsig1 cc1 A1 P1 Q1 NEP1 NEQ1
@@ -1527,17 +1568,80 @@ unfold seplog.func_at in *. unfold pureat in *.
 simpl in H, H0. rewrite H in H0. inv H0. auto.
 Qed.
 
+Require VST.floyd.SeparationLogicFacts.
 
-Lemma func_ptr_der: forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
+Definition precise_funspec := 
+fun (Delta : seplog.tycontext) (f : funspec) =>
+match f with
+| mk_funspec fsig0 _ A P R _ _ =>
+	forall (bl : environ -> list val) (Q1 Q2 : environ -> mpred)
+      (ret : option ident) r,
+    (snd fsig0 = Tvoid -> ret = None) ->
+    tc_fn_return Delta ret (snd fsig0) ->
+    ((EX (ts1 : list Type)
+      (x1 : (fix dtfr (T : rmaps.TypeTree) : functor :=
+               match T with
+               | rmaps.ConstType A0 => fconst A0
+               | rmaps.Mpred => fidentity
+               | rmaps.DependentType n => fconst (nth n ts1 unit)
+               | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
+               | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
+               | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
+               | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
+               | rmaps.ListType T0 => flist (dtfr T0)
+               end) A mpred),
+      lift.liftx (P ts1 x1 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r *
+      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts1 x1) (snd fsig0) ret rho -* Q1 rho) r) &&
+     (EX (ts2 : list Type)
+      (x2 : (fix dtfr (T : rmaps.TypeTree) : functor :=
+               match T with
+               | rmaps.ConstType A0 => fconst A0
+               | rmaps.Mpred => fidentity
+               | rmaps.DependentType n => fconst (nth n ts2 unit)
+               | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
+               | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
+               | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
+               | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
+               | rmaps.ListType T0 => flist (dtfr T0)
+               end) A mpred),
+      lift.liftx (P ts2 x2 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r  *
+      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts2 x2) (snd fsig0) ret rho -* Q1 rho) r))
+    |-- (EX (ts : list Type)
+         (x : (fix dtfr (T : rmaps.TypeTree) : functor :=
+                 match T with
+                 | rmaps.ConstType A0 => fconst A0
+                 | rmaps.Mpred => fidentity
+                 | rmaps.DependentType n => fconst (nth n ts unit)
+                 | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
+                 | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
+                 | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
+                 | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
+                 | rmaps.ListType T0 => flist (dtfr T0)
+                 end) A mpred),
+         lift.liftx (P ts x : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r *
+         SeparationLogicFacts.oboxopt Delta ret
+           (fun rho => maybe_retval (R ts x) (snd fsig0) ret rho -* Q1 rho && Q2 rho) r)
+end.
+
+Definition precise_fun_at_ptr (Delta:seplog.tycontext) (v:val) : mpred:= 
+  (allp (fun (fs:funspec) =>
+  allp (fun (b: block) =>
+    imp ((!! (v = Vptr b Ptrofs.zero))  && seplog.func_at fs (b, 0)) 
+       (!! (precise_funspec Delta fs) ))))%pred.
+
+Lemma func_ptr_der: forall Delta argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
 (( (seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
-((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v)
+((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v &&  
+precise_fun_at_ptr Delta v)
 |--
 !! (argsig1 = argsig2) &&
 (EX (blk_fun: block) (gA : rmaps.TypeTree)
       (gP1 gP2 gR1 gR2 : forall ts : list Type,
       functors.MixVariantFunctor._functor
         (rmaps.dependent_type_functor_rec ts (AssertTT gA)) mpred)  NEgP1 NEgP2 NEgR1 NEgR2,
-      !! (v = Vptr blk_fun Ptrofs.zero) &&
+      !! (v = Vptr blk_fun Ptrofs.zero 
+      /\  precise_funspec Delta (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
+           ) &&
       ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0)) ) &&
       ((seplog.func_at (mk_funspec (argsig1, retsig) cc gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0)) ) &&
       ((seplog.funspec_sub_si (mk_funspec (argsig1, retsig) cc gA gP1 gR1 NEgP1 NEgR1)
@@ -1558,7 +1662,7 @@ Proof.
   destruct gs1 as [gsig1 gcc1 gA1 gP1 gQ1 gNP1 gNQ1].
   destruct gs2 as [gsig2 gcc2 gA2 gP2 gQ2 gNP2 gNQ2].
   subst. intro r.
-  intros [[E1 E2] [E3 E4]].
+  intros [[E1 E2] [E5 [E3 E4]]].
   pose proof func_at_unique1 _ _ E2 E4.
   destruct H as [? [? ?]]. subst.
   pose proof E1 as E1'.
@@ -1571,15 +1675,63 @@ Proof.
   exists gA1, gP1, gP2, gQ1, gQ2.
   exists gNP1, gNP2, gNQ1, gNQ2.
   split;[split|];[split| |];auto. split;auto.
-  reflexivity.
+  split;auto.
+  specialize (E5 (mk_funspec (argsig1, retsig) cc gA1 gP1 gQ1 gNP1 gNQ1) blk2).
+  
+  eapply E5. { apply necR_refl. }
+  split;auto. reflexivity.
 Qed.
-
-
 
 Lemma fun_beta: forall {A B:Type} (a: A -> B) y, (fun x => a x) y = a y.
 Proof.
   reflexivity.
 Qed.
+
+(* Lemma unify_func_at_subsume: forall phi psi1 psi2 addr,
+( (seplog.func_at psi1 addr) && (seplog.func_at psi2 addr) &&
+  (seplog.funspec_sub_si psi1 phi))
+  |-- (seplog.funspec_sub_si psi2 phi).
+Proof.
+  intros. intro r.
+  intros. destruct H. destruct H.
+  destruct phi, psi1, psi2.
+  pose proof func_at_unique1 _ _ H H1.
+  destruct H2 as [? [? ?]]. subst.
+  pose proof func_at_unique2 _ _ _ _ _ _ _ _ _ _ _ _ _ H H1.
+  destruct H2.
+  hnf in H0. hnf.
+  destruct H0. destruct H0. subst f. subst c.
+  split. { split;reflexivity. }
+  intros ts2. intros x2. intros rho'.
+  rewrite semax.unfash_allp in H4. specialize (H4 ts2).
+  rewrite fun_beta in H4.
+  rewrite semax.unfash_allp in H4. specialize (H4 x2).
+  rewrite fun_beta in H4.
+  rewrite semax.unfash_allp in H4. specialize (H4 rho').
+  rewrite fun_beta in H4.
+  (* apply semax.unfash_fash in H4. *)
+  simpl. intros y Hry a' Hnec.
+  specialize (H4 y Hry a' Hnec).
+  intros HP. specialize (H4 HP).
+  destruct H4 as [ts1 [x1 [F H4]]].
+  exists ts1, x1, F. destruct H4 as [E1 E2].
+  split. 
+  { destruct E1 as [y0 [z [E1a [E1b E1c]]]].
+    specialize (H2 ts1 x1 rho').
+    simpl in H2.
+    Check function_pointer_aux.
+    Search seplog.func_at.
+  
+  }
+
+
+  Search fash imp.
+  apply derives_subp. Search imp derives.  simpl.
+  pose proof fash_derives.
+  Search fash. *)
+
+
+
 
 (* Lemma func_ptr_der': forall  argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
 (( (seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
@@ -2077,12 +2229,3 @@ Proof.
   apply seplog.funspec_sub_si_refl.
   auto.
 Qed.
-
-Lemma obox_sepcon2: forall Delta i P Q r,
-  SeparationLogic.closed_wrt_vars (eq i) P -> 
-  SeparationLogicFacts.obox Delta i (fun rho => sepcon (P rho) (Q rho)) r |-- sepcon (P r) (SeparationLogicFacts.obox Delta i Q r).
-Proof.
-  intros. intro w.
-  intros. unfold SeparationLogicFacts.obox in *.
-  destruct ((seplog.temp_types Delta) ! i ) eqn:E.
-Abort.
