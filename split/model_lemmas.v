@@ -1529,13 +1529,83 @@ inv H. auto.
 Qed.
 
 
+
 Lemma func_at_unique2: forall r
 fsig cc A P1 Q1 NEP1 NEQ1
 P2 Q2 NEP2 NEQ2 l,
 seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
 seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
-((forall ts x vl,  (box laterM (P2 ts x vl <--> P1 ts x vl)) r ) /\
-(forall ts x vl,  (box laterM (Q2 ts x vl <--> Q1 ts x vl)) r )).
+((((box laterM (unfash (fash (ALL ts x vl, (P2 ts x vl  <--> P1 ts x vl)))) r)) /\
+( (box laterM (unfash (fash (ALL ts x vl, (Q2 ts x vl <--> Q1 ts x vl)))) r )))).
+Proof.
+  intros.
+  unfold seplog.func_at in *. unfold pureat in *.
+  simpl in H, H0. rewrite H in H0.
+  apply pure_eq_inv in H0. destruct H0.
+  apply function_pointer_aux in H1;auto.
+  destruct H1.
+  split. 
+  { rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros ts. specialize (H1 ts).
+    rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros x. specialize (H1 x).
+    rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros vl. specialize (H1 vl).
+    rewrite later_unfash. auto. }
+  { rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros ts. specialize (H2 ts).
+    rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros x. specialize (H2 x).
+    rewrite fash_allp. rewrite semax.unfash_allp. rewrite later_allp.
+    intros vl. specialize (H2 vl).
+    rewrite later_unfash. auto. }
+Qed.
+
+
+Lemma func_at_unique2_later: forall r
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l,
+seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+((((box laterM 
+    (andp (unfash (fash (ALL ts x vl, (P2 ts x vl  <--> P1 ts x vl))))
+          (unfash (fash (ALL ts x vl, (Q2 ts x vl <--> Q1 ts x vl))))))
+    r))).
+Proof.
+  intros. rewrite later_andp.
+  eapply func_at_unique2.
+  { apply H. }
+  { apply H0. }
+Qed.
+
+(* Lemma func_at_unique2_cor: forall r
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l,
+seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+((((box laterM 
+    ( !! corable.corable (ALL ts x vl, (P2 ts x vl  <--> P1 ts x vl)) &&
+      (ALL ts x vl, (P2 ts x vl  <--> P1 ts x vl))
+)) r)) /\
+( (box laterM 
+    ( !! corable.corable (ALL ts x vl, (Q2 ts x vl <--> Q1 ts x vl)) &&
+     (ALL ts x vl, (Q2 ts x vl <--> Q1 ts x vl))) r ))).
+Proof.
+  intros.
+  pose proof func_at_unique2 _ _ _ _ _ _ _ _ _ _ _ _ _ H H0.
+  destruct H1. split.
+  { eapply later_derives;[|apply H1].
+    apply andp_right;[|apply semax.unfash_fash].
+    intro rho'. intros.
+Abort. *)
+
+Lemma func_at_unique2': forall r
+fsig cc A P1 Q1 NEP1 NEQ1
+P2 Q2 NEP2 NEQ2 l,
+seplog.func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l r ->
+seplog.func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l r ->
+(((forall ts x vl,  (box laterM (unfash (fash (P2 ts x vl <--> P1 ts x vl))) r )) /\
+(forall ts x vl,  (box laterM (unfash (fash (Q2 ts x vl <--> Q1 ts x vl))) r )))).
 Proof.
   intros.
   unfold seplog.func_at in *. unfold pureat in *.
@@ -1546,14 +1616,17 @@ Proof.
   split. 
   { intros ts x vl. specialize (H1 ts x vl).
     rewrite <- later_unfash in H1.
-    eapply later_derives. 2:{ apply H1. }
-    apply semax.unfash_fash.
+    auto.
   }
   { intros ts x vl. specialize (H2 ts x vl).
     rewrite <- later_unfash in H2.
+    auto.
+  }
+  (* { intros ts x vl. specialize (H2 ts x vl).
+    rewrite <- later_unfash in H2.
     eapply later_derives. 2:{ apply H2. }
     apply semax.unfash_fash.
-  }
+  } *)
 Qed.
 
 Lemma func_at_unique1: forall r
@@ -2228,4 +2301,117 @@ Proof.
   split;auto.
   apply seplog.funspec_sub_si_refl.
   auto.
+Qed.
+
+
+Lemma later_andp_aux: forall (P Q : mpred) r,
+  (|> P)%pred r ->
+  (|> Q)%pred r ->
+  (|> andp P Q)%pred r.
+Proof.
+  intros. rewrite later_andp.
+  split;auto.
+Qed.
+
+(* Parameter ass: environ -> mpred.
+Parameter vl: environ -> environ.
+Check @lift.liftx.
+Check ((@lift.liftx ass) vl). *)
+
+
+
+Lemma func_at_unique_rewrite : forall Delta argsig retsig cc A gP1
+gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address ts x (vl: environ -> environ)  ret Q (r: environ),
+(lift.liftx (seplog.func_at (mk_funspec (argsig, retsig) cc A gP2 gR2 NEgP2 NEgR2) address)) r  &&
+(lift.liftx (seplog.func_at (mk_funspec (argsig, retsig) cc A gP1 gR1 NEgP1 NEgR1) address)) r  &&
+(box laterM ((((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP1 ts x : environ -> mpred)) (vl)) r) *    SeparationLogicFacts.oboxopt Delta ret (fun rho => wand (SeparationLogic.maybe_retval (gR1 ts x) retsig ret rho) (Q rho)) r))
+|-- (box laterM   (((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP2 ts x: environ -> mpred)) (vl) r) * SeparationLogicFacts.oboxopt Delta ret (fun rho => wand ((SeparationLogic.maybe_retval (gR2 ts x) retsig ret) rho) (Q rho)) r)).
+Proof.
+  intros. intros w.
+  intros [[E1 E2] E3].
+  pose proof func_at_unique2_later _ _ _ _ _ _ NEgP1 NEgR1 _ _  NEgP2 NEgR2 _ E2 E1.
+  pose proof later_andp_aux _ _ _ E3 H as Eder.
+  clear H.
+  eapply later_derives. 2:{ apply Eder. }  
+  clear Eder.
+  intros w'.
+  intros [Ew1 [Ew2 Ew3]].
+
+  clear E1 E2 E3.
+
+  destruct Ew1 as [w1 [w2 [Ewjoin [Ew1 Ew4]]]].
+  exists w1, w2. split;auto. split.
+  { unfold lift.liftx. unfold lift.lift. simpl.
+    apply corable_fash_spec with (w2 := w1)in Ew2;auto.
+    2:{ apply join_core in Ewjoin;auto. }
+    apply semax.unfash_fash in Ew2.
+    specialize (Ew2 ts x (vl r)).
+    destruct Ew2. apply H0;auto. }
+  { apply corable_fash_spec with (w2 := w2)in Ew3;auto.
+    2:{ apply join_comm in Ewjoin. apply join_core in Ewjoin;auto. }
+    eapply oboxopt_K'.
+    3:{ apply Ew4. }
+    (*  
+        w'           z
+      /  \          / \
+      w1  w2 ------ x' y
+    
+      w' |= !# gR1 <-> gR2
+      y  |= gR2
+      Goal: y |= gR1
+    *)
+    { simpl. intros.
+      apply H with (x' := x') (y := y) (z:= z);auto.
+      pose proof pred_nec_hereditary _ _ _ H0 Ew3 as Ew3'.
+      apply corable_fash_spec with (w2 := y) in Ew3';auto.
+      2:{ apply join_core2 in H1. auto. }
+      apply semax.unfash_fash in Ew3'.
+      unfold maybe_retval. unfold maybe_retval in H2.
+      destruct ret.
+      { specialize (Ew3' ts x (Clight_seplog.get_result1 i r)).
+        destruct Ew3'. apply H3;auto. }
+
+      (* For non-void case  *)
+      assert (Htmp:
+      (EX v : val, gR2 ts x
+        (seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r))%pred y
+      -> ((EX v : val, gR1 ts x 
+        (seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r))%pred y)).
+      { intros E0. simpl in E0.
+        destruct E0 as [v' E0]. exists v'.
+        specialize (Ew3' ts x (env_set (seplog.globals_only r) Clight_seplog.ret_temp v')).
+        apply Ew3';auto. }
+
+      destruct retsig;auto.
+      specialize (Ew3' ts x (seplog.globals_only r)).
+      apply Ew3';auto.
+    }
+
+    { simpl. intros i0 v0. intros.
+      apply H with (x' := x') (y := y) (z:= z);auto.
+      pose proof pred_nec_hereditary _ _ _ H0 Ew3 as Ew3'.
+      apply corable_fash_spec with (w2 := y) in Ew3';auto.
+      2:{ apply join_core2 in H1. auto. }
+      apply semax.unfash_fash in Ew3'.
+      unfold maybe_retval. unfold maybe_retval in H2.
+      destruct ret.
+      { specialize (Ew3' ts x (Clight_seplog.get_result1 i (env_set r i0 v0))).
+        destruct Ew3'. apply H3;auto. }
+
+      (* For non-void case  *)
+      assert (Htmp:
+      (EX v : val, gR2 ts x
+        (seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r))%pred y
+      -> ((EX v : val, gR1 ts x 
+        (seplog.make_args (Clight_seplog.ret_temp :: nil) (v :: nil) r))%pred y)).
+      { intros E0. simpl in E0.
+        destruct E0 as [v' E0]. exists v'.
+        specialize (Ew3' ts x (env_set (seplog.globals_only r) Clight_seplog.ret_temp v')).
+        apply Ew3';auto. }
+
+      destruct retsig;auto.
+      specialize (Ew3' ts x (seplog.globals_only r)).
+      apply Ew3';auto.
+    }
+  }
 Qed.

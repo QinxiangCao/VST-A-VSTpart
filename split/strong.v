@@ -327,6 +327,7 @@ Proof.
     apply normalize.derives_extract_prop; intros X; inv X. trivial.
 Qed.
 
+Check semax.corable_unfash.
 
 
 
@@ -425,6 +426,45 @@ Proof.
     * apply funspec_rewrite_logic.
   }
   Exists argsig1 retsig2 cc2 gA gP1 gR1 NEgP1 NEgR1.
+
+Check (make_args'
+(@pair (list (prod ident type)) type argsig1 retsig2)
+(@eval_exprlist CS
+   (@snd (list ident) (list type)
+      (@split ident type argsig1)) bl)).
+
+  assert (ts'0 : list Type) by admit.
+  assert (x' : functors.MixVariantFunctor._functor
+          ((fix dtfr (T : rmaps.TypeTree) :
+              functors.MixVariantFunctor.functor :=
+              match T with
+              | rmaps.ConstType A =>
+                  functors.MixVariantFunctorGenerator.fconst A
+              | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
+              | rmaps.DependentType n =>
+                  functors.MixVariantFunctorGenerator.fconst
+                    (nth n ts'0 unit)
+              | rmaps.ProdType T1 T2 =>
+                  functors.MixVariantFunctorGenerator.fpair 
+                    (dtfr T1) (dtfr T2)
+              | rmaps.ArrowType T1 T2 =>
+                  functors.MixVariantFunctorGenerator.ffunc 
+                    (dtfr T1) (dtfr T2)
+              | rmaps.SigType I0 f =>
+                  functors.MixVariantFunctorGenerator.fsig
+                    (fun i : I0 => dtfr (f i))
+              | rmaps.PiType I0 f =>
+                  functors.MixVariantFunctorGenerator.fpi
+                    (fun i : I0 => dtfr (f i))
+              | rmaps.ListType T0 =>
+                  functors.MixVariantFunctorGenerator.flist (dtfr T0)
+              end) gA) mpred) by admit.
+  assert (r: environ) by admit.
+  Check ((` (gP1 ts'0 x' : environ -> mpred))
+  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) r). : environ -> mpred).
+Check (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)).
+Locate maybe_retval.
+
 
   rewrite (add_andp _ _ (
     func_at_unique2_logic (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1
