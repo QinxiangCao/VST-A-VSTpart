@@ -195,4 +195,4 @@ Proof.
   intros. destruct H. destruct H.
   pose proof func_ptr_self gs fs _ _ H w.
   apply H2. split;auto.
-Qed.
+Qed. 

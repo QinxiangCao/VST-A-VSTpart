@@ -1663,7 +1663,7 @@ match f with
                | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
                | rmaps.ListType T0 => flist (dtfr T0)
                end) A mpred),
-      lift.liftx (P ts1 x1 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r *
+      @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts1 x1 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r *
       SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts1 x1) (snd fsig0) ret rho -* Q1 rho) r) &&
      (EX (ts2 : list Type)
       (x2 : (fix dtfr (T : rmaps.TypeTree) : functor :=
@@ -1677,8 +1677,8 @@ match f with
                | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
                | rmaps.ListType T0 => flist (dtfr T0)
                end) A mpred),
-      lift.liftx (P ts2 x2 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r  *
-      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts2 x2) (snd fsig0) ret rho -* Q1 rho) r))
+        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts2 x2 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r  *
+      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts2 x2) (snd fsig0) ret rho -* Q2 rho) r))
     |-- (EX (ts : list Type)
          (x : (fix dtfr (T : rmaps.TypeTree) : functor :=
                  match T with
@@ -1691,7 +1691,7 @@ match f with
                  | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
                  | rmaps.ListType T0 => flist (dtfr T0)
                  end) A mpred),
-         lift.liftx (P ts x : environ -> mpred) (SeparationLogic.make_args' fsig0 bl r) r *
+        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts x : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r *
          SeparationLogicFacts.oboxopt Delta ret
            (fun rho => maybe_retval (R ts x) (snd fsig0) ret rho -* Q1 rho && Q2 rho) r)
 end.
