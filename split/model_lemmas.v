@@ -2321,11 +2321,11 @@ Check ((@lift.liftx ass) vl). *)
 
 
 Lemma func_at_unique_rewrite : forall Delta argsig retsig cc A gP1
-gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address ts x (vl: environ -> environ)  ret Q (r: environ),
+gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address (vl: environ -> environ)  ret Q (r: environ),
 (lift.liftx (seplog.func_at (mk_funspec (argsig, retsig) cc A gP2 gR2 NEgP2 NEgR2) address)) r  &&
 (lift.liftx (seplog.func_at (mk_funspec (argsig, retsig) cc A gP1 gR1 NEgP1 NEgR1) address)) r  &&
-(box laterM ((((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP1 ts x : environ -> mpred)) (vl)) r) *    SeparationLogicFacts.oboxopt Delta ret (fun rho => wand (SeparationLogic.maybe_retval (gR1 ts x) retsig ret rho) (Q rho)) r))
-|-- (box laterM   (((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP2 ts x: environ -> mpred)) (vl) r) * SeparationLogicFacts.oboxopt Delta ret (fun rho => wand ((SeparationLogic.maybe_retval (gR2 ts x) retsig ret) rho) (Q rho)) r)).
+(box laterM (EX ts x, (((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP1 ts x : environ -> mpred)) (vl)) r) *    SeparationLogicFacts.oboxopt Delta ret (fun rho => wand (SeparationLogic.maybe_retval (gR1 ts x) retsig ret rho) (Q rho)) r))
+|-- (box laterM (EX ts x, (((@lift.liftx (lift.Tarrow environ (LiftEnviron mpred))  (gP2 ts x: environ -> mpred)) (vl)) r) * SeparationLogicFacts.oboxopt Delta ret (fun rho => wand ((SeparationLogic.maybe_retval (gR2 ts x) retsig ret) rho) (Q rho)) r)).
 Proof.
   intros. intros w.
   intros [[E1 E2] E3].
@@ -2339,8 +2339,8 @@ Proof.
 
   clear E1 E2 E3.
 
-  destruct Ew1 as [w1 [w2 [Ewjoin [Ew1 Ew4]]]].
-  exists w1, w2. split;auto. split.
+  destruct Ew1 as [ts [x [w1 [w2 [Ewjoin [Ew1 Ew4]]]]]].
+  exists ts, x, w1, w2. split;auto. split.
   { unfold lift.liftx. unfold lift.lift. simpl.
     apply corable_fash_spec with (w2 := w1)in Ew2;auto.
     2:{ apply join_core in Ewjoin;auto. }

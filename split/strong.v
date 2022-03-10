@@ -327,8 +327,6 @@ Proof.
     apply normalize.derives_extract_prop; intros X; inv X. trivial.
 Qed.
 
-Check semax.corable_unfash.
-
 
 
 Lemma semax_aux_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
@@ -395,9 +393,9 @@ Proof.
     ` (funspec_sub_si (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) 
                         (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))
     ) &&
-   ( 
-    ((` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) ) &&
+    ((
+     (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) ) &&
+    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
     (local (tc_environ Delta) &&
       tc_exprlist Delta (snd (split argsig1)) bl &&
      ` (funspec_sub_si
@@ -427,49 +425,6 @@ Proof.
   }
   Exists argsig1 retsig2 cc2 gA gP1 gR1 NEgP1 NEgR1.
 
-Check (make_args'
-(@pair (list (prod ident type)) type argsig1 retsig2)
-(@eval_exprlist CS
-   (@snd (list ident) (list type)
-      (@split ident type argsig1)) bl)).
-
-  assert (ts'0 : list Type) by admit.
-  assert (x' : functors.MixVariantFunctor._functor
-          ((fix dtfr (T : rmaps.TypeTree) :
-              functors.MixVariantFunctor.functor :=
-              match T with
-              | rmaps.ConstType A =>
-                  functors.MixVariantFunctorGenerator.fconst A
-              | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-              | rmaps.DependentType n =>
-                  functors.MixVariantFunctorGenerator.fconst
-                    (nth n ts'0 unit)
-              | rmaps.ProdType T1 T2 =>
-                  functors.MixVariantFunctorGenerator.fpair 
-                    (dtfr T1) (dtfr T2)
-              | rmaps.ArrowType T1 T2 =>
-                  functors.MixVariantFunctorGenerator.ffunc 
-                    (dtfr T1) (dtfr T2)
-              | rmaps.SigType I0 f =>
-                  functors.MixVariantFunctorGenerator.fsig
-                    (fun i : I0 => dtfr (f i))
-              | rmaps.PiType I0 f =>
-                  functors.MixVariantFunctorGenerator.fpi
-                    (fun i : I0 => dtfr (f i))
-              | rmaps.ListType T0 =>
-                  functors.MixVariantFunctorGenerator.flist (dtfr T0)
-              end) gA) mpred) by admit.
-  assert (r: environ) by admit.
-  Check ((` (gP1 ts'0 x' : environ -> mpred))
-  (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) r). : environ -> mpred).
-Check (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)).
-Locate maybe_retval.
-
-
-  rewrite (add_andp _ _ (
-    func_at_unique2_logic (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1
-    gP2 gR2 NEgP2 NEgR2 (blk_fun, 0)
-    )).
 
   apply andp_right.
   { apply andp_right.
@@ -485,15 +440,15 @@ Locate maybe_retval.
     + solve_andp.
   }
   apply andp_left2.
+  eapply derives_trans.
+  { apply andp_derives.
+    { apply func_at_unique_rewrite_logic. }
+    { apply derives_refl. }
+  }
   rewrite <- !later_andp.
-  rewrite andp_assoc. rewrite <- !later_andp.
-  rewrite andp_assoc. rewrite <- !later_andp.
-  apply andp_left2.
-
   apply later_derives.
-  Intros ts1 x1. Intros ts2 x2.
 
-Check (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)).
+  (* hnf in H2.
 
   eapply derives_trans.
   { apply andp_derives.
@@ -530,11 +485,12 @@ oboxopt Delta ret (maybe_retval (gR2 ts1 x1) retsig2 ret -* Q1)) &&
    (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
  oboxopt Delta ret (maybe_retval (gR2 ts2 x2) retsig2 ret -* Q2))
   ).
-  { Exists ts1 x1 ts2 x2. solve_andp. }
+  { Exists ts1 x1 ts2 x2. solve_andp. } *)
 
   unfold precise_funspec in H2.
   specialize (H2 ((eval_exprlist (snd (split argsig1)) bl)) Q1 Q2 ret).
   intro r. specialize (H2 r H3 H4).
+  simpl in H2. apply derives_rewrite.
   (* apply H2. *)
 Admitted.
 

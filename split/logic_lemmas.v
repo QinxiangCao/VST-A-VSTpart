@@ -85,11 +85,11 @@ oboxopt Delta ret
     maybe_retval (gR1 ts x) retsig ret rho0 -* Q rho0) rho))%pred r. *)
 
 Lemma func_at_unique_rewrite_logic : forall Delta argsig retsig cc A gP1
-gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address ts x (vl: environ -> environ) ret Q,
+gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address (vl: environ -> environ) ret Q,
 (`(func_at (mk_funspec (argsig, retsig) cc A gP2 gR2 NEgP2 NEgR2) address))  &&
 (`(func_at (mk_funspec (argsig, retsig) cc A gP1 gR1 NEgP1 NEgR1) address)) &&
-(later ((((`(gP1 ts x : environ -> mpred)) vl)) * oboxopt Delta ret (fun rho => wand (maybe_retval (gR1 ts x) retsig ret rho) (Q rho))))
-|-- (later (((`(gP2 ts x: environ -> mpred)) vl) * oboxopt Delta ret (fun rho => wand ((maybe_retval (gR2 ts x) retsig ret) rho) (Q rho)))).
+(|> (EX ts x, (((`(gP1 ts x : environ -> mpred)) vl)) * oboxopt Delta ret (fun rho => wand (maybe_retval (gR1 ts x) retsig ret rho) (Q rho))))
+|-- (|> (EX ts x, ((`(gP2 ts x: environ -> mpred)) vl) * oboxopt Delta ret (fun rho => wand ((maybe_retval (gR2 ts x) retsig ret) rho) (Q rho)))).
 Proof.
   intros. intro rho.
   unfold liftx. unfold_lift.
@@ -97,7 +97,7 @@ Proof.
   intro r. intros E.
   destruct E. destruct H.
   pose proof func_at_unique_rewrite Delta argsig retsig cc A gP1
-  gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address ts x vl ret Q rho r.
+  gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2 address vl ret Q rho r.
   simpl. 
 
   unfold liftx in H2. unfold_lift in H2.
@@ -105,123 +105,6 @@ Proof.
   split;auto. split;auto.
 Qed.
 
-
-
-(* Lemma func_at_unique2_logic: forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 (l: address),
-`(func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l) &&
-`(func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)
-|-- (|> (unfash (fash (ALL ts x (vl: environ -> environ), 
-        `(P2 ts x : environ -> mpred) vl <--> `(P1 ts x: environ -> mpred) vl)): environ -> mpred )) &&
-  ((|> (unfash (fash (ALL ts x (vl: environ -> environ), 
-        `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl)): environ -> mpred))).
-Proof.
-  intros. intro rho.
-  unfold liftx. unfold_lift.
-  apply derives_rewrite. intro r.
-  intros [E1 E2].
-  pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
-  destruct H. split. *)
-        
-
-
-(* Lemma func_at_unique2_logic: forall
-fsig cc A P1 Q1 NEP1 NEQ1
-P2 Q2 NEP2 NEQ2 (l: address),
-`(func_at (mk_funspec fsig cc A P1 Q1 NEP1 NEQ1) l) &&
-`(func_at (mk_funspec fsig cc A P2 Q2 NEP2 NEQ2) l)
-|--  ( (|> 
-(!! corable ((ALL ts x (vl: environ -> environ) ,  `(P2 ts x : environ -> mpred) vl  <--> `(P1 ts x: environ -> mpred) vl))) &&
-(ALL ts x (vl: environ -> environ),  `(P2 ts x : environ -> mpred) vl <--> `(P1 ts x: environ -> mpred) vl))) &&
-  ( !! corable ((ALL ts x (vl: environ -> environ),  `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl)) &&
-    
-  (|>  (ALL ts x (vl: environ -> environ),  `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl))).
-Proof.
-  intros. intro rho.
-  unfold liftx. unfold_lift.
-  apply derives_rewrite. intro r.
-  intros [E1 E2].
-  pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
-  destruct H. split.
-  { split.
-    - eapply predicates_hered.later_derives;[|apply H].
-      intros r'. intros E3.
-      eapply semax.corable_unfash in E3.
-      Search subtypes.unfash corable.corable.
-
-    Search subtypes.unfash subtypes.fash.
-    
-  eapply predicates_hered.later_derives;[|apply H].
-  Search corable fash.
-    Search unfash f
-
-
-    Search unfash.
-  
-  simpl. apply H. auto. }
-
-  Check func_at_unique2.
-
-  eapply derives_trans with (Q:=
-    (|> (ALL ts x vl,  ((`(P2 ts x : environ -> mpred) vl <--> `(P1 ts x: environ -> mpred) vl)))) &&
-        (|> (ALL ts x vl, (( `(Q2 ts x : environ -> mpred) vl <--> `(Q1 ts x: environ -> mpred) vl))))
-  ).
-  2:{ unfold liftx. unfold_lift. apply andp_derives.
-  + intro rho. unfold liftx. unfold_lift. apply later_derives.
-  Search subtypes.fash subtypes.unfash.
-    apply allp_derives. 
-    intros ts. rewrite later_allp. apply allp_derives.
-    intros x. rewrite later_allp. apply allp_derives.
-    intros vl. apply derives_refl.
-  + rewrite later_allp. apply allp_derives.
-    intros ts. rewrite later_allp. apply allp_derives.
-    intros x. rewrite later_allp. apply allp_derives.
-    intros vl. apply derives_refl.
-  }
-  {
-  apply andp_right.
-  { eapply allp_right. intros ts.
-    eapply allp_right. intros x.
-    eapply allp_right. intros vl.
-    intro r.
-    apply derives_rewrite.
-    intros rho. intros [E1 E2].
-    pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
-    destruct H.
-    specialize (H ts x (vl r)). apply H.
-  }
-  { eapply allp_right. intros ts.
-    eapply allp_right. intros x.
-    eapply allp_right. intros vl.
-    intro r.
-    apply derives_rewrite.
-    intros rho. intros [E1 E2].
-    pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
-    destruct H.
-    specialize (H0 ts x (vl r)). apply H0.
-  }
-  }
-  rewrite <- fash_allp.
-Locate fash.
-  Search predicates_hered.allp subtypes.fash.
-  rewrite unfash_allp.
-
-
-  {
-
-  }
-  { apply allp_right. intros ts.
-    apply allp_right. intros x.
-    apply allp_right. intros vl.
-    intro r.
-    apply derives_rewrite.
-    intros rho. intros [E1 E2].
-    pose proof func_at_unique2 _ _ _ _ _ _ NEP1 NEQ1 _ _  NEP2 NEQ2 _ E1 E2.
-    destruct H.
-    specialize (H0 ts x (vl r)). auto.
-  }
-Qed. *)
 
 Lemma func_ptr_der_logic: forall Delta argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
 (` (func_ptr (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v &&
