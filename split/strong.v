@@ -2183,11 +2183,14 @@ intros.
     - reduceL. apply FF_left.
     - intros; reduceL. apply FF_left.
   + pose proof (fun x => semax_aux_call_inv _ _ _ _ _ _ (H x)).
-    (* eapply semax_aux_conseq; [| intros; apply derives_aux_refl .. | apply semax_aux_call].
-    rewrite !exp_andp2.
-    apply exp_left; intros x; specialize (H0 x).
-    auto. *)
-    admit.
+    eapply semax_aux_conseq; [ .. | apply semax_aux_call].
+    - rewrite !exp_andp2.
+      apply exp_left; intros x; specialize (H0 x).
+      apply H0.
+    - reduceL. apply derives_refl.
+    - reduceL. apply FF_left.
+    - reduceL. apply FF_left.
+    - intros; reduceL. apply FF_left.
   + pose proof (fun x => semax_aux_builtin_inv _ _ _ _ _ _ _ (H x)).
     eapply semax_aux_conseq; [| intros; apply derives_aux_refl .. | apply semax_aux_builtin].
     rewrite !exp_andp2.
@@ -2339,8 +2342,7 @@ intros.
     rewrite !exp_andp2.
     apply exp_left; intros x; specialize (H0 x).
     auto.
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma aux_semax_extract_prop: forall (CS : compspecs) (Espec : OracleKind) 
       (Delta : tycontext) (PP : Prop) (P : environ -> mpred)
@@ -2438,6 +2440,31 @@ Proof.
   apply semax_aux_simple_inv with (Post:=
   normal_ret_assert (Q1n&&Q2n));auto.
   eapply semax_aux_conj_set with (Q:= {|
+  RA_normal := FF;
+  RA_break := FF;
+  RA_continue := FF;
+  RA_return := (fun v => FF)
+  |});auto.
+Qed.
+
+
+Lemma semax_aux_conj_call_ret: forall CS Espec Delta ret a bl P Q1 Q2,
+@semax_aux CS Espec Delta P  (Clight.Scall ret a bl) Q2 ->
+@semax_aux CS Espec Delta P  (Clight.Scall ret a bl) Q1 ->
+@semax_aux CS Espec Delta P  (Clight.Scall ret a bl) (ret_assert_andp Q1 Q2).
+Proof.
+  intros.
+  destruct Q1 as [Q1n Q1b Q1c Q1r].
+  destruct Q2 as [Q2n Q2b Q2c Q2r].
+  unfold ret_assert_andp. unfold_der.
+  apply semax_aux_simple_inv with (Post':=
+    normal_ret_assert Q1n
+  ) in H0;auto.
+  apply semax_aux_simple_inv with (Post':=
+  normal_ret_assert Q2n) in H;auto.
+  apply semax_aux_simple_inv with (Post:=
+  normal_ret_assert (Q1n&&Q2n));auto.
+  eapply semax_aux_conj_call with (Q:= {|
   RA_normal := FF;
   RA_break := FF;
   RA_continue := FF;
@@ -2548,14 +2575,10 @@ Proof.
     eapply semax_aux_conseq;
     [..|eapply semax_aux_conj_set_ret with (Q1:=Q1) (Q2:=Q2);eassumption]; try solve_andp.
     intros. solve_andp.
-  - intros. unfold ret_assert_andp.
-    admit.
-    (* pose proof semax_aux_conj_call.
-  
-  apply semax_aux_call_inv in H0. *)
-    (* eapply semax_aux_pre';[apply H0|].
-    rewrite <- (FF_andp P).
-      unfold FF. apply aux_semax_extract_prop. intros. destruct H1. *)
+  - intros.
+    eapply semax_aux_conseq;
+    [..|eapply semax_aux_conj_call_ret with (Q1:=Q1) (Q2:=Q2);eassumption]; try solve_andp.
+    intros. solve_andp.
   - intros. apply semax_aux_builtin_inv in H0.
     eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
@@ -2646,37 +2669,16 @@ Proof.
     eapply semax_aux_pre';[apply H0|].
     rewrite <- (FF_andp P).
     unfold FF. apply aux_semax_extract_prop. intros. destruct H1.
-(* Qed. *)
-Admitted.
+Qed.
 
-(* Theorem semax_conj_rule: forall  CS Espec Delta P c Q1 Q2 ,
-  @semax CS Espec Delta P c Q1 ->
-  @semax CS Espec Delta P c Q2 ->
-  @semax CS Espec Delta P c (ret_assert_andp Q1 Q2).
+(* Lemma later_exp_entail: forall Delta (A : Type) (ND : NatDed A) (Indir : Indir A) (T : Type) (F : T -> (environ -> mpred)),
+ENTAIL Delta, allp_fun_id Delta && 
+  |> (EX y, F y) |-- (EX x : T, |> F x) || |> FF.
 Proof.
   intros.
-  inv H. inv H0.
-  assert (semax_aux Delta P c R').
-  { eapply semax_aux_pre';[|apply H6]. auto. }
-  assert (semax_aux Delta P c R'0).
-  { eapply semax_aux_pre';[|apply H11]. auto. }
-  pose proof semax_aux_conj_rule _ _ _ _ _ _ _ H0 H12.
-  destruct R' as [R1n R1b R1c R1r], R'0 as [R2n R2b R2c R2r],
-  Q1 as [Q1n Q1b Q1c Q1r], Q2 as [Q2n Q2b Q2c Q2r];
-  unfold ret_assert_andp in *; unfold_der.
-  eapply semax_conseq_intro;[..|apply H13];unfold_der.
-  - solve_andp.
-  - eapply derives_trans with 
-      (Q:= (|==> |> FF || Q1n) && (|==> |> FF || Q2n)).
-    { apply andp_right.
-      - eapply derives_trans;[|apply H2]. solve_andp.
-      - eapply derives_trans;[|apply H7]. solve_andp. }
-    {  apply bupd_mono.
+  apply andp_left2. apply andp_left2.
+  apply seplog.later_exp''. *)
 
-
-     }
-  
-  Search bupd andp.   *)
 
 
 Theorem semax_aux_derives: forall CS Espec Delta P c Q,
@@ -2706,15 +2708,46 @@ Proof.
   - eapply AuxDefs.semax_conseq;[..|apply IHsemax_aux];
     try solve [intros;apply aux1_reduceR; eapply derives_trans;[|apply bupd_intro];auto].
   - constructor.
-  - admit.
-   (* rewrite <- (FF_andp TT).
-    unfold FF. apply semax_extract_prop. intros. destruct H. *)
+  - eapply AuxDefs.semax_conseq;
+    [..|apply AuxDefs.semax_call_backward with (R0:=R)].
+    { 
+      Intros argsig retsig cc A P Q NEP NEQ.
+      eapply derives_trans;[|apply bupd_intro].
+      eapply derives_trans.
+      { rewrite <- !andp_assoc.
+        apply andp_derives.
+        { apply derives_refl. }
+        { apply seplog.later_exp''. }
+      }
+      rewrite distrib_orp_andp2. apply orp_left.
+      2:{ eapply derives_trans with (Q0:= |> FF); try solve_andp.
+          apply orp_right1. auto. }
+      Intros ts.
+      eapply derives_trans.
+      { apply andp_derives.
+        { apply derives_refl. }
+        { apply seplog.later_exp''. }
+      }
+      rewrite distrib_orp_andp2. apply orp_left.
+      2:{ eapply derives_trans with (Q0:= |> FF); try solve_andp.
+          apply orp_right1. auto. }
+      Intros x.
+      apply orp_right2.
+      Exists argsig retsig cc A P Q NEP NEQ ts x.
+      apply andp_right;try solve_andp.
+      apply andp_right;try solve_andp.
+      apply andp_right;try solve_andp.
+      apply prop_right;auto.
+    }
+    { apply derives_full_refl. } 
+    { apply derives_full_refl. }
+    { apply derives_full_refl. }  
+    { intros. apply derives_full_refl. }
   - constructor. auto.
   - constructor.
   - rewrite <- (FF_andp TT).
     unfold FF. apply semax_extract_prop. intros. destruct H.
-Admitted.
-(* Qed. *)
+Qed.
 
 Theorem semax_derives: forall CS Espec Delta P c Q,
   @semax CS Espec Delta P c Q -> @SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q.
@@ -2767,21 +2800,3 @@ split;intro.
   unfold_der. eapply derives_trans;[|apply E1].
   solve_andp.
 Qed.
-      
-
-(* Lemma aux_extract_exists_pre': forall {CS Espec} (A : Type) (P : A -> environ -> mpred) 
-      (c : Clight.statement) (Delta : tycontext) 
-      (R : ret_assert),
-    (forall x : A, @semax CS Espec Delta (P x) c R) ->
-    semax Delta (EX x : A, P x) c R.
-Proof.
-  intros.
-  pose proof aux_semax_extract_exists.
-Admitted.
-
-Lemma aux_semax_extract_prop': forall (CS : compspecs) (Espec : OracleKind) 
-      (Delta : tycontext) (PP : Prop) (P : environ -> mpred)
-      (c : Clight.statement) (Q : ret_assert),
-    (PP -> semax Delta P c Q) ->
-    semax Delta (!! PP && P) c Q.
-Admitted. *)
