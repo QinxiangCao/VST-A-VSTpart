@@ -86,18 +86,19 @@ Notation S_partial_post_rets := (list S_partial_post_ret).
 
 
 
-Record S_result : Type := mk_S_result {
-  S_pre : S_partial_pres;
-  S_path : S_full_paths;
-  S_post_normal : S_partial_posts;
-  S_post_break : S_partial_posts;
-  S_post_continue : S_partial_posts;
-  S_post_return : S_partial_post_rets;
-  S_atom_normal : atoms;
-  S_atom_break : atoms;
-  S_atom_continue : atoms;
-  S_atom_return : atom_rets 
-}. 
+Inductive S_result : Type := 
+| mk_S_result 
+  (S_pre : S_partial_pres)
+  (S_path : S_full_paths)
+  (S_post_normal : S_partial_posts)
+  (S_post_break : S_partial_posts)
+  (S_post_continue : S_partial_posts)
+  (S_post_return : S_partial_post_rets)
+  (S_atom_normal : atoms)
+  (S_atom_break : atoms)
+  (S_atom_continue : atoms)
+  (S_atom_return : atom_rets)
+. 
 
 
 
@@ -239,7 +240,9 @@ Fixpoint Cposts_conn_Cpres
   : (C_full_paths (Sposts_conn_Spres s_posts s_pres)).
 Admitted.
 
-Definition S_result_sequence res1 res2 := {|
+Parameter S_result_sequence : S_result -> S_result -> S_result.
+
+(* Definition S_result_sequence res1 res2 := {|
   S_pre := S_pre res1 ++ atoms_conn_Spres (S_atom_normal res1) (S_pre res2);
   S_path := S_path res1 ++ S_path res2 ++ Sposts_conn_Spres (S_post_normal res1) (S_pre res2);
   S_post_normal := S_post_normal res2 ++ Sposts_conn_atoms (S_post_normal res1) (S_atom_normal res2);
@@ -253,7 +256,7 @@ Definition S_result_sequence res1 res2 := {|
   S_atom_return := S_atom_return res1 ++ atoms_conn_returns (S_atom_normal res1) (S_atom_return res2);
   S_atom_break  := S_atom_break  res1 ++ atoms_conn_atoms (S_atom_normal res1) (S_atom_break  res2);
   S_atom_continue := S_atom_continue res1 ++ atoms_conn_atoms (S_atom_normal res1) (S_atom_continue res2);
-|}.
+|}. *)
 
 
 Inductive C_result : S_result -> Type := 
@@ -323,38 +326,87 @@ Definition tl_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R)
     | list_binded_cons x x' xs xsb => xsb
     end.
 
-Definition C_result_proj_C_pre (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_pres (S_pre s_res) :=
+Notation S_pre_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_pre
+  end.
+
+Definition C_result_proj_C_pre (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_pres (S_pre_of s_res) :=
   fun a =>
     match (c_res a) 
       as c0 in C_result s0
-      return C_partial_pres (S_pre s0)
+      return C_partial_pres (S_pre_of s0)
     with
     | mk_C_result _ C_pre _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
         C_pre
     end.
 
+Notation S_post_normal_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_post_normal
+  end.
 
-Definition C_result_proj_C_post_normal (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_normal s_res) :=
+Definition C_result_proj_C_post_normal (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_normal_of s_res) :=
   fun a =>
     match (c_res a) 
       as c0 in C_result s0
-      return C_partial_posts (S_post_normal s0)
+      return C_partial_posts (S_post_normal_of s0)
     with
     | mk_C_result _ _ _ _ _ C_post_normal _ _ _ _ _ _ _ _ _ _ =>
     C_post_normal
     end.
 
-Definition C_result_proj_C_post_break (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_break s_res).
+Notation S_post_break_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_post_break
+  end.
+
+Definition C_result_proj_C_post_break (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_break_of s_res).
 Admitted.
 
-Definition C_result_proj_C_post_continue (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_continue s_res).
+Notation S_post_continue_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_post_continue
+  end.
+
+Definition C_result_proj_C_post_continue (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_continue_of s_res).
 Admitted.
 
-Definition C_result_proj_C_post_return (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (S_post_return s_res).
+Notation S_post_return_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_post_return
+  end.
+
+Definition C_result_proj_C_post_return (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (S_post_return_of s_res).
 Admitted.
 
-Definition C_result_proj_C_path (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (S_path s_res).
+Notation S_path_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_path
+  end.
+
+Definition C_result_proj_C_path (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (S_path_of s_res).
 Admitted.
+
+Notation S_atom_normal_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_atom_normal
+  end.
+
+Notation S_atom_break_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_atom_break
+  end.
+
+Notation S_atom_continue_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_atom_continue
+  end.
+
+Notation S_atom_return_of s_res :=
+  match s_res with
+  | mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return => S_atom_return
+  end.
 
 Fixpoint flatten_binds {R A:Type} {binder: R -> Type} 
 (HA: inhabited A)
@@ -404,82 +456,35 @@ Definition flatten_full_paths_binds {A:Type}
 Definition C_result_binder_intro (s_res : S_result) (A : Type) (HA: inhabited A)
 (c_res' : A -> C_result s_res) : 
 
-C_result {|
-S_pre := S_pre s_res;
-S_path := S_path s_res;
-S_post_normal := S_post_normal s_res;
-S_post_break := S_post_break s_res;
-S_post_continue := S_post_continue s_res;
-S_post_return := S_post_return s_res;
-S_atom_normal := S_atom_normal s_res;
-S_atom_break := S_atom_break s_res;
-S_atom_continue := S_atom_continue s_res;
-S_atom_return := S_atom_return s_res |} 
+C_result s_res
 (* C_result s_res *)
 :=
+match s_res with
+| mk_S_result S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return =>
 let c_pre := C_result_proj_C_pre s_res A c_res' in
-let c_pre := flatten_partial_pres_binds HA (S_pre s_res) c_pre in
+let c_pre := flatten_partial_pres_binds HA (S_pre) c_pre in
 let c_post_normal := C_result_proj_C_post_normal s_res A c_res' in
-let c_post_normal := flatten_partial_posts_binds HA (S_post_normal s_res) c_post_normal in
+let c_post_normal := flatten_partial_posts_binds HA (S_post_normal) c_post_normal in
 let c_post_break := C_result_proj_C_post_break s_res A c_res' in
-let c_post_break := flatten_partial_posts_binds HA (S_post_break s_res) c_post_break in
+let c_post_break := flatten_partial_posts_binds HA (S_post_break) c_post_break in
 let c_post_continue := C_result_proj_C_post_continue s_res A c_res' in
-let c_post_continue := flatten_partial_posts_binds HA (S_post_continue s_res) c_post_continue in
+let c_post_continue := flatten_partial_posts_binds HA (S_post_continue) c_post_continue in
 let c_post_return := C_result_proj_C_post_return s_res A c_res' in
-let c_post_return := flatten_partial_post_rets_binds HA (S_post_return s_res) c_post_return in
+let c_post_return := flatten_partial_post_rets_binds HA (S_post_return) c_post_return in
 let c_path := C_result_proj_C_path s_res A c_res' in
-let c_path := flatten_full_paths_binds HA (S_path s_res) c_path in
+let c_path := flatten_full_paths_binds HA (S_path) c_path in
 mk_C_result 
-  (S_pre s_res) c_pre
-  (S_path s_res) c_path
-  (S_post_normal s_res) c_post_normal
-  (S_post_break s_res) c_post_break
-  (S_post_continue s_res) c_post_continue
-  (S_post_return s_res) c_post_return
-  (S_atom_normal s_res)
-  (S_atom_break s_res)
-  (S_atom_continue s_res)
-  (S_atom_return s_res).
-
-Program Definition C_result_binder_intro_option (s_res : S_result) (A : Type) (HA: inhabited A)
-(c_res' : A -> C_result s_res) : 
-
-(* C_result {|
-S_pre := S_pre s_res;
-S_path := S_path s_res;
-S_post_normal := S_post_normal s_res;
-S_post_break := S_post_break s_res;
-S_post_continue := S_post_continue s_res;
-S_post_return := S_post_return s_res;
-S_atom_normal := S_atom_normal s_res;
-S_atom_break := S_atom_break s_res;
-S_atom_continue := S_atom_continue s_res;
-S_atom_return := S_atom_return s_res |}  *)
-C_result s_res
-:=
-let c_pre := C_result_proj_C_pre s_res A c_res' in
-let c_pre := flatten_partial_pres_binds HA (S_pre s_res) c_pre in
-let c_post_normal := C_result_proj_C_post_normal s_res A c_res' in
-let c_post_normal := flatten_partial_posts_binds HA (S_post_normal s_res) c_post_normal in
-let c_post_break := C_result_proj_C_post_break s_res A c_res' in
-let c_post_break := flatten_partial_posts_binds HA (S_post_break s_res) c_post_break in
-let c_post_continue := C_result_proj_C_post_continue s_res A c_res' in
-let c_post_continue := flatten_partial_posts_binds HA (S_post_continue s_res) c_post_continue in
-let c_post_return := C_result_proj_C_post_return s_res A c_res' in
-let c_post_return := flatten_partial_post_rets_binds HA (S_post_return s_res) c_post_return in
-let c_path := C_result_proj_C_path s_res A c_res' in
-let c_path := flatten_full_paths_binds HA (S_path s_res) c_path in
-mk_C_result 
-  (S_pre s_res) c_pre
-  (S_path s_res) c_path
-  (S_post_normal s_res) c_post_normal
-  (S_post_break s_res) c_post_break
-  (S_post_continue s_res) c_post_continue
-  (S_post_return s_res) c_post_return
-  (S_atom_normal s_res)
-  (S_atom_break s_res)
-  (S_atom_continue s_res)
-  (S_atom_return s_res).
+  (S_pre) c_pre
+  (S_path) c_path
+  (S_post_normal) c_post_normal
+  (S_post_break) c_post_break
+  (S_post_continue) c_post_continue
+  (S_post_return) c_post_return
+  (S_atom_normal)
+  (S_atom_break)
+  (S_atom_continue)
+  (S_atom_return)
+end.
 
 
 Definition C_split_sequence 
