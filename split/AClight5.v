@@ -211,30 +211,30 @@ Parameter Sposts_conn_Spres : S_partial_posts -> S_partial_pres -> S_full_paths.
 
 Fixpoint atoms_conn_Cpres 
   (atoms: atoms)
-  (Spres: S_partial_pres)
+  {Spres: S_partial_pres}
   (Cpres: C_partial_pres Spres) 
   : (C_partial_pres (atoms_conn_Spres atoms Spres)).
 Admitted.
 
 
 Fixpoint Cposts_conn_atoms 
-  (s_posts : S_partial_posts) 
+  {s_posts : S_partial_posts}
   (c_posts : C_partial_posts s_posts) 
   (atoms: atoms)
   : (C_partial_posts (Sposts_conn_atoms s_posts atoms)).
 Admitted.
 
 Fixpoint Cposts_conn_returns
-  (s_posts : S_partial_posts) 
+  {s_posts : S_partial_posts}
   (c_posts : C_partial_posts s_posts) 
   (atoms: atom_rets)
   : (C_partial_post_rets (Sposts_conn_returns s_posts atoms)).
 Admitted.
 
 Fixpoint Cposts_conn_Cpres
-  (s_posts : S_partial_posts)
+  {s_posts : S_partial_posts}
   (c_posts : C_partial_posts s_posts)
-  (s_pres: S_partial_pres)
+  {s_pres: S_partial_pres}
   (c_pres: C_partial_pres s_pres)
   : (C_full_paths (Sposts_conn_Spres s_posts s_pres)).
 Admitted.
@@ -323,7 +323,27 @@ Definition tl_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R)
     | list_binded_cons x x' xs xsb => xsb
     end.
 
-Definition C_result_proj_C_pre (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_pres (S_pre s_res) :=
+
+Section Cres_proj.
+
+
+Context {s_pre : S_partial_pres}.
+Context {s_path : S_full_paths}.
+Context {s_post_normal : S_partial_posts}.
+Context {s_post_break : S_partial_posts}.
+Context {s_post_continue : S_partial_posts}.
+Context {s_post_return : S_partial_post_rets}.
+Context {s_atom_normal : atoms}.
+Context {s_atom_break : atoms}.
+Context {s_atom_continue : atoms}.
+Context {s_atom_return : atom_rets}.
+
+Notation s_res :=
+  (mk_S_result s_pre s_path 
+    s_post_normal s_post_break s_post_continue s_post_return
+    s_atom_normal s_atom_break s_atom_continue s_atom_return).
+    
+Definition C_result_proj_C_pre (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_pres s_pre :=
   fun a =>
     match (c_res a) 
       as c0 in C_result s0
@@ -334,7 +354,7 @@ Definition C_result_proj_C_pre (s_res: S_result) (A : Type) (c_res: A -> C_resul
     end.
 
 
-Definition C_result_proj_C_post_normal (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_normal s_res) :=
+Definition C_result_proj_C_post_normal (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (S_post_normal s_res) :=
   fun a =>
     match (c_res a) 
       as c0 in C_result s0
@@ -344,17 +364,18 @@ Definition C_result_proj_C_post_normal (s_res: S_result) (A : Type) (c_res: A ->
     C_post_normal
     end.
 
-Definition C_result_proj_C_post_break (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_res.(S_post_break)).
+Definition C_result_proj_C_post_break (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_res.(S_post_break)).
 Admitted.
 
-Definition C_result_proj_C_post_continue (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_res.(S_post_continue)).
+Definition C_result_proj_C_post_continue (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_res.(S_post_continue)).
 Admitted.
 
-Definition C_result_proj_C_post_return (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (s_res.(S_post_return)).
+Definition C_result_proj_C_post_return (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (s_res.(S_post_return)).
 Admitted.
 
-Definition C_result_proj_C_path (s_res: S_result) (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (s_res.(S_path)).
+Definition C_result_proj_C_path (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (s_res.(S_path)).
 Admitted.
+
 
 Fixpoint flatten_binds {R A:Type} {binder: R -> Type} 
 (HA: inhabited A)
@@ -401,7 +422,7 @@ Definition flatten_full_paths_binds {A:Type}
   flatten_binds HA (bind_C_full_path A HA) s_paths c_paths'.
 
 
-Definition C_result_binder_intro (s_res : S_result) (A : Type) (HA: inhabited A)
+Definition C_result_binder_intro (A : Type) (HA: inhabited A)
 (c_res' : A -> C_result s_res) : 
 
 (* C_result {|
@@ -417,17 +438,17 @@ S_atom_continue := S_atom_continue s_res;
 S_atom_return := S_atom_return s_res |}  *)
 C_result s_res
 :=
-let c_pre := C_result_proj_C_pre s_res A c_res' in
+let c_pre := C_result_proj_C_pre A c_res' in
 let c_pre := flatten_partial_pres_binds HA (S_pre s_res) c_pre in
-let c_post_normal := C_result_proj_C_post_normal s_res A c_res' in
+let c_post_normal := C_result_proj_C_post_normal A c_res' in
 let c_post_normal := flatten_partial_posts_binds HA (S_post_normal s_res) c_post_normal in
-let c_post_break := C_result_proj_C_post_break s_res A c_res' in
+let c_post_break := C_result_proj_C_post_break A c_res' in
 let c_post_break := flatten_partial_posts_binds HA (S_post_break s_res) c_post_break in
-let c_post_continue := C_result_proj_C_post_continue s_res A c_res' in
+let c_post_continue := C_result_proj_C_post_continue A c_res' in
 let c_post_continue := flatten_partial_posts_binds HA (S_post_continue s_res) c_post_continue in
-let c_post_return := C_result_proj_C_post_return s_res A c_res' in
+let c_post_return := C_result_proj_C_post_return A c_res' in
 let c_post_return := flatten_partial_post_rets_binds HA (S_post_return s_res) c_post_return in
-let c_path := C_result_proj_C_path s_res A c_res' in
+let c_path := C_result_proj_C_path A c_res' in
 let c_path := flatten_full_paths_binds HA (S_path s_res) c_path in
 mk_C_result 
   (S_pre s_res) c_pre
@@ -441,45 +462,17 @@ mk_C_result
   (S_atom_continue s_res)
   (S_atom_return s_res).
 
-Program Definition C_result_binder_intro_option (s_res : S_result) (A : Type) (HA: inhabited A)
-(c_res' : A -> C_result s_res) : 
+End Cres_proj.
 
-(* C_result {|
-S_pre := S_pre s_res;
-S_path := S_path s_res;
-S_post_normal := S_post_normal s_res;
-S_post_break := S_post_break s_res;
-S_post_continue := S_post_continue s_res;
-S_post_return := S_post_return s_res;
-S_atom_normal := S_atom_normal s_res;
-S_atom_break := S_atom_break s_res;
-S_atom_continue := S_atom_continue s_res;
-S_atom_return := S_atom_return s_res |}  *)
-C_result s_res
-:=
-let c_pre := C_result_proj_C_pre s_res A c_res' in
-let c_pre := flatten_partial_pres_binds HA (S_pre s_res) c_pre in
-let c_post_normal := C_result_proj_C_post_normal s_res A c_res' in
-let c_post_normal := flatten_partial_posts_binds HA (S_post_normal s_res) c_post_normal in
-let c_post_break := C_result_proj_C_post_break s_res A c_res' in
-let c_post_break := flatten_partial_posts_binds HA (S_post_break s_res) c_post_break in
-let c_post_continue := C_result_proj_C_post_continue s_res A c_res' in
-let c_post_continue := flatten_partial_posts_binds HA (S_post_continue s_res) c_post_continue in
-let c_post_return := C_result_proj_C_post_return s_res A c_res' in
-let c_post_return := flatten_partial_post_rets_binds HA (S_post_return s_res) c_post_return in
-let c_path := C_result_proj_C_path s_res A c_res' in
-let c_path := flatten_full_paths_binds HA (S_path s_res) c_path in
-mk_C_result 
-  (S_pre s_res) c_pre
-  (S_path s_res) c_path
-  (S_post_normal s_res) c_post_normal
-  (S_post_break s_res) c_post_break
-  (S_post_continue s_res) c_post_continue
-  (S_post_return s_res) c_post_return
-  (S_atom_normal s_res)
-  (S_atom_break s_res)
-  (S_atom_continue s_res)
-  (S_atom_return s_res).
+
+Definition Capp {A:Type} {binder: A -> Type} 
+  {sl1: list A} (cl1 : @list_binded_of A binder sl1)
+  {sl2: list A} (cl2 : @list_binded_of A binder sl2)
+  : @list_binded_of A binder (sl1 ++ sl2).
+Admitted.
+
+
+Infix "+++" := Capp (right associativity, at level 60).
 
 
 Definition C_split_sequence 
@@ -487,14 +480,88 @@ Definition C_split_sequence
 (c_res1 : C_result (S_split s1))
 (c_res2 : C_result (S_split s2))
 (c1: C_statement s1) (c2: C_statement s2)
-: C_result (S_split (Ssequence s1 s2)).
-Admitted.
+: C_result (S_split (Ssequence s1 s2)) :=
+  match 
+    c_res1 in C_result s_res1,
+    c_res2 in C_result s_res2
+    return (C_result (S_result_sequence s_res1 s_res2))
+  with
+    | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+        s_post_normal1 c_post_normal1 
+        s_post_break1 c_post_break1 
+        s_post_continue1 c_post_continue1 
+        s_post_return1 c_post_return1
+        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+     mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+        s_post_normal2 c_post_normal2 
+        s_post_break2 c_post_break2 
+        s_post_continue2 c_post_continue2 
+        s_post_return2 c_post_return2
+        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+      mk_C_result
+      (* S_pre *)
+        (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2)
+      (* C_pre *)
+        (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2)
+      (* S_path *)
+        (s_path1 ++ s_path2 ++ 
+          Sposts_conn_Spres s_post_normal1 s_pre2)
+      (* C_path *)
+        (c_path1 +++ c_path2 +++ 
+          Cposts_conn_Cpres c_post_normal1 c_pre2)
+      (* S_post_normal *)
+        (s_post_normal2 ++ 
+          Sposts_conn_atoms s_post_normal1 s_atom_normal2)
+      (* C_post_normal *)
+        (c_post_normal2 +++ 
+          Cposts_conn_atoms c_post_normal1 s_atom_normal2)
+      (* S_post_break *)
+        (s_post_break1 ++ s_post_break2 ++ 
+          Sposts_conn_atoms s_post_normal1 s_atom_break2)
+      (* C_post_break *)
+        (c_post_break1 +++ c_post_break2 +++
+          Cposts_conn_atoms c_post_normal1 s_atom_break2)
+      (* S_post_continue *)
+        (s_post_continue1 ++ s_post_continue2 ++ 
+          Sposts_conn_atoms s_post_normal1 s_atom_continue2)
+      (* C_post_continue *)
+        (c_post_continue1 +++ c_post_continue2 +++ 
+          Cposts_conn_atoms c_post_normal1 s_atom_continue2)
+      (* S_post_return *)
+        (s_post_return1 ++ s_post_return2 ++ 
+          Sposts_conn_returns s_post_normal1 s_atom_return2)
+      (* C_post_return *)
+        (c_post_return1 +++ c_post_return2 +++ 
+          Cposts_conn_returns c_post_normal1 s_atom_return2)
+      (* S_atom_normal *)
+        (atoms_conn_atoms s_atom_normal1 s_atom_normal2)
+      (* S_atom_break *)
+        (s_atom_break1 ++
+          atoms_conn_atoms s_atom_normal1 s_atom_break2)
+      (* S_atom_continue *)
+        (s_atom_continue1 ++
+          atoms_conn_atoms s_atom_normal1 s_atom_continue2)
+      (* S_atom_return *)
+        (s_atom_return1 ++
+          atoms_conn_returns s_atom_normal1 s_atom_return2)
+    end
+.
 
-Parameter default_C_result : C_result default_S_result.
 
 Fixpoint C_split (s: S_statement) (c: C_statement s) : C_result (S_split s) :=
 match c as c0 in C_statement s0
-  return C_result (S_split s0)
+  return C_result ({|
+    S_pre := S_pre (S_split s0);
+    S_path := S_path (S_split s0);
+    S_post_normal := S_post_normal (S_split s0);
+    S_post_break := S_post_break (S_split s0);
+    S_post_continue := S_post_continue (S_split s0);
+    S_post_return := S_post_return (S_split s0);
+    S_atom_normal := S_atom_normal (S_split s0);
+    S_atom_break := S_atom_break (S_split s0);
+    S_atom_continue := S_atom_continue (S_split s0);
+    S_atom_return := S_atom_return (S_split s0)
+  |})
 with
 | Csequence s1 s2 c1 c2 =>
     C_split_sequence s1 s2 (C_split s1 c1) (C_split s2 c2) c1 c2
@@ -503,7 +570,7 @@ with
 | Cskip => 
     default_C_result
 | Cgiven A HA c a_stm' =>
-    C_result_binder_intro (S_split c) A HA (fun a =>  C_split c (a_stm' a))
+    C_result_binder_intro A HA (fun a =>  C_split c (a_stm' a))
 | Cexgiven A HA ass c a_stm' =>
     default_C_result
 | Cassign e1 e2 =>
