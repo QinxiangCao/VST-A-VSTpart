@@ -376,6 +376,7 @@ Admitted.
 Definition C_result_proj_C_path (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (s_res.(S_path)).
 Admitted.
 
+End Cres_proj.
 
 Fixpoint flatten_binds {R A:Type} {binder: R -> Type} 
 (HA: inhabited A)
@@ -422,10 +423,8 @@ Definition flatten_full_paths_binds {A:Type}
   flatten_binds HA (bind_C_full_path A HA) s_paths c_paths'.
 
 
-Definition C_result_binder_intro (A : Type) (HA: inhabited A)
-(c_res' : A -> C_result s_res) : 
-
-(* C_result {|
+Definition C_result_binder_intro {s_res : S_result} (A : Type) (HA: inhabited A)
+(c_res' : A -> C_result {|
 S_pre := S_pre s_res;
 S_path := S_path s_res;
 S_post_normal := S_post_normal s_res;
@@ -435,8 +434,20 @@ S_post_return := S_post_return s_res;
 S_atom_normal := S_atom_normal s_res;
 S_atom_break := S_atom_break s_res;
 S_atom_continue := S_atom_continue s_res;
-S_atom_return := S_atom_return s_res |}  *)
-C_result s_res
+S_atom_return := S_atom_return s_res |}) : 
+
+C_result {|
+S_pre := S_pre s_res;
+S_path := S_path s_res;
+S_post_normal := S_post_normal s_res;
+S_post_break := S_post_break s_res;
+S_post_continue := S_post_continue s_res;
+S_post_return := S_post_return s_res;
+S_atom_normal := S_atom_normal s_res;
+S_atom_break := S_atom_break s_res;
+S_atom_continue := S_atom_continue s_res;
+S_atom_return := S_atom_return s_res |} 
+(* C_result s_res *)
 :=
 let c_pre := C_result_proj_C_pre A c_res' in
 let c_pre := flatten_partial_pres_binds HA (S_pre s_res) c_pre in
@@ -461,8 +472,6 @@ mk_C_result
   (S_atom_break s_res)
   (S_atom_continue s_res)
   (S_atom_return s_res).
-
-End Cres_proj.
 
 
 Definition Capp {A:Type} {binder: A -> Type} 
@@ -547,21 +556,32 @@ Definition C_split_sequence
     end
 .
 
+Parameter default_C_result: 
+  C_result {|
+  S_pre := S_pre default_S_result;
+  S_path := S_path default_S_result;
+  S_post_normal := S_post_normal default_S_result;
+  S_post_break := S_post_break default_S_result;
+  S_post_continue := S_post_continue default_S_result;
+  S_post_return := S_post_return default_S_result;
+  S_atom_normal := S_atom_normal default_S_result;
+  S_atom_break := S_atom_break default_S_result;
+  S_atom_continue := S_atom_continue default_S_result;
+  S_atom_return := S_atom_return default_S_result |}.
 
 Fixpoint C_split (s: S_statement) (c: C_statement s) : C_result (S_split s) :=
 match c as c0 in C_statement s0
   return C_result ({|
-    S_pre := S_pre (S_split s0);
-    S_path := S_path (S_split s0);
-    S_post_normal := S_post_normal (S_split s0);
-    S_post_break := S_post_break (S_split s0);
-    S_post_continue := S_post_continue (S_split s0);
-    S_post_return := S_post_return (S_split s0);
-    S_atom_normal := S_atom_normal (S_split s0);
-    S_atom_break := S_atom_break (S_split s0);
-    S_atom_continue := S_atom_continue (S_split s0);
-    S_atom_return := S_atom_return (S_split s0)
-  |})
+  S_pre := S_pre (S_split s0);
+  S_path := S_path (S_split s0);
+  S_post_normal := S_post_normal (S_split s0);
+  S_post_break := S_post_break (S_split s0);
+  S_post_continue := S_post_continue (S_split s0);
+  S_post_return := S_post_return (S_split s0);
+  S_atom_normal := S_atom_normal (S_split s0);
+  S_atom_break := S_atom_break (S_split s0);
+  S_atom_continue := S_atom_continue (S_split s0);
+  S_atom_return := S_atom_return (S_split s0) |})
 with
 | Csequence s1 s2 c1 c2 =>
     C_split_sequence s1 s2 (C_split s1 c1) (C_split s2 c2) c1 c2
