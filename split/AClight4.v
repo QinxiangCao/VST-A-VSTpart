@@ -157,6 +157,32 @@ Inductive list_binded_of {R : Type} {binder: R -> Type} : list R -> Type :=
 | list_binded_cons (r:R) (r': binder r) (l: list R)
                    (l':list_binded_of l) : list_binded_of (r::l).
 
+Fixpoint Capp {A:Type} {binder: A -> Type} 
+  {sl1: list A} (cl1 : @list_binded_of A binder sl1)
+  {sl2: list A} (cl2 : @list_binded_of A binder sl2)
+  : @list_binded_of A binder (sl1 ++ sl2) :=
+match cl1 in list_binded_of sl1'
+return list_binded_of (sl1' ++ sl2) with
+| list_binded_nil => cl2
+| list_binded_cons sx cx sl1' cl1' =>
+  list_binded_cons sx cx (app sl1' sl2) (Capp cl1' cl2)
+end.
+
+Fixpoint Cmap {A B:Type} {binder_a: A -> Type} {binder_b: B -> Type} 
+  (f: A -> B ) (binder_f: forall a, binder_a a -> binder_b (f a)) 
+    {sl: list A} (cl : @list_binded_of A binder_a sl)
+  : @list_binded_of B binder_b (map f sl) :=
+match cl in list_binded_of sl'
+return list_binded_of (map f sl') with
+| list_binded_nil => list_binded_nil
+| list_binded_cons sx cx sl' cl' =>
+  list_binded_cons (f sx) (binder_f sx cx)
+                   (map f sl') (Cmap f binder_f cl')
+end.
+
+
+Infix "+++" := Capp (right associativity, at level 60).
+
 Inductive C_full_path : S_full_path -> Type :=
 | mk_C_full_path : 
     forall (pre: assert) (path: path) (post: assert),
@@ -205,44 +231,270 @@ Inductive C_partial_post_ret : S_partial_post_ret -> Type :=
 
 Notation C_partial_post_rets := (@list_binded_of _ C_partial_post_ret).
 
+Definition atom_conn_return atom1 atom2 :=
+  match atom1, atom2 with
+  | mk_atom path1, mk_atom_ret path2 retval =>
+      mk_atom_ret (path1 ++ path2) retval
+  end.
 
-Parameter atoms_conn_returns : atoms -> atom_rets -> atom_rets.
-Parameter atoms_conn_atoms : atoms -> atoms -> atoms.
-Parameter atoms_conn_Spres : atoms -> S_partial_pres -> S_partial_pres.
-Parameter Sposts_conn_atoms : S_partial_posts -> atoms -> S_partial_posts.
-Parameter Sposts_conn_returns : S_partial_posts -> atom_rets -> S_partial_post_rets.
-Parameter Sposts_conn_Spres : S_partial_posts -> S_partial_pres -> S_full_paths.
+Definition atom_conn_returns atom1 atoms2 :=
+  map (atom_conn_return atom1) atoms2.
+
+Definition atoms_conn_returns atoms1 atoms2 :=
+  concat (map (fun atom1 => atom_conn_returns atom1 atoms2) atoms1).
+
+Definition atom_conn_atom atom1 atom2 :=
+  match atom1, atom2 with
+  | mk_atom path1, mk_atom path2 =>
+      mk_atom (path1 ++ path2)
+  end.
+
+Definition atom_conn_atoms atom1 atoms2 :=
+  map (atom_conn_atom atom1) atoms2.
+
+Definition atoms_conn_atoms atoms1 atoms2 :=
+  concat (map (fun atom1 => atom_conn_atoms atom1 atoms2) atoms1).
+
+Definition atom_conn_Spre atom1 s_pre2 :=
+  match atom1, s_pre2 with
+  | mk_atom path1, mk_S_partial_pre path2 =>
+      mk_S_partial_pre (path1 ++ path2)
+  end.
+  
+
+Fixpoint atom_conn_Cpre s_atom1 { s_pre2 } (c_pre2: C_partial_pre s_pre2) : C_partial_pre (atom_conn_Spre s_atom1 s_pre2) :=
+match s_atom1 with
+  | mk_atom path1 =>
+  match c_pre2 in C_partial_pre s_pre2'
+  return C_partial_pre (atom_conn_Spre (mk_atom path1) s_pre2') with
+  | mk_C_partial_pre path2 post2 =>
+      mk_C_partial_pre (path1 ++ path2) post2
+  | bind_C_partial_pre A HA s_pre2 c_pre2' =>
+      bind_C_partial_pre A HA (atom_conn_Spre (mk_atom path1) s_pre2)
+        (fun a => atom_conn_Cpre (mk_atom path1) (c_pre2' a))
+  end
+end.
+
+
+Definition atom_conn_Spres atom1 s_pres2 :=
+  map (atom_conn_Spre atom1) s_pres2.
+
+Fixpoint atoms_conn_Spres atoms1 s_pres2 :=
+  match atoms1 with
+  | [] => []
+  | atom1 :: atoms1' =>
+    atom_conn_Spres atom1 s_pres2 ++ atoms_conn_Spres atoms1' s_pres2
+  end.
+
+Definition atom_conn_Cpres s_atom1 { s_pres2 } (c_pres2: C_partial_pres s_pres2) : C_partial_pres (atom_conn_Spres s_atom1 s_pres2) :=
+  Cmap (atom_conn_Spre s_atom1) (@atom_conn_Cpre s_atom1) c_pres2.
 
 Fixpoint atoms_conn_Cpres 
   (atoms: atoms)
   {Spres: S_partial_pres}
   (Cpres: C_partial_pres Spres) 
-  : (C_partial_pres (atoms_conn_Spres atoms Spres)).
-Admitted.
+  : (C_partial_pres (atoms_conn_Spres atoms Spres)) :=
+  match atoms with
+  | nil => list_binded_nil
+  | atom :: atoms' =>
+      Capp (atom_conn_Cpres atom Cpres)
+            (atoms_conn_Cpres atoms' Cpres)
+  end.
 
+Definition Spost_conn_atom s_post1 atom2 :=
+  match s_post1 with
+  | mk_S_partial_post path1 =>
+    match atom2 with
+    | mk_atom path2 =>
+        mk_S_partial_post (path1 ++ path2)
+    end
+  end.
+
+Fixpoint Cpost_conn_atom { s_post1 } 
+  (c_post1 : C_partial_post s_post1) atom2
+  : C_partial_post (Spost_conn_atom s_post1 atom2) :=
+  match atom2 with
+  | mk_atom path2 =>
+  match c_post1 in C_partial_post s_post1'
+  return C_partial_post (Spost_conn_atom s_post1' (mk_atom path2)) with
+  | mk_C_partial_post pre1 path1 =>
+      mk_C_partial_post pre1 (path1 ++ path2)
+  | bind_C_partial_post A HA s_post1 c_post1' =>
+      bind_C_partial_post A HA (Spost_conn_atom s_post1 (mk_atom path2))
+        (fun a => Cpost_conn_atom (c_post1' a) (mk_atom path2))
+  end
+end.
+
+Definition Sposts_conn_atom s_posts1 atom2 :=
+  map (fun s_post1 => Spost_conn_atom s_post1 atom2) s_posts1.
+
+
+Fixpoint Cposts_conn_atom {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_posts (Sposts_conn_atom s_posts1 atom2) :=
+  Cmap(fun s_post1 => Spost_conn_atom s_post1 atom2)
+       (fun s_post1 c_post1 => 
+            @Cpost_conn_atom s_post1 c_post1 atom2)
+  c_posts1.
+
+Fixpoint Sposts_conn_atoms s_posts1 atoms2 :=
+  match atoms2 with
+  | [] => []
+  | atom2 :: atoms2' =>
+    Sposts_conn_atom s_posts1 atom2 ++ Sposts_conn_atoms s_posts1 atoms2'
+  end.
 
 Fixpoint Cposts_conn_atoms 
-  {s_posts : S_partial_posts}
-  (c_posts : C_partial_posts s_posts) 
-  (atoms: atoms)
-  : (C_partial_posts (Sposts_conn_atoms s_posts atoms)).
-Admitted.
+  {s_posts1 : S_partial_posts}
+  (c_posts1 : C_partial_posts s_posts1) 
+  (atoms2: atoms)
+  : (C_partial_posts (Sposts_conn_atoms s_posts1 atoms2)):=
+  match atoms2 with
+  | nil => list_binded_nil
+  | atom :: atoms' =>
+      Capp (Cposts_conn_atom c_posts1 atom )
+            (Cposts_conn_atoms c_posts1 atoms')
+  end.
 
-Fixpoint Cposts_conn_returns
-  {s_posts : S_partial_posts}
-  (c_posts : C_partial_posts s_posts) 
-  (atoms: atom_rets)
-  : (C_partial_post_rets (Sposts_conn_returns s_posts atoms)).
-Admitted.
+
+Definition Spost_conn_return s_post1 atom2 :=
+  match s_post1 with
+  | mk_S_partial_post path1 =>
+    match atom2 with
+    | mk_atom_ret path2 retval =>
+        mk_S_partial_post_ret (path1 ++ path2) retval
+    end
+  end.
+
+Fixpoint Cpost_conn_return { s_post1 } 
+  (c_post1 : C_partial_post s_post1) atom2
+  : C_partial_post_ret (Spost_conn_return s_post1 atom2) :=
+  match atom2 with
+  | mk_atom_ret path2 retval =>
+  match c_post1 in C_partial_post s_post1'
+  return C_partial_post_ret (Spost_conn_return s_post1' (mk_atom_ret path2 retval)) with
+  | mk_C_partial_post pre1 path1 =>
+      mk_C_partial_post_ret pre1 (path1 ++ path2) retval
+  | bind_C_partial_post A HA s_post1 c_post1' =>
+      bind_C_partial_post_ret A HA (Spost_conn_return s_post1 (mk_atom_ret path2 retval))
+        (fun a => Cpost_conn_return (c_post1' a) (mk_atom_ret path2 retval))
+  end
+end.
+
+Definition Sposts_conn_return s_posts1 atom2 :=
+  map (fun s_post1 => Spost_conn_return s_post1 atom2) s_posts1.
+
+
+Fixpoint Cposts_conn_return {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_post_rets (Sposts_conn_return s_posts1 atom2) :=
+  Cmap(fun s_post1 => Spost_conn_return s_post1 atom2)
+        (fun s_post1 c_post1 => 
+            @Cpost_conn_return s_post1 c_post1 atom2)
+  c_posts1.
+
+Fixpoint Sposts_conn_returns s_posts1 atoms2 :=
+  match atoms2 with
+  | [] => []
+  | atom2 :: atoms2' =>
+    Sposts_conn_return s_posts1 atom2 ++ Sposts_conn_returns s_posts1 atoms2'
+  end.
+
+Fixpoint Cposts_conn_returns 
+  {s_posts1 : S_partial_posts}
+  (c_posts1 : C_partial_posts s_posts1) 
+  (atoms2: atom_rets)
+  : (C_partial_post_rets (Sposts_conn_returns s_posts1 atoms2)):=
+  match atoms2 with
+  | nil => list_binded_nil
+  | atom :: atoms' =>
+      Capp (Cposts_conn_return c_posts1 atom )
+            (Cposts_conn_returns c_posts1 atoms')
+  end.
+
+
+Definition Spost_conn_Spre
+  (s_post1: S_partial_post)
+  (s_pre2: S_partial_pre) : S_full_path :=
+match s_post1 with
+| mk_S_partial_post path1 =>
+  match s_pre2 with
+  | mk_S_partial_pre path2 =>
+      mk_S_full_path (path1 ++ path2)
+  end
+end.
+
+Definition Spost_conn_Spres 
+  (s_post1: S_partial_post)
+  (s_pres2: S_partial_pres) : S_full_paths :=
+map (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2) s_pres2.
+
+Fixpoint Sposts_conn_Spres 
+  (s_posts1: S_partial_posts)
+  (s_pres2: S_partial_pres) : S_full_paths :=
+  match s_posts1 with
+  | [] => []
+  | s_post1 :: s_posts1' =>
+    Spost_conn_Spres s_post1 s_pres2 ++ 
+    Sposts_conn_Spres s_posts1' s_pres2
+  end.
+
+Fixpoint Cpost_conn_Cpre_aux
+  (pre: assert)
+  (path1: path)
+  {s_pre2: S_partial_pre}
+  (c_pre2: C_partial_pre s_pre2) : 
+  C_full_path (Spost_conn_Spre (mk_S_partial_post path1) s_pre2) :=
+match c_pre2 in C_partial_pre s_pre2'
+return C_full_path (Spost_conn_Spre (mk_S_partial_post path1) s_pre2') with
+| mk_C_partial_pre path2 post =>
+    mk_C_full_path pre (path1 ++ path2) post
+| bind_C_partial_pre A HA s_pre2 c_pre2' =>
+    bind_C_full_path A HA 
+      (Spost_conn_Spre (mk_S_partial_post path1) s_pre2)
+      (fun a => Cpost_conn_Cpre_aux pre path1 (c_pre2' a))
+end.
+
+Fixpoint Cpost_conn_Cpre
+  {s_post1: S_partial_post}
+  (c_post1: C_partial_post s_post1)
+  {s_pre2: S_partial_pre}
+  (c_pre2: C_partial_pre s_pre2) :
+  C_full_path (Spost_conn_Spre s_post1 s_pre2) :=
+match c_post1 in C_partial_post s_post1'
+return C_full_path (Spost_conn_Spre s_post1' s_pre2) with
+| mk_C_partial_post pre path1 =>
+    Cpost_conn_Cpre_aux pre path1 c_pre2
+| bind_C_partial_post A HA s_post1 c_post1' =>
+    bind_C_full_path A HA 
+      (Spost_conn_Spre s_post1 s_pre2)
+      (fun a => Cpost_conn_Cpre (c_post1' a) c_pre2)
+end.
+
+
+Definition Cpost_conn_Cpres 
+  {s_post1: S_partial_post}
+  (c_post1: C_partial_post s_post1)
+  {s_pres2: S_partial_pres}
+  (c_pres2: C_partial_pres s_pres2 ) 
+  : C_full_paths (Spost_conn_Spres s_post1 s_pres2) :=
+Cmap 
+  (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2)
+  (fun s_pre2 c_pre2 => 
+       @Cpost_conn_Cpre s_post1 c_post1 s_pre2 c_pre2)
+  c_pres2.
+
+
 
 Fixpoint Cposts_conn_Cpres
-  {s_posts : S_partial_posts}
-  (c_posts : C_partial_posts s_posts)
-  {s_pres: S_partial_pres}
-  (c_pres: C_partial_pres s_pres)
-  : (C_full_paths (Sposts_conn_Spres s_posts s_pres)).
-Admitted.
-
+  {s_posts1 : S_partial_posts}
+  (c_posts1 : C_partial_posts s_posts1)
+  {s_pres2: S_partial_pres}
+  (c_pres2: C_partial_pres s_pres2)
+  : (C_full_paths (Sposts_conn_Spres s_posts1 s_pres2)):=
+  match c_posts1 in list_binded_of s_posts1'
+  return C_full_paths (Sposts_conn_Spres s_posts1' s_pres2) with
+  | list_binded_nil => list_binded_nil
+  | list_binded_cons s_post1 c_post1 s_posts' c_posts' =>
+      Capp (Cpost_conn_Cpres c_post1 c_pres2)
+           (Cposts_conn_Cpres c_posts' c_pres2)
+  end.
 
 
 Definition S_result_sequence res1 res2 := 
@@ -321,18 +573,14 @@ Definition option_map2 {A B C:Type} (f:A->B->C)
     | _, _ => @None C
   end.
 
-Parameter default_S_result : S_result.
-
 Fixpoint S_split (s: S_statement) : S_result :=
   match s with
   | Ssequence s1 s2 =>
       let res1 := S_split s1 in
       let res2 := S_split s2 in
       S_result_sequence res1 res2
-  | _ => default_S_result
+  | _ => no_S_result
   end.
-
-
 
 
 Definition hd_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R) 
@@ -341,7 +589,6 @@ Definition hd_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R)
     match (res' a) with
     | list_binded_cons x x' xs xsb => x'
     end.
-
 
 Definition tl_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R)
   (res' : A -> @list_binded_of R binder (x::xs)) : A -> list_binded_of xs :=
@@ -386,17 +633,37 @@ Definition C_result_proj_C_post_normal (A : Type) (c_res: A -> C_result s_res) :
     end.
 
 
-Definition C_result_proj_C_post_break (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_post_break).
-Admitted.
+Definition C_result_proj_C_post_break (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_post_break) :=
+  fun a =>
+    match (c_res a) 
+    with
+    | mk_C_result _ _ _ _ _ _ _ c_post_break _ _ _ _ _ _ _ _ =>
+      c_post_break
+    end.
 
-Definition C_result_proj_C_post_continue (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_post_continue).
-Admitted.
+Definition C_result_proj_C_post_continue (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_posts (s_post_continue):=
+fun a =>
+match (c_res a) 
+with
+| mk_C_result _ _ _ _ _ _ _ _ _ c_post_continue _ _ _ _ _ _ =>
+c_post_continue
+end.
 
-Definition C_result_proj_C_post_return (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (s_post_return).
-Admitted.
+Definition C_result_proj_C_post_return (A : Type) (c_res: A -> C_result s_res) : A -> C_partial_post_rets (s_post_return) :=
+fun a =>
+match (c_res a)
+with
+| mk_C_result _ _ _ _ _ _ _ _ _ _ _ C_post_return _ _ _ _ =>
+C_post_return
+end.
 
-Definition C_result_proj_C_path (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (s_path).
-Admitted.
+Definition C_result_proj_C_path (A : Type) (c_res: A -> C_result s_res) : A -> C_full_paths (s_path) :=
+fun a =>
+match (c_res a)
+with
+| mk_C_result _ _ _ C_path  _ _ _ _ _ _ _ _ _ _ _ _ =>
+C_path
+end.
 
 Fixpoint flatten_binds {R A:Type} {binder: R -> Type} 
 (HA: inhabited A)
@@ -481,16 +748,7 @@ mk_C_result
 end.
 
 
-Definition Capp {A:Type} {binder: A -> Type} 
-  {sl1: list A} (cl1 : @list_binded_of A binder sl1)
-  {sl2: list A} (cl2 : @list_binded_of A binder sl2)
-  : @list_binded_of A binder (sl1 ++ sl2).
-Admitted.
 
-
-Infix "+++" := Capp (right associativity, at level 60).
-
-Parameter default_C_result : C_result default_S_result.
 
 Definition C_split_sequence 
 (s1 s2 : S_statement)
@@ -576,31 +834,30 @@ with
 | Csequence s1 s2 c1 c2 =>
     C_split_sequence s1 s2 (C_split s1 c1) (C_split s2 c2)
 | Cassert a => 
-    default_C_result
+    no_C_result
 | Cskip => 
-    default_C_result
+    no_C_result
 | Cgiven A HA c a_stm' =>
     C_result_binder_intro (S_split c) A HA (fun a =>  C_split c (a_stm' a))
 | Cexgiven A HA ass c a_stm' =>
     C_result_binder_intro (S_split c) A HA (fun a =>  C_split c (a_stm' a))
 | Cassign e1 e2 =>
-    default_C_result
+    no_C_result
 | Ccall id e args =>
-    default_C_result
+    no_C_result
 | Cset id e =>
-    default_C_result
+    no_C_result
 | Cifthenelse e1 s1 s2 c1 c2 =>
-    default_C_result
+    no_C_result
 | Cloop inv s1 s2 c1 c2 =>
-    default_C_result
+    no_C_result
 | Cbreak =>
-    default_C_result
+    no_C_result
 | Ccontinue =>
-    default_C_result
+    no_C_result
 | Creturn e =>
-    default_C_result
+    no_C_result
 end.
-
 
 
 (* Legacy rules
