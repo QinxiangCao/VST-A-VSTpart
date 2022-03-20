@@ -122,6 +122,13 @@ Inductive C_statement : S_statement -> Type :=
     (c: S_statement)
     (a_stm': A -> C_statement c),
     C_statement (Ssequence Sassert (Ssequence Sassert c ))
+(* EX a. ass *)
+(* Given a
+   { ass }
+    c ...
+
+*)
+
     (* C_statement c *)
     (* TODO: to be refined *)
 | Cassign : forall (e1:expr) (e2:expr),
@@ -536,6 +543,8 @@ return C_full_path (Spost_conn_Spre s_post1' s_pre2) with
       (Spost_conn_Spre s_post1 s_pre2)
       (fun a => Cpost_conn_Cpre (c_post1' a) c_pre2)
 end.
+
+
 
 
 Definition Cpost_conn_Cpres 
@@ -1083,7 +1092,6 @@ with
 C_path
 end.
 
-
 End Cres_proj.
 
 
@@ -1198,6 +1206,21 @@ with
   end
 .
 
+
+
+
+(* EX a. 
+   Given a...
+
+   { Q(a) }
+
+   Bind a. 
+    {EX a . P(a)}
+    ...
+    {Q(a)}
+
+*)
+
 Definition C_split_given (s_res : S_result) (A : Type) (HA: inhabited A) :
 (A -> C_result s_res) ->
 C_result s_res
@@ -1232,10 +1255,78 @@ mk_C_result
 | no_S_result => fun _ => no_C_result
 end.
 
-Definition C_split_exgiven (s: S_statement) (A: Type) (HA: inhabited A) (c_ass': A -> assert) : (A -> C_result (S_split s)) ->
-C_result (S_split (Ssequence Sassert (Ssequence Sassert s))) :=
-fun c_res' => 
+Definition C_split_exgiven (s_res: S_result) (A: Type) (HA: inhabited A) (c_ass': A -> assert) : (A -> C_result s_res) ->
+C_result (S_split_sequence S_split_assert s_res ) :=
+match s_res with
+| mk_S_result s_pre s_path s_post_normal s_post_break s_post_continue s_post_return s_atom_normal s_atom_break s_atom_continue s_atom_return =>
+fun c_res' =>
 let ex_ass := exp c_ass' in
+let c_pre := C_result_proj_C_pre A c_res' in
+let c_pre := flatten_partial_pres_binds HA (s_pre) c_pre in
+let c_post_normal := C_result_proj_C_post_normal A c_res' in
+let c_post_normal := flatten_partial_posts_binds HA (s_post_normal) c_post_normal in
+let c_post_break := C_result_proj_C_post_break A c_res' in
+let c_post_break := flatten_partial_posts_binds HA (s_post_break) c_post_break in
+let c_post_continue := C_result_proj_C_post_continue A c_res' in
+let c_post_continue := flatten_partial_posts_binds HA (s_post_continue) c_post_continue in
+let c_post_return := C_result_proj_C_post_return A c_res' in
+let c_post_return := flatten_partial_post_rets_binds HA (s_post_return) c_post_return in
+let c_path := C_result_proj_C_path A c_res' in
+let c_path := flatten_full_paths_binds HA (s_path) c_path in
+
+let ass_post_normal_C := bind_C_partial_post A HA 
+          (mk_S_partial_post nil)
+          (fun a => mk_C_partial_post (c_ass' a) nil) in
+let ass_post_normal_S := mk_S_partial_post nil in
+
+mk_C_result
+(* S_pre *)
+  ( [ mk_S_partial_pre nil ] ++ atoms_conn_Spres [] s_pre)
+(* C_pre *)
+  ( Capp ({ (mk_C_partial_pre nil ex_ass) }) (atoms_conn_Cpres [] c_pre))
+(* S_path *)
+  (s_path ++ 
+    Sposts_conn_Spres [ass_post_normal_S] s_pre)
+(* C_path *)
+  (c_path +++ 
+    Cposts_conn_Cpres { ass_post_normal_C } c_pre)
+(* S_post_normal *)
+  (s_post_normal ++ 
+    Sposts_conn_atoms [ass_post_normal_S] s_atom_normal)
+(* C_post_normal *)
+  (c_post_normal +++ 
+    Cposts_conn_atoms { ass_post_normal_C } s_atom_normal)
+(* S_post_break *)
+  (s_post_break ++ 
+    Sposts_conn_atoms [ass_post_normal_S] s_atom_break)
+(* C_post_break *)
+  (c_post_break +++
+    Cposts_conn_atoms { ass_post_normal_C } s_atom_break)
+(* S_post_continue *)
+  (s_post_continue ++ 
+    Sposts_conn_atoms [ass_post_normal_S] s_atom_continue)
+(* C_post_continue *)
+  ( c_post_continue +++ 
+    Cposts_conn_atoms { ass_post_normal_C } s_atom_continue)
+(* S_post_return *)
+  ( s_post_return ++ 
+    Sposts_conn_returns [ass_post_normal_S] s_atom_return)
+(* C_post_return *)
+  ( c_post_return +++ 
+    Cposts_conn_returns { ass_post_normal_C } s_atom_return)
+(* S_atom_normal *)
+  (atoms_conn_atoms [] s_atom_normal)
+(* S_atom_break *)
+  ( atoms_conn_atoms [] s_atom_break)
+(* S_atom_continue *)
+  ( atoms_conn_atoms [] s_atom_continue)
+(* S_atom_return *)
+  ( atoms_conn_returns [] s_atom_return)
+
+| no_S_result => fun _ => no_C_result
+end.
+
+
 let ex_split := C_split_assert ex_ass in
 let c_split := C_split_given (S_split (Ssequence Sassert s)) A HA
     (fun a:A => C_split_sequence Sassert s  
