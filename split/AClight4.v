@@ -835,12 +835,12 @@ Definition S_split_loop0 res1 res2 :=
     | mk_S_result s_pre2 s_path2 
           s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-      if (
+      (* if (
         andb (loop_cont_valid s_atom_continue2 s_post_continue2)
         (andb (loop_has_assert s_pre1 s_pre2)
          (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
            (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
-      ) then (
+      ) then ( *)
       mk_S_result 
       (* S_pre *)
         (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
@@ -898,11 +898,89 @@ Definition S_split_loop0 res1 res2 :=
           atoms_conn_returns s_atom_normal1 s_atom_return2 ++
           atoms_conn_returns s_atom_continue1 s_atom_return2 ++
           atoms_conn_returns s_atom_normal2 s_atom_return1)
-      ) else no_S_result
+      (* ) else no_S_result *)
     | no_S_result => no_S_result
     end
   | no_S_result => no_S_result
   end.
+
+Definition S_split_loop0_refined res1 res2 := 
+match res1 with
+| mk_S_result s_pre1 s_path1 
+      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1 =>
+  match res2 with
+  | mk_S_result s_pre2 s_path2 
+        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    if (
+      andb (loop_cont_valid s_atom_continue2 s_post_continue2)
+      (andb (loop_has_assert s_pre1 s_pre2)
+        (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
+          (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
+    ) then (
+    mk_S_result 
+    (* S_pre *)
+      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
+        atoms_conn_Spres s_atom_continue1 s_pre2)
+    (* S_path *)
+      (s_path1 ++ s_path2 ++ 
+        Sposts_conn_Spres s_post_normal1 s_pre2 ++
+        Sposts_conn_Spres s_post_continue1 s_pre2 ++
+        Sposts_conn_Spres s_post_normal2 s_pre1 ++
+        Sposts_conn_Spres s_post_normal1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_continue1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_continue1 s_pre2))
+    (* S_post_normal *)
+      (s_post_break1 ++ s_post_break2 ++
+        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
+        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
+        Sposts_conn_atoms s_post_continue1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
+    (* S_post_break *)    []
+    (* S_post_continue *) []
+    (* S_post_return *)
+      (s_post_return1 ++ s_post_return2 ++ 
+        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
+        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
+        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
+        Sposts_conn_returns s_post_normal2
+          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal2 
+          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
+        Sposts_conn_returns s_post_continue1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1))
+    (* S_atom_normal *)
+      (s_atom_break1 ++
+        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_normal2 s_atom_break1)
+    (* S_atom_break *)    []
+    (* S_atom_continue *) []
+    (* S_atom_return *)
+      (s_atom_return1 ++
+        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
+        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
+        atoms_conn_returns s_atom_normal2 s_atom_return1)
+    ) else no_S_result
+  | no_S_result => no_S_result
+  end
+| no_S_result => no_S_result
+end.
 
 Definition S_split_loop1 res1 res2 := 
   match res1 with
@@ -1008,7 +1086,7 @@ if loop_cont_valid s_atom_continue2 s_post_continue2 then (
 
 Definition S_split_loop inv res1 res2 := 
   match inv with
-  | LILNull => S_split_loop0 res1 res2
+  | LILNull => S_split_loop0_refined res1 res2
   | LILSingle => S_split_loop1 res1 res2
   | LILDouble => S_split_loop2 res1 res2
   end.
@@ -1559,30 +1637,409 @@ Definition C_split_ifthenelse (e: expr)
 (s1 s2 : S_statement)
 : C_result (S_split s1) ->
   C_result (S_split s2) ->
-  C_result (S_split (Sifthenelse e s1 s2)).
-Admitted.
+  C_result (S_split (Sifthenelse e s1 s2)) :=
+fun c_res1 c_res2 =>
+match 
+  c_res1 in C_result s_res1,
+  c_res2 in C_result s_res2
+  return (C_result (S_split_ifthenelse e s_res1 s_res2))
+with
+  | no_C_result, _ 
+  | _, no_C_result => no_C_result
+  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+      s_post_normal1 c_post_normal1 
+      s_post_break1 c_post_break1 
+      s_post_continue1 c_post_continue1 
+      s_post_return1 c_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+      s_post_normal2 c_post_normal2 
+      s_post_break2 c_post_break2 
+      s_post_continue2 c_post_continue2 
+      s_post_return2 c_post_return2
+      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    mk_C_result
+    (* S_pre *)
+      (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres e s_pre2)
+    (* C_pre *)
+      (add_exp_to_Cpres e c_pre1 +++ add_exp_to_Cpres e c_pre2)
+    (* S_path *)
+      (s_path1 ++ s_path2)
+    (* C_path *)
+      (c_path1 +++ c_path2)
+    (* S_post_normal *)
+      (s_post_normal1 ++ s_post_normal2)
+    (* C_post_normal *)
+      (c_post_normal1 +++ c_post_normal2)
+    (* S_post_break *)
+      (s_post_break1 ++ s_post_break2)
+    (* C_post_break *)
+      (c_post_break1 +++ c_post_break2)
+    (* S_post_continue *)
+      (s_post_continue1 ++ s_post_continue2)
+    (* C_post_continue *)
+      (c_post_continue1 +++ c_post_continue2)
+    (* S_post_return *)
+      (s_post_return1 ++ s_post_return2)
+    (* C_post_return *)
+      (c_post_return1 +++ c_post_return2)
+    (* S_atom_normal *)
+      (add_exp_to_atoms e s_atom_normal1 ++
+        add_exp_to_atoms e s_atom_normal2)
+    (* S_atom_break *)
+      (add_exp_to_atoms e s_atom_break1 ++
+        add_exp_to_atoms e s_atom_break2)     
+    (* S_atom_continue *)
+      (add_exp_to_atoms e s_atom_continue1 ++
+        add_exp_to_atoms e s_atom_continue2)
+    (* S_atom_return *)
+      (add_exp_to_ret_atoms e s_atom_return1 ++
+      add_exp_to_ret_atoms e s_atom_return2)
+end.
 
 Definition C_split_loop0
 (s1 s2 : S_statement)
 : C_result (S_split s1) ->
   C_result (S_split s2) ->
-  C_result (S_split (Sloop LILNull s1 s2)).
-Admitted.
+  C_result (S_split (Sloop LILNull s1 s2)):=
+  fun c_res1 c_res2 =>
+match 
+  c_res1 in C_result s_res1,
+  c_res2 in C_result s_res2
+  return (C_result (
+    match s_res1, s_res2 with
+    | no_S_result, _ => no_S_result
+    | _, no_S_result => no_S_result
+    | mk_S_result s_pre1 s_path1  
+        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1 
+        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+      mk_S_result s_pre2 s_path2  
+        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2 
+        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+        if (
+          andb (loop_cont_valid s_atom_continue2 s_post_continue2)
+          (andb (loop_has_assert s_pre1 s_pre2)
+            (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
+              (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
+        ) then (S_split_loop0_refined s_res1 s_res2)
+        else no_S_result
+    end
+  ))
+with
+  | no_C_result, _ 
+  | _, no_C_result => no_C_result
+  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+      s_post_normal1 c_post_normal1 
+      s_post_break1 c_post_break1 
+      s_post_continue1 c_post_continue1 
+      s_post_return1 c_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+      s_post_normal2 c_post_normal2 
+      s_post_break2 c_post_break2 
+      s_post_continue2 c_post_continue2 
+      s_post_return2 c_post_return2
+      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    if (
+      andb (loop_cont_valid s_atom_continue2 s_post_continue2)
+      (andb (loop_has_assert s_pre1 s_pre2)
+        (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
+          (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
+    ) then (
+    mk_C_result 
+    (* S_pre *)
+      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
+        atoms_conn_Spres s_atom_continue1 s_pre2)
+    (* C_pre *)
+      (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
+        atoms_conn_Cpres s_atom_continue1 c_pre2)
+    (* S_path *)
+      (s_path1 ++ s_path2 ++ 
+        Sposts_conn_Spres s_post_normal1 s_pre2 ++
+        Sposts_conn_Spres s_post_continue1 s_pre2 ++
+        Sposts_conn_Spres s_post_normal2 s_pre1 ++
+        Sposts_conn_Spres s_post_normal1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_continue1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_continue1 s_pre2))
+    (* C_path *)
+      (c_path1 +++ c_path2 +++
+        Cposts_conn_Cpres c_post_normal1 c_pre2 +++
+        Cposts_conn_Cpres c_post_continue1 c_pre2 +++
+        Cposts_conn_Cpres c_post_normal2 c_pre1 +++
+        Cposts_conn_Cpres c_post_normal1
+          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
+        Cposts_conn_Cpres c_post_continue1
+          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
+        Cposts_conn_Cpres c_post_normal2
+          (atoms_conn_Cpres s_atom_normal1 c_pre2) +++
+        Cposts_conn_Cpres c_post_normal2
+          (atoms_conn_Cpres s_atom_continue1 c_pre2))
+    (* S_post_normal *)
+      (s_post_break1 ++ s_post_break2 ++
+        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
+        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
+        Sposts_conn_atoms s_post_continue1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
+    (* C_post_normal *)
+      (c_post_break1 +++ c_post_break2 +++
+        Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
+        Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
+        Cposts_conn_atoms c_post_continue1 s_atom_break2 +++
+        Cposts_conn_atoms c_post_normal2
+          (atoms_conn_atoms s_atom_normal1 s_atom_break2) +++
+        Cposts_conn_atoms c_post_normal2
+          (atoms_conn_atoms s_atom_continue1 s_atom_break2) +++
+        Cposts_conn_atoms c_post_normal1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) +++
+        Cposts_conn_atoms c_post_continue1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
+    (* S_post_break *)    []
+    (* C_post_break *)    {}
+    (* S_post_continue *) []
+    (* C_post_continue *) {}
+    (* S_post_return *)
+      (s_post_return1 ++ s_post_return2 ++ 
+        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
+        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
+        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
+        Sposts_conn_returns s_post_normal2
+          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal2 
+          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
+        Sposts_conn_returns s_post_continue1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1))
+    (* C_post_return *)
+      (c_post_return1 +++ c_post_return2 +++
+        Cposts_conn_returns c_post_normal1 s_atom_return2 +++
+        Cposts_conn_returns c_post_continue1 s_atom_return2 +++
+        Cposts_conn_returns c_post_normal2 s_atom_return1 +++
+        Cposts_conn_returns c_post_normal2 
+          (atoms_conn_returns s_atom_normal1 s_atom_return2) +++
+        Cposts_conn_returns c_post_normal2 
+          (atoms_conn_returns s_atom_continue1 s_atom_return2) +++
+        Cposts_conn_returns c_post_normal1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) +++
+        Cposts_conn_returns c_post_continue1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1))
+    (* S_atom_normal *)
+      (s_atom_break1 ++
+        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_normal2 s_atom_break1)
+    (* S_atom_break *)    []
+    (* S_atom_continue *) []
+    (* S_atom_return *)
+      (s_atom_return1 ++
+        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
+        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
+        atoms_conn_returns s_atom_normal2 s_atom_return1)
+    ) else no_S_result
+end.
+
+Definition C_split_loop0
+(s1 s2 : S_statement)
+: C_result (S_split s1) ->
+  C_result (S_split s2) ->
+  C_result (S_split (Sloop LILNull s1 s2)):=
+  fun c_res1 c_res2 =>
+match 
+  c_res1 in C_result s_res1,
+  c_res2 in C_result s_res2
+  return (C_result (S_split_loop0_refined s_res1 s_res2))
+with
+  | no_C_result, _ 
+  | _, no_C_result => no_C_result
+  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+      s_post_normal1 c_post_normal1 
+      s_post_break1 c_post_break1 
+      s_post_continue1 c_post_continue1 
+      s_post_return1 c_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+      s_post_normal2 c_post_normal2 
+      s_post_break2 c_post_break2 
+      s_post_continue2 c_post_continue2 
+      s_post_return2 c_post_return2
+      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    (* if (
+      andb (loop_cont_valid s_atom_continue2 s_post_continue2)
+      (andb (loop_has_assert s_pre1 s_pre2)
+        (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
+          (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
+    ) then ( *)
+    mk_C_result 
+    (* S_pre *)
+      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
+        atoms_conn_Spres s_atom_continue1 s_pre2)
+    (* C_pre *)
+      (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
+        atoms_conn_Cpres s_atom_continue1 c_pre2)
+    (* S_path *)
+      (s_path1 ++ s_path2 ++ 
+        Sposts_conn_Spres s_post_normal1 s_pre2 ++
+        Sposts_conn_Spres s_post_continue1 s_pre2 ++
+        Sposts_conn_Spres s_post_normal2 s_pre1 ++
+        Sposts_conn_Spres s_post_normal1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_continue1
+          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
+        Sposts_conn_Spres s_post_normal2
+          (atoms_conn_Spres s_atom_continue1 s_pre2))
+    (* C_path *)
+      (c_path1 +++ c_path2 +++
+        Cposts_conn_Cpres c_post_normal1 c_pre2 +++
+        Cposts_conn_Cpres c_post_continue1 c_pre2 +++
+        Cposts_conn_Cpres c_post_normal2 c_pre1 +++
+        Cposts_conn_Cpres c_post_normal1
+          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
+        Cposts_conn_Cpres c_post_continue1
+          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
+        Cposts_conn_Cpres c_post_normal2
+          (atoms_conn_Cpres s_atom_normal1 c_pre2) +++
+        Cposts_conn_Cpres c_post_normal2
+          (atoms_conn_Cpres s_atom_continue1 c_pre2))
+    (* S_post_normal *)
+      (s_post_break1 ++ s_post_break2 ++
+        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
+        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal2
+          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
+        Sposts_conn_atoms s_post_normal1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
+        Sposts_conn_atoms s_post_continue1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
+    (* C_post_normal *)
+      (c_post_break1 +++ c_post_break2 +++
+        Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
+        Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
+        Cposts_conn_atoms c_post_continue1 s_atom_break2 +++
+        Cposts_conn_atoms c_post_normal2
+          (atoms_conn_atoms s_atom_normal1 s_atom_break2) +++
+        Cposts_conn_atoms c_post_normal2
+          (atoms_conn_atoms s_atom_continue1 s_atom_break2) +++
+        Cposts_conn_atoms c_post_normal1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) +++
+        Cposts_conn_atoms c_post_continue1
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
+    (* S_post_break *)    []
+    (* C_post_break *)    {}
+    (* S_post_continue *) []
+    (* C_post_continue *) {}
+    (* S_post_return *)
+      (s_post_return1 ++ s_post_return2 ++ 
+        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
+        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
+        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
+        Sposts_conn_returns s_post_normal2
+          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal2 
+          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
+        Sposts_conn_returns s_post_normal1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
+        Sposts_conn_returns s_post_continue1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1))
+    (* C_post_return *)
+      (c_post_return1 +++ c_post_return2 +++
+        Cposts_conn_returns c_post_normal1 s_atom_return2 +++
+        Cposts_conn_returns c_post_continue1 s_atom_return2 +++
+        Cposts_conn_returns c_post_normal2 s_atom_return1 +++
+        Cposts_conn_returns c_post_normal2 
+          (atoms_conn_returns s_atom_normal1 s_atom_return2) +++
+        Cposts_conn_returns c_post_normal2 
+          (atoms_conn_returns s_atom_continue1 s_atom_return2) +++
+        Cposts_conn_returns c_post_normal1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) +++
+        Cposts_conn_returns c_post_continue1 
+          (atoms_conn_returns s_atom_normal2 s_atom_return1))
+    (* S_atom_normal *)
+      (s_atom_break1 ++
+        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
+        atoms_conn_atoms s_atom_normal2 s_atom_break1)
+    (* S_atom_break *)    []
+    (* S_atom_continue *) []
+    (* S_atom_return *)
+      (s_atom_return1 ++
+        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
+        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
+        atoms_conn_returns s_atom_normal2 s_atom_return1)
+    (* ) else no_S_result *)
+end.
+
 
 Definition C_split_loop1 (inv: assert)
 (s1 s2 : S_statement)
 : C_result (S_split s1) ->
   C_result (S_split s2) ->
-  C_result (S_split (Sloop LILSingle s1 s2)).
-Admitted.
+  C_result (S_split (Sloop LILSingle s1 s2)) :=
+fun c_res1 c_res2 =>
+match 
+  c_res1 in C_result s_res1,
+  c_res2 in C_result s_res2
+  return (C_result (S_split_sequence s_res1 s_res2))
+with
+  | no_C_result, _ 
+  | _, no_C_result => no_C_result
+  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+      s_post_normal1 c_post_normal1 
+      s_post_break1 c_post_break1 
+      s_post_continue1 c_post_continue1 
+      s_post_return1 c_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+      s_post_normal2 c_post_normal2 
+      s_post_break2 c_post_break2 
+      s_post_continue2 c_post_continue2 
+      s_post_return2 c_post_return2
+      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    mk_C_result
 
 
 Definition C_split_loop2 (inv1: assert) (inv2: assert)
 (s1 s2 : S_statement)
 : C_result (S_split s1) ->
   C_result (S_split s2) ->
-  C_result (S_split (Sloop LILDouble s1 s2)).
-Admitted.
+  C_result (S_split (Sloop LILDouble s1 s2)) :=
+fun c_res1 c_res2 =>
+match 
+  c_res1 in C_result s_res1,
+  c_res2 in C_result s_res2
+  return (C_result (S_split_sequence s_res1 s_res2))
+with
+  | no_C_result, _ 
+  | _, no_C_result => no_C_result
+  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
+      s_post_normal1 c_post_normal1 
+      s_post_break1 c_post_break1 
+      s_post_continue1 c_post_continue1 
+      s_post_return1 c_post_return1
+      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
+      s_post_normal2 c_post_normal2 
+      s_post_break2 c_post_break2 
+      s_post_continue2 c_post_continue2 
+      s_post_return2 c_post_return2
+      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    mk_C_result
 
 Definition C_split_loop {invl} (inv: loop_invariant invl)
 (s1 s2 : S_statement)
