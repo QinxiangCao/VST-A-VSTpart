@@ -883,83 +883,6 @@ Definition S_split_loop0 res1 res2 :=
   | no_S_result => no_S_result
   end.
 
-(* Definition S_split_loop0_refined res1 res2 := 
-match res1 with
-| mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1 =>
-  match res2 with
-  | mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-    if (
-      andb (loop_cont_valid s_atom_continue2 s_post_continue2)
-      (andb (loop_has_assert s_pre1 s_pre2)
-        (andb (no_unannote_loop1 s_atom_normal1 s_atom_normal2)
-          (no_unannote_loop2 s_atom_continue1 s_atom_normal2)))
-    ) then (
-    mk_S_result 
-    (* S_pre *)
-      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-        atoms_conn_Spres s_atom_continue1 s_pre2)
-    (* S_path *)
-      (s_path1 ++ s_path2 ++ 
-        Sposts_conn_Spres s_post_normal1 s_pre2 ++
-        Sposts_conn_Spres s_post_continue1 s_pre2 ++
-        Sposts_conn_Spres s_post_normal2 s_pre1 ++
-        Sposts_conn_Spres s_post_normal1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-        Sposts_conn_Spres s_post_continue1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_continue1 s_pre2))
-    (* S_post_normal *)
-      (s_post_break1 ++ s_post_break2 ++
-        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
-        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
-        Sposts_conn_atoms s_post_normal1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
-        Sposts_conn_atoms s_post_continue1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
-    (* S_post_break *)    []
-    (* S_post_continue *) []
-    (* S_post_return *)
-      (s_post_return1 ++ s_post_return2 ++ 
-        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
-        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
-        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
-        Sposts_conn_returns s_post_normal2
-          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
-        Sposts_conn_returns s_post_normal2 
-          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
-        Sposts_conn_returns s_post_normal1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
-        Sposts_conn_returns s_post_continue1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1))
-    (* S_atom_normal *)
-      (s_atom_break1 ++
-        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_normal2 s_atom_break1)
-    (* S_atom_break *)    []
-    (* S_atom_continue *) []
-    (* S_atom_return *)
-      (s_atom_return1 ++
-        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
-        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
-        atoms_conn_returns s_atom_normal2 s_atom_return1)
-    ) else no_S_result
-  | no_S_result => no_S_result
-  end
-| no_S_result => no_S_result
-end. *)
 
 Definition S_split_loop1 res1 res2 := 
   match res1 with
@@ -1116,11 +1039,52 @@ end.
 
 
 
+Definition S_split_loop0_refined (res1 res2: S_result) := 
+  match res1, res2 with
+  | mk_S_result s_pre1 s_path1 
+        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
+        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+      mk_S_result s_pre2 s_path2 
+        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
+    match s_atom_continue2 with
+    | _ :: _ => 
+      (* S_split_loop0 res1 res2 *)
+      no_S_result
+    | nil =>  
+      match s_post_continue2 with
+      | _ :: _ => no_S_result
+      | nil =>
+        match s_atom_normal2 with
+        | nil =>  S_split_loop0 res1 res2
+        | _ :: _  =>
+          match s_atom_normal1 with
+          | nil => 
+            match s_atom_continue1 with
+            | nil => S_split_loop0 res1 res2
+            | _ :: _ => no_S_result
+            end
+          | _ :: _ => no_S_result
+          end
+        end
+      end
+    end
+  | _, _ => no_S_result
+  end.
+
+
+Definition S_split_loop1_refined (res1 res2: S_result) : S_result.
+Admitted.
+
+Definition S_split_loop2_refined (res1 res2: S_result) : S_result.
+Admitted.
+
+
 Definition S_split_loop inv res1 res2 := 
   match inv with
-  | LILNull => S_split_loop0 res1 res2
-  | LILSingle => S_split_loop1 res1 res2
-  | LILDouble => S_split_loop2 res1 res2
+  | LILNull => S_split_loop0_refined res1 res2
+  | LILSingle => S_split_loop1_refined res1 res2
+  | LILDouble => S_split_loop2_refined res1 res2
   end.
 
 Definition S_split_assert := 
@@ -1271,10 +1235,7 @@ Fixpoint S_split (s: S_statement) : S_result :=
   | Sloop inv s1 s2 => 
       let res1 := S_split s1 in
       let res2 := S_split s2 in
-      if loop_result_valid inv res1 res2 then
-        S_split_loop inv res1 res2
-      else
-        no_S_result
+      S_split_loop inv res1 res2
   end.
 
 
@@ -1733,146 +1694,6 @@ with
 end.
 
 Definition C_split_loop0
-(s1 s2 : S_statement)
-: C_result (S_split s1) ->
-  C_result (S_split s2) ->
-  C_result (S_split_loop0 (S_split s1) (S_split s2)):=
-  fun c_res1 c_res2 =>
-match 
-  c_res1 in C_result s_res1,
-  c_res2 in C_result s_res2
-  return (C_result (
-    S_split_loop0 s_res1 s_res2))
-with
-  | no_C_result, _ 
-  | _, no_C_result => no_C_result
-  | mk_C_result s_pre1 c_pre1 s_path1 c_path1 
-      s_post_normal1 c_post_normal1 
-      s_post_break1 c_post_break1 
-      s_post_continue1 c_post_continue1 
-      s_post_return1 c_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-    mk_C_result s_pre2 c_pre2 s_path2 c_path2 
-      s_post_normal2 c_post_normal2 
-      s_post_break2 c_post_break2 
-      s_post_continue2 c_post_continue2 
-      s_post_return2 c_post_return2
-      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-
-      (* match s_pre1, s_pre2, s_atom_normal1, s_atom_continue1, 
-            s_atom_normal2, s_post_continue2, s_atom_continue2 with
-      | _, _, _ :: _, _ , _ :: _, _, _ => no_C_result (* unannoted loop *)
-      | _, _, _, _ :: _, _ :: _, _, _ => no_C_result (* unannoted loop *)
-      | _, _, _, _, _, _::_, _ => no_C_result (* incr stm has continue *)
-      | _, _, _, _, _, _, _::_ => no_C_result (* incr stm has continue *)
-    (*  | nil, _, _, _, _, _, _ => no_C_result (* pre1 has no assertion *)
-      | _, nil, _, _, _, _, _ => no_C_result (* pre2 has no assertion *) *)
-      | _, _, _, _, _, _, _ => *)
-    mk_C_result 
-    (* S_pre *)
-      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-        atoms_conn_Spres s_atom_continue1 s_pre2)
-    (* C_pre *)
-      (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
-        atoms_conn_Cpres s_atom_continue1 c_pre2)
-    (* S_path *)
-      (s_path1 ++ s_path2 ++ 
-        Sposts_conn_Spres s_post_normal1 s_pre2 ++
-        Sposts_conn_Spres s_post_continue1 s_pre2 ++
-        Sposts_conn_Spres s_post_normal2 s_pre1 ++
-        Sposts_conn_Spres s_post_normal1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-        Sposts_conn_Spres s_post_continue1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_continue1 s_pre2))
-    (* C_path *)
-      (c_path1 +++ c_path2 +++
-        Cposts_conn_Cpres c_post_normal1 c_pre2 +++
-        Cposts_conn_Cpres c_post_continue1 c_pre2 +++
-        Cposts_conn_Cpres c_post_normal2 c_pre1 +++
-        Cposts_conn_Cpres c_post_normal1
-          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
-        Cposts_conn_Cpres c_post_continue1
-          (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
-        Cposts_conn_Cpres c_post_normal2
-          (atoms_conn_Cpres s_atom_normal1 c_pre2) +++
-        Cposts_conn_Cpres c_post_normal2
-          (atoms_conn_Cpres s_atom_continue1 c_pre2))
-    (* S_post_normal *)
-      (s_post_break1 ++ s_post_break2 ++
-        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
-        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
-        Sposts_conn_atoms s_post_normal1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
-        Sposts_conn_atoms s_post_continue1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
-    (* C_post_normal *)
-      (c_post_break1 +++ c_post_break2 +++
-        Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
-        Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
-        Cposts_conn_atoms c_post_continue1 s_atom_break2 +++
-        Cposts_conn_atoms c_post_normal2
-          (atoms_conn_atoms s_atom_normal1 s_atom_break2) +++
-        Cposts_conn_atoms c_post_normal2
-          (atoms_conn_atoms s_atom_continue1 s_atom_break2) +++
-        Cposts_conn_atoms c_post_normal1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1) +++
-        Cposts_conn_atoms c_post_continue1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1))
-    (* S_post_break *)    []
-    (* C_post_break *)    {}
-    (* S_post_continue *) []
-    (* C_post_continue *) {}
-    (* S_post_return *)
-      (s_post_return1 ++ s_post_return2 ++ 
-        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
-        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
-        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
-        Sposts_conn_returns s_post_normal2
-          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
-        Sposts_conn_returns s_post_normal2 
-          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
-        Sposts_conn_returns s_post_normal1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
-        Sposts_conn_returns s_post_continue1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1))
-    (* C_post_return *)
-      (c_post_return1 +++ c_post_return2 +++
-        Cposts_conn_returns c_post_normal1 s_atom_return2 +++
-        Cposts_conn_returns c_post_continue1 s_atom_return2 +++
-        Cposts_conn_returns c_post_normal2 s_atom_return1 +++
-        Cposts_conn_returns c_post_normal2 
-          (atoms_conn_returns s_atom_normal1 s_atom_return2) +++
-        Cposts_conn_returns c_post_normal2 
-          (atoms_conn_returns s_atom_continue1 s_atom_return2) +++
-        Cposts_conn_returns c_post_normal1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1) +++
-        Cposts_conn_returns c_post_continue1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1))
-    (* S_atom_normal *)
-      (s_atom_break1 ++
-        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_normal2 s_atom_break1)
-    (* S_atom_break *)    []
-    (* S_atom_continue *) []
-    (* S_atom_return *)
-      (s_atom_return1 ++
-        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
-        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
-        atoms_conn_returns s_atom_normal2 s_atom_return1)
-      (* end *)
-end.
-
-Definition C_split_loop0'
 (res1 res2 : S_result)
 : C_result res1 ->
   C_result res2 ->
@@ -1886,15 +1707,6 @@ match res1, res2 with
   mk_S_result s_pre2 s_path2
     s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
     s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-  (* match s_pre1, s_pre2, s_atom_normal1, s_atom_continue1, 
-    s_atom_normal2, s_post_continue2, s_atom_continue2 with
-    | _, _, _ :: _, _ , _ :: _, _, _ => fun _ _ =>no_C_result (* unannoted loop *)
-    | _, _, _, _ :: _, _ :: _, _, _ => fun _ _ => no_C_result (* unannoted loop *)
-    | _, _, _, _, _, _::_, _ => fun _ _ => no_C_result (* incr stm has continue *)
-    | _, _, _, _, _, _, _::_ => fun _ _ => no_C_result (* incr stm has continue *)
-(* | nil, _, _, _, _, _, _ => no_C_result (* pre1 has no assertion *)
-| _, nil, _, _, _, _, _ => no_C_result (* pre2 has no assertion *) *)
-    | _, _, _, _, _, _, _ =>  *)
   fun c_res1 c_res2 =>
 match 
   c_res1 in C_result s_res1,
@@ -2026,151 +1838,11 @@ end.
 
 
 
-
-Definition S_split_loop0_refined res1 res2 := 
-  match res1, res2 with
-  | mk_S_result s_pre1 s_path1 
-        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-      mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-
-    match s_atom_continue2 with
-    | _ :: _ => no_S_result
-    | nil =>  
-      match s_atom_normal2 with
-      | nil => 
-      (* S_split_loop0 res1 res2 *)
-      no_S_result
-      | s_atom_normal2a :: s_atom_normal2b => 
-      (* S_split_loop0 (mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        (  s_atom_normal2a :: s_atom_normal2b) s_atom_break2 s_atom_continue2 s_atom_return2) res2 *)
-        (* no_S_result *)
-        S_split_loop0 res1 res2
-
-      end
-    end
-    | _, _ => no_S_result
-    end.
-
-(* ----------------------------------------------------------------------------------------
-(* Pattern Match on toplevel can type check *)
-
-
-Definition S_split_loop0_refined' (res1 res2: S_result) := 
-  match res1, res2 with
-  | mk_S_result s_pre1 s_path1 
-        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-      mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-
-    match s_atom_continue2 with
-    | _ :: _ => S_split_loop0 res1 res2
-    | nil =>  
-      (* match s_atom_normal2 with
-      | nil => 
-      (* S_split_loop0 res1 res2 *)
-      no_S_result
-      | s_atom_normal2a :: s_atom_normal2b =>  *)
-      (* S_split_loop0 (mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        (  s_atom_normal2a :: s_atom_normal2b) s_atom_break2 s_atom_continue2 s_atom_return2) res2 *)
-        (* no_S_result *)
-        S_split_loop0 res1 res2
-
-      (* end *)
-    end
-    | _, _ => no_S_result
-    end.
-
-
 Definition C_split_loop0_refined
 (res1 res2 : S_result)
 : C_result res1 ->
   C_result res2 ->
-  C_result (S_split_loop0_refined' res1 res2):=
-match res1, res2 with
-| no_S_result, _ => fun _ _ => no_C_result
-| _, no_S_result => fun _ _ => no_C_result
-| mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-    mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-      s_atom_normal2 s_atom_break2 (s_atom_continue2a :: s_atom_continue2b) s_atom_return2 =>
-  fun c_res1 c_res2 => 
-  C_split_loop0' (mk_S_result s_pre1 s_path1 
-  s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-  s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-  (mk_S_result s_pre2 s_path2 
-    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-    s_atom_normal2 s_atom_break2 (s_atom_continue2a :: s_atom_continue2b) s_atom_return2)
-  c_res1 c_res2
-
-
-| mk_S_result s_pre1 s_path1 
-    s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-    s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-  mk_S_result s_pre2 s_path2 
-    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-    s_atom_normal2 s_atom_break2 nil s_atom_return2 =>
-  fun c_res1 c_res2 => 
-  C_split_loop0' (mk_S_result s_pre1 s_path1 
-  s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-  s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-  (mk_S_result s_pre2 s_path2 
-    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-    s_atom_normal2 s_atom_break2 nil s_atom_return2)
-  c_res1 c_res2
-end.
- ----------------------------------------------------------------------------------------*)
-
-(* nested Pattern Match can type check too *)
-
-
-Definition S_split_loop0_refined' (res1 res2: S_result) := 
-  match res1, res2 with
-  | mk_S_result s_pre1 s_path1 
-        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-      mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-    match s_atom_continue2 with
-    | _ :: _ => 
-      (* S_split_loop0 res1 res2 *)
-      no_S_result
-    | nil =>  
-      match s_post_continue2 with
-      | _ :: _ => no_S_result
-      | nil =>
-        match s_atom_normal2 with
-        | nil =>  S_split_loop0 res1 res2
-        | _ :: _  =>
-          match s_atom_normal1 with
-          | nil => 
-            match s_atom_continue1 with
-            | nil => S_split_loop0 res1 res2
-            | _ :: _ => no_S_result
-            end
-          | _ :: _ => no_S_result
-          end
-        end
-      end
-    end
-  | _, _ => no_S_result
-  end.
-
-
-Definition C_split_loop0_refined
-(res1 res2 : S_result)
-: C_result res1 ->
-  C_result res2 ->
-  C_result (S_split_loop0_refined' res1 res2):=
+  C_result (S_split_loop0_refined res1 res2):=
 match res1, res2 with
 | no_S_result, _ => fun _ _ => no_C_result
 | _, no_S_result => fun _ _ => no_C_result
@@ -2183,16 +1855,7 @@ match res1, res2 with
 
 match s_atom_continue2 with
 | s_atom_continue2a :: s_atom_continue2b => 
-  fun c_res1 c_res2 => 
-  (* C_split_loop0' (mk_S_result s_pre1 s_path1 
-  s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-  s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-  (mk_S_result s_pre2 s_path2 
-    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-    s_atom_normal2 s_atom_break2 (s_atom_continue2a :: s_atom_continue2b) s_atom_return2)
-  c_res1 c_res2 *)
-  no_C_result
-
+  fun c_res1 c_res2 =>  no_C_result
 | nil =>
   match s_post_continue2 with
   | _ :: _ => fun _ _ => no_C_result
@@ -2200,7 +1863,7 @@ match s_atom_continue2 with
     match s_atom_normal2 with
     | nil =>
       fun c_res1 c_res2 => 
-      C_split_loop0' 
+      C_split_loop0 
         (mk_S_result s_pre1 s_path1 
           s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
           s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
@@ -2212,7 +1875,7 @@ match s_atom_continue2 with
       match s_atom_normal1, s_atom_continue1 with
       | nil, nil =>
           fun c_res1 c_res2 => 
-            C_split_loop0' 
+            C_split_loop0 
               (mk_S_result s_pre1 s_path1 
                 s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
                 nil s_atom_break1 nil s_atom_return1)
@@ -2226,175 +1889,6 @@ match s_atom_continue2 with
   end
 end
 end.
-
-
-
-
-
-
-| mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-  mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-
-match s_atom_continue2 with
-| _ :: _ => fun _ _ => no_C_result
-| nil =>
-
-match s_atom_normal2 with
-| nil =>
-    fun c_res1 => fun (c_res2:C_result res2) =>
-    (* C_split_loop0' 
-    (mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-    (mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-      nil s_atom_break2 nil s_atom_return2)
-    c_res1 c_res2 *)
-    no_C_result
-| s_atom_normal2a :: s_atom_normal2b =>
-    fun c_res1 c_res2 => 
-    C_split_loop0' 
-    (mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_break1 s_atom_return1)
-    (mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-      s_atom_normal2 s_atom_break2 nil s_atom_return1)
-    c_res1 c_res2
-    (* no_C_result *)
-end
-
-end
-| _ , _ => fun _ _ => no_C_result
-end.
-
-
-Definition S_split_loop0_refined res1 res2 := 
-  match res1, res2 with
-  | mk_S_result s_pre1 s_path1 
-        s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-        s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-      mk_S_result s_pre2 s_path2 
-        s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-        s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-    (* match s_pre1, s_pre2, s_atom_normal1, s_atom_continue1, 
-        s_atom_normal2, s_post_continue2, s_atom_continue2 with
-    | _, _, _ :: _, _ , _ :: _, _, _ => no_S_result (* unannoted loop *)
-    | _, _, _, _ :: _, _ :: _, _, _ => no_S_result (* unannoted loop *)
-    | _, _, _, _, _, _::_, _ => no_S_result (* incr stm has continue *)
-    | _, _, _, _, _, _, _::_ => no_S_result (* incr stm has continue *)
-    | _, _, _, _, _, _, _ =>  *)
-
-    match s_atom_continue2 with
-    | _ :: _ => no_S_result
-    | nil =>
-    match s_post_continue2 with
-    | _ :: _ => no_S_result
-    | nil =>
-    match s_atom_normal2 with
-    | nil =>  S_split_loop0 res1 res2
-    | _ :: _ =>
-    match s_atom_normal1 with
-    | nil => 
-    match s_atom_continue1 with
-    | nil => S_split_loop0 res1 res2
-    | _ :: _ => no_S_result
-    end
-    | _ :: _ => no_S_result
-    end
-    end
-    end
-    end
-    | _, _ => no_S_result
-    end.
-
-
-
-
-Definition C_split_loop0_refined
-(res1 res2 : S_result)
-: C_result res1 ->
-  C_result res2 ->
-  C_result (S_split_loop0_refined res1 res2):=
-match res1, res2 with
-| mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
-    mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-      s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-
-match s_atom_continue2 with
-| _ :: _ => fun _ _ => no_C_result
-| nil =>
-match s_post_continue2 with
-| _ :: _ => fun _ _ => no_C_result
-| nil =>
-match s_atom_normal2 with
-| nil =>
-  fun c_res1 => fun c_res2 =>
-    C_split_loop0' 
-    (mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-    (mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 nil s_post_return2
-      nil s_atom_break2 nil s_atom_return2)
-    c_res1 c_res2
-| s_atom_normal2a :: s_atom_normal2b =>
-match s_atom_normal1 with
-| nil => fun _ _ =>
-match s_atom_continue1 with
-| nil => fun _ _ =>
-  fun c_res1 c_res2 => 
-    C_split_loop0' 
-    (mk_S_result s_pre1 s_path1 
-      s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-      s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-    (mk_S_result s_pre2 s_path2 
-      s_post_normal2 s_post_break2 nil s_post_return2
-      (s_atom_normal2a :: s_atom_normal2b) s_atom_break2 nil s_atom_return2)
-    c_res1 c_res2
-| _ :: _ => fun _ _ => no_C_result
-end
-| _ :: _ => fun _ _ => no_C_result
-end
-end
-end
-end
-| _, _ => fun _ _ => no_C_result
-end.
-
-
-match s_atom_normal2 with
-
-  (* match s_pre1, s_pre2, s_atom_normal1, s_atom_continue1, 
-      s_atom_normal2, s_post_continue2, s_atom_continue2 with
-  | _, _, _ :: _, _ , _ :: _, _, _ => fun _ _ => no_C_result (* unannoted loop *)
-  | _, _, _, _ :: _, _ :: _, _, _ => fun _ _ => no_C_result (* unannoted loop *)
-  | _, _, _, _, _, _::_, _ => fun _ _ => no_C_result (* incr stm has continue *)
-  | _, _, _, _, _, _, _::_ => fun _ _ => no_C_result (* incr stm has continue *)
-  | _, _, _, _, _, _, _ =>  *)
-  match s_pre1 with
-  | nil => fun _ _ => no_C_result
-  | s_pre1' :: s_pre1s' =>
-  fun c_res1 c_res2 => 
-  C_split_loop0' (mk_S_result (s_pre1' :: s_pre1s') s_path1 
-    s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
-    s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
-  
-  (mk_S_result s_pre2 s_path2 
-  s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
-  s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) c_res1 c_res2
-  end
-  | _, _ => fun _ _ => no_C_result
-end.
-
-
 
 Definition C_split_loop1 (inv: assert)
 (s1 s2 : S_statement)
@@ -2426,6 +1920,17 @@ with
     mk_C_result *)
 
 
+Definition C_split_loop1_refined
+(inv : assert)
+(res1 res2 : S_result)
+: C_result res1 ->
+  C_result res2 ->
+  C_result (S_split_loop1_refined res1 res2).
+Admitted.
+
+
+
+
 Definition C_split_loop2 (inv1: assert) (inv2: assert)
 (s1 s2 : S_statement)
 : C_result (S_split s1) ->
@@ -2453,11 +1958,20 @@ with
       s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
     mk_C_result *)
 
+
+Definition C_split_loop2_refined
+(inv1 : assert) (inv2 : assert)
+(res1 res2 : S_result)
+: C_result res1 ->
+  C_result res2 ->
+  C_result (S_split_loop2_refined res1 res2).
+Admitted.
+
 Definition C_split_loop {invl} (inv: loop_invariant invl)
-(s1 s2 : S_statement)
-(c_res1 : C_result (S_split s1))
-(c_res2 : C_result (S_split s2)) :
-  C_result (S_split (Sloop invl s1 s2)) :=
+(res1 : S_result) (res2 :S_result)
+(c_res1 : C_result res1)
+(c_res2 : C_result res2):
+  C_result (S_split_loop invl res1 res2) :=
 match inv in 
   loop_invariant invl',
   c_res1 in C_result s_res1,
@@ -2469,11 +1983,11 @@ if loop_result_valid invl' s_res1 s_res2 then
 with
 
 | LINull, c_res1, c_res2 => 
-    C_split_loop0 s1 s2 c_res1 c_res2
+    C_split_loop0_refined res1 res2 c_res1 c_res2
 | LISingle inv, c_res1, c_res2 =>
-    C_split_loop1 inv s1 s2 c_res1 c_res2
+    C_split_loop1_refined inv res1 res2 c_res1 c_res2
 | LIDouble inv1 inv2, c_res1, c_res2 =>
-    C_split_loop2 inv1 inv2 s1 s2 c_res1 c_res2
+    C_split_loop2_refined inv1 inv2 res1 res2 c_res1 c_res2
 end.
 
 Fixpoint C_split (s: S_statement) (c: C_statement s) : C_result (S_split s) :=
@@ -2500,7 +2014,7 @@ with
 | Cifthenelse e s1 s2 c1 c2 =>
     C_split_ifthenelse e s1 s2 (C_split s1 c1) (C_split s2 c2)
 | Cloop invl inv s1 s2 c1 c2 =>
-    C_split_loop inv s1 s2 (C_split s1 c1) (C_split s2 c2)
+    C_split_loop inv (S_split s1) (S_split s2) (C_split s1 c1) (C_split s2 c2)
 | Cbreak =>
     C_split_break
 | Ccontinue =>
