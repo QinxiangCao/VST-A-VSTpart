@@ -153,6 +153,11 @@ Inductive C_statement : S_statement -> Type :=
 .
 
 
+Notation "'GIVEN' x .. y , c " :=
+  (Cgiven _ _ _ (fun x => .. (Cgiven _ _ _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+
+
+
 (***********************************)
 (** Simple Split Results  *)
 (***********************************)
