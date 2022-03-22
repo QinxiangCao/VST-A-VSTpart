@@ -831,7 +831,8 @@ Definition S_split_loop res1 res2 :=
       mk_S_result 
       (* S_pre *)
         (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-          atoms_conn_Spres s_atom_continue1 s_pre2)
+          atoms_conn_Spres s_atom_continue1 s_pre2 ++
+          add_Q_to_atoms s_atom_continue2)
       (* S_path *)
         (s_path1 ++ s_path2 ++ 
           Sposts_conn_Spres s_post_normal1 s_pre2 ++
@@ -844,7 +845,8 @@ Definition S_split_loop res1 res2 :=
           Sposts_conn_Spres s_post_normal2
             (atoms_conn_Spres s_atom_normal1 s_pre2) ++
           Sposts_conn_Spres s_post_normal2
-            (atoms_conn_Spres s_atom_continue1 s_pre2))
+            (atoms_conn_Spres s_atom_continue1 s_pre2) ++
+          add_Q_to_Sposts s_post_continue2)
       (* S_post_normal *)
         (s_post_break1 ++ s_post_break2 ++
           Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
@@ -901,25 +903,16 @@ Definition S_split_loop_refined (res1 res2: S_result) :=
       mk_S_result s_pre2 s_path2 
         s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
         s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
-    match s_atom_continue2 with
-    | _ :: _ => 
-      no_S_result
-    | nil =>  
-      match s_post_continue2 with
-      | _ :: _ => no_S_result
-      | nil =>
-        match s_atom_normal2 with
-        | nil =>  S_split_loop res1 res2
-        | _ :: _  =>
-          match s_atom_normal1 with
-          | nil => 
-            match s_atom_continue1 with
-            | nil => S_split_loop res1 res2
-            | _ :: _ => no_S_result
-            end
-          | _ :: _ => no_S_result
-          end
+    match s_atom_normal2 with
+    | nil =>  S_split_loop res1 res2
+    | _ :: _  =>
+      match s_atom_normal1 with
+      | nil => 
+        match s_atom_continue1 with
+        | nil => S_split_loop res1 res2
+        | _ :: _ => no_S_result
         end
+      | _ :: _ => no_S_result
       end
     end
   | _, _ => no_S_result
@@ -1689,10 +1682,12 @@ with
     mk_C_result 
     (* S_pre *)
       (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-        atoms_conn_Spres s_atom_continue1 s_pre2)
+        atoms_conn_Spres s_atom_continue1 s_pre2 ++
+        add_Q_to_atoms s_atom_continue2)
     (* C_pre *)
       (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
-        atoms_conn_Cpres s_atom_continue1 c_pre2)
+        atoms_conn_Cpres s_atom_continue1 c_pre2 +++
+        add_Q_to_Catoms seplog.FF s_atom_continue2)
     (* S_path *)
       (s_path1 ++ s_path2 ++ 
         Sposts_conn_Spres s_post_normal1 s_pre2 ++
@@ -1705,7 +1700,8 @@ with
         Sposts_conn_Spres s_post_normal2
           (atoms_conn_Spres s_atom_normal1 s_pre2) ++
         Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_continue1 s_pre2))
+          (atoms_conn_Spres s_atom_continue1 s_pre2) ++
+        add_Q_to_Sposts s_post_continue2)
     (* C_path *)
       (c_path1 +++ c_path2 +++
         Cposts_conn_Cpres c_post_normal1 c_pre2 +++
@@ -1718,7 +1714,8 @@ with
         Cposts_conn_Cpres c_post_normal2
           (atoms_conn_Cpres s_atom_normal1 c_pre2) +++
         Cposts_conn_Cpres c_post_normal2
-          (atoms_conn_Cpres s_atom_continue1 c_pre2))
+          (atoms_conn_Cpres s_atom_continue1 c_pre2) +++
+        add_Q_to_Cposts seplog.FF c_post_continue2)
     (* S_post_normal *)
       (s_post_break1 ++ s_post_break2 ++
         Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
@@ -1809,13 +1806,6 @@ match res1, res2 with
     s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
     s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2 =>
 
-match s_atom_continue2 with
-| s_atom_continue2a :: s_atom_continue2b => 
-  fun c_res1 c_res2 =>  no_C_result
-| nil =>
-  match s_post_continue2 with
-  | _ :: _ => fun _ _ => no_C_result
-  | nil => 
     match s_atom_normal2 with
     | nil =>
       fun c_res1 c_res2 => 
@@ -1824,8 +1814,8 @@ match s_atom_continue2 with
           s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
           s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1)
         (mk_S_result s_pre2 s_path2 
-          s_post_normal2 s_post_break2 nil s_post_return2
-          nil s_atom_break2 nil s_atom_return2)
+          s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+          nil s_atom_break2 s_atom_continue2 s_atom_return2)
         c_res1 c_res2
     | s_atom_normal2a :: s_atom_normal2b =>
       match s_atom_normal1, s_atom_continue1 with
@@ -1836,14 +1826,12 @@ match s_atom_continue2 with
                 s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
                 nil s_atom_break1 nil s_atom_return1)
               (mk_S_result s_pre2 s_path2 
-                s_post_normal2 s_post_break2 nil s_post_return2
-                (s_atom_normal2a :: s_atom_normal2b) s_atom_break2 nil s_atom_return2)
+                s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+                (s_atom_normal2a :: s_atom_normal2b) s_atom_break2 s_atom_continue2 s_atom_return2)
               c_res1 c_res2
       | _, _ => fun _ _ => no_C_result
       end
     end
-  end
-end
 end.
 
 
