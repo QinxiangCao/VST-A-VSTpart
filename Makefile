@@ -21,6 +21,8 @@ CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlink
 COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
  -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)\
  -Q vfa VFA -Q wand_demo WandDemo
+ -Q Split Split
+ -Q CSplit CSplit
 
 ifneq (, $(RAMIFYCOQDIR))
  COQFLAGS += -Q $(RAMIFYCOQDIR) RamifyCoq
