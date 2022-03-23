@@ -4,6 +4,41 @@ Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
 
+(* 
+
+Definition split_Semax (P: assert) (Q: ret_assert) {s_res: S_result_rec} : (C_result (Some s_res)) -> Prop :=
+  match s_res with
+  | mk_S_result_rec s_pre s_path
+      s_post_normal s_post_break s_post_continue s_post_return
+      s_atom_normal s_atom_break s_atom_continue s_atom_return =>
+      fun c_res =>
+      match c_res with
+      | mk_C_result_rec c_pre c_path
+          c_post_normal c_post_break c_post_continue c_post_return =>
+          CForall (@pre_to_semax P) c_pre
+        /\ CForall (@path_to_semax) c_path
+        /\ CForall (@post_to_semax (RA_normal Q)) c_post_normal
+        /\ CForall (@post_to_semax (RA_break Q)) c_post_break
+        /\ CForall (@post_to_semax (RA_continue Q)) c_post_continue
+        /\ CForall (@post_ret_to_semax (RA_return Q)) c_post_return
+        /\ Forall (atom_to_semax P (RA_normal Q)) s_atom_normal
+        /\ Forall (atom_to_semax P (RA_break Q)) s_atom_break
+        /\ Forall (atom_to_semax P (RA_continue Q)) s_atom_continue
+        /\ Forall (atom_ret_to_semax P (RA_return Q)) s_atom_return
+      end
+  end.
+
+Definition split_Semax_refined (P: assert) (Q: ret_assert) {s_res: S_result} : (C_result s_res) -> Prop :=
+  match s_res with
+  | Some s_res' => fun c_res => @split_Semax P Q s_res' c_res
+  | None => fun _ => False
+  end. 
+  
+Split semax can be done!
+  
+*)
+
+
 Inductive CForall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop ) :
 forall {sl: list A}, (@list_binded_of A binder sl) -> Prop :=
@@ -207,6 +242,7 @@ Definition split_Semax (P: assert) (Q: ret_assert) {s_res: S_result} (c_res: C_r
       s_post_return c_post_return
       s_atom_normal s_atom_break s_atom_continue s_atom_return =>
      CForall (@pre_to_semax P) c_pre
+  /\ CForall (@path_to_semax) c_path
   /\ CForall (@post_to_semax (RA_normal Q)) c_post_normal
   /\ CForall (@post_to_semax (RA_break Q)) c_post_break
   /\ CForall (@post_to_semax (RA_continue Q)) c_post_continue
