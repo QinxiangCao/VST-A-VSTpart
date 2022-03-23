@@ -36,20 +36,84 @@ Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
 Require Import Coq.Program.Equality.
 
+Lemma lb_nil_inv: forall {R:Type} {binder:R->Type}
+ (cl: @list_binded_of R binder []),
+ cl= {}.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+Qed.
+
+Lemma lb_cons_inv: forall {R:Type} {binder:R->Type}
+ {s: R} {sl: list R}
+ (cl: @list_binded_of R binder (s::sl)),
+ exists c cl',
+ cl= list_binded_cons s c sl cl'.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+  exists r', cl...
+Qed.
+
+(* Lemma flatten_binds_inv: (R A : Type) (binder : R -> Type) (HA : inhabited A)
+(binder_intro : forall r : R, (A -> binder r) -> binder r)
+  (s_x:R) (s_res : list R) (c_res' : A -> binder (s_x :: s_res))
+(flatten_partial_pres_binds HA (a0 :: s_pres) c_pres') = *)
+
+
+
+Lemma given_pre_sound: forall B HA P s_pres 
+  (c_pres: B -> C_partial_pres s_pres),
+CForall (@pre_to_semax CS Espec Delta P)
+  (flatten_partial_pres_binds HA s_pres c_pres) ->
+forall b, CForall (@pre_to_semax CS Espec Delta P) (c_pres b).
+Proof.
+  intros. revert c_pres H b. induction s_pres;intros.
+  - intros. rewrite lb_nil_inv . constructor.
+  - inversion H.
+    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+    specialize (IHs_pres _ H5).
+    destruct (lb_cons_inv (c_pres b)) as [r [cl E]].
+    specialize (IHs_pres b).
+    unfold tl_of in IHs_pres. rewrite E in IHs_pres.
+    rewrite E. constructor;auto.
+    simpl in H3. specialize (H3 b).
+    unfold hd_of in H3. rewrite E in H3. auto.
+Qed.
+
+Lemma given_sound: forall A HA P Q s_res 
+  (c_res': A -> C_result s_res),
+split_Semax Delta P Q (C_split_given s_res A HA c_res') ->
+forall a, split_Semax Delta P Q (c_res' a).
+Proof.
+  intros. hnf in H.
+  destruct s_res.
+  - destruct s. simpl in H.
+    destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+    hnf. destruct (c_res' a) eqn:E.
+    repeat split;auto.
+    + clear S2 S3 S4 S5 S6 S7 S8 S9 S10.
+      unfold C_result_proj_C_pre in S1.
+      unfold flatten_partial_pres_binds in S1.
+      apply given_pre_sound with (b:=a) in S1.
+      rewrite E in S1. auto.
+Admitted.
+
+
+
 Lemma given_sound: forall A (HA: inhabited A) P Q s_stm 
   (c_stm' : A -> C_statement s_stm),
 split_Semax Delta P Q (C_split s_stm (Cgiven A HA s_stm c_stm')) ->
 forall a, split_Semax Delta P Q (C_split s_stm (c_stm' a)).
 Proof.
-  intros. 
-  hnf in H.
-
+  intros.
   simpl in H.
-  
   set (x:= (fun a : A => C_split s_stm (c_stm' a))) in H.
   change ((C_split s_stm (c_stm' a))) with (x a).
   set (y:= S_split s_stm) in x, H.
-  clearbody x. clearbody  y.
+  clearbody x.  clearbody y.
+  destruct y.
+  dependent destruction y.
 
 
   remember (C_split s_stm  (Cgiven A HA s_stm c_stm')) as c_res_given.
