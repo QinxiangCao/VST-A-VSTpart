@@ -68,14 +68,69 @@ CForall (@pre_to_semax CS Espec Delta P)
   (flatten_partial_pres_binds HA s_pres c_pres) ->
 forall b, CForall (@pre_to_semax CS Espec Delta P) (c_pres b).
 Proof.
-  intros. revert c_pres H b. induction s_pres;intros.
+  intros. revert c_pres H b. dependent induction s_pres;intros.
   - intros. rewrite lb_nil_inv . constructor.
   - inversion H.
     apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
-    specialize (IHs_pres _ H5).
     destruct (lb_cons_inv (c_pres b)) as [r [cl E]].
-    specialize (IHs_pres b).
+    specialize (IHs_pres _ H5 b).
     unfold tl_of in IHs_pres. rewrite E in IHs_pres.
+    rewrite E. constructor;auto.
+    simpl in H3. specialize (H3 b).
+    unfold hd_of in H3. rewrite E in H3. auto.
+Qed.
+
+
+Lemma given_post_sound: forall B HA P s_posts 
+  (c_posts: B -> C_partial_posts s_posts),
+CForall (@post_to_semax CS Espec Delta P)
+  (flatten_partial_posts_binds HA s_posts c_posts) ->
+forall b, CForall (@post_to_semax CS Espec Delta P) (c_posts b).
+Proof.
+  intros. revert c_posts H b. dependent induction s_posts;intros.
+  - intros. rewrite lb_nil_inv . constructor.
+  - inversion H.
+    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+    destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
+    specialize (IHs_posts _ H5 b).
+    unfold tl_of in IHs_posts. rewrite E in IHs_posts.
+    rewrite E. constructor;auto.
+    simpl in H3. specialize (H3 b).
+    unfold hd_of in H3. rewrite E in H3. auto.
+Qed.
+
+
+Lemma given_post_ret_sound: forall B HA P s_posts 
+  (c_posts: B -> C_partial_post_rets s_posts),
+CForall (@post_ret_to_semax CS Espec Delta P)
+  (flatten_partial_post_rets_binds HA s_posts c_posts) ->
+forall b, CForall (@post_ret_to_semax CS Espec Delta P) (c_posts b).
+Proof.
+  intros. revert c_posts H b. dependent induction s_posts;intros.
+  - intros. rewrite lb_nil_inv . constructor.
+  - inversion H.
+    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+    destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
+    specialize (IHs_posts _ H5 b).
+    unfold tl_of in IHs_posts. rewrite E in IHs_posts.
+    rewrite E. constructor;auto.
+    simpl in H3. specialize (H3 b).
+    unfold hd_of in H3. rewrite E in H3. auto.
+Qed.
+
+Lemma given_path_sound: forall B HA  s_paths 
+  (c_paths: B -> C_full_paths s_paths),
+CForall (@path_to_semax CS Espec Delta)
+  (flatten_full_paths_binds HA s_paths c_paths) ->
+forall b, CForall (@path_to_semax CS Espec Delta ) (c_paths b).
+Proof.
+  intros. revert c_paths H b. dependent induction s_paths;intros.
+  - intros. rewrite lb_nil_inv . constructor.
+  - inversion H.
+    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+    destruct (lb_cons_inv (c_paths b)) as [r [cl E]].
+    specialize (IHs_paths _ H5 b).
+    unfold tl_of in IHs_paths. rewrite E in IHs_paths.
     rewrite E. constructor;auto.
     simpl in H3. specialize (H3 b).
     unfold hd_of in H3. rewrite E in H3. auto.
@@ -92,40 +147,26 @@ Proof.
     destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
     hnf. destruct (c_res' a) eqn:E.
     repeat split;auto.
-    + clear S2 S3 S4 S5 S6 S7 S8 S9 S10.
+    + apply given_pre_sound with (b:=a) in S1.
       unfold C_result_proj_C_pre in S1.
-      unfold flatten_partial_pres_binds in S1.
-      apply given_pre_sound with (b:=a) in S1.
       rewrite E in S1. auto.
-Admitted.
-
-
-
-Lemma given_sound: forall A (HA: inhabited A) P Q s_stm 
-  (c_stm' : A -> C_statement s_stm),
-split_Semax Delta P Q (C_split s_stm (Cgiven A HA s_stm c_stm')) ->
-forall a, split_Semax Delta P Q (C_split s_stm (c_stm' a)).
-Proof.
-  intros.
-  simpl in H.
-  set (x:= (fun a : A => C_split s_stm (c_stm' a))) in H.
-  change ((C_split s_stm (c_stm' a))) with (x a).
-  set (y:= S_split s_stm) in x, H.
-  clearbody x.  clearbody y.
-  destruct y.
-  dependent destruction y.
-
-
-  remember (C_split s_stm  (Cgiven A HA s_stm c_stm')) as c_res_given.
-  dependent destruction c_res_given.
-  - rewrite <- x in H.
-    rewrite <- x in H.
-  destruct (C_split s_stm  (Cgiven A HA s_stm c_stm')).
-  - destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
-    hnf. destruct (C_split s_stm (c_stm' a)).
-    2:{  }
-  unfold C_split in H. unfold C_split_given in H.
-  simpl in H.
+    + apply given_path_sound with (b:=a) in S2.
+      unfold C_result_proj_C_path in S2.
+      rewrite E in S2. auto.
+    + apply given_post_sound with (b:=a) in S3.
+      unfold C_result_proj_C_post_normal in S3.
+      rewrite E in S3. auto.
+    + apply given_post_sound with (b:=a) in S4.
+      unfold C_result_proj_C_post_break in S4.
+      rewrite E in S4. auto.
+    + apply given_post_sound with (b:=a) in S5.
+      unfold C_result_proj_C_post_continue in S5.
+      rewrite E in S5. auto.
+    + apply given_post_ret_sound with (b:=a) in S6.
+      unfold C_result_proj_C_post_return in S6.
+      rewrite E in S6. auto.
+  - destruct H.
+Qed.
 
 
 Theorem soundness: forall 
@@ -135,23 +176,6 @@ split_Semax Delta P Q (C_split s_stm c_stm) ->
 @semax CS Espec Delta P (S_statement_to_Clight s_stm) Q.
 Proof.
   intros. revert P Q H.
-
-
-  (* 
-  induction s_stm.
-  - dependent destruction c_stm.
-    { intros. admit. }
-    { intros.
-      simpl.
-      assert (stm1': A -> C_statement s_stm1) by admit.
-      assert (stm2': A -> C_statement s_stm2) by admit.
-      specialize (IHs_stm1 (Cgiven A HA s_stm1 stm1')).
-      admit.
-    }
-    { admit. }
-  - dependent destruction c_stm.
-  *)
-
   induction c_stm.
   - (* Ssequence *)
     intros. simpl.
@@ -179,9 +203,9 @@ Proof.
 
   - (* given *)
     intros. simpl in H0.
-    destruct H0 as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
-
-    admit.
+    destruct HA. apply H with (a:=a).
+    apply given_sound with (a:=a) in H0 .
+    auto.
 
   - (* exgiven *)
     admit.
