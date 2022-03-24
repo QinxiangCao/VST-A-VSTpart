@@ -3,7 +3,6 @@ Require Export CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
-
 Inductive CForall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop ) :
 forall {sl: list A}, (@list_binded_of A binder sl) -> Prop :=
