@@ -168,6 +168,173 @@ Proof.
   - destruct H.
 Qed.
 
+Lemma CForall_Capp {A:Type} {binder: A -> Type}:
+forall (P : forall (a: A), binder a -> Prop ) 
+  {sl1: list A}   (cl1: @list_binded_of A binder sl1)
+  {sl2: list A}   (cl2: @list_binded_of A binder sl2),
+  CForall P (cl1 +++ cl2) <-> CForall P cl1 /\ CForall P cl2.
+Proof.
+  intros.
+  induction cl1.
+  - split;intro.
+    + split;try constructor. simpl in H. auto.
+    + simpl. destruct H. auto.
+  - split;intro.
+    + dependent destruction H.
+      apply IHcl1 in H0. destruct H0.
+       simpl in H. repeat split;try constructor; auto.
+    + simpl. destruct H.
+      dependent destruction H.
+      constructor;auto. apply IHcl1.
+      split;auto.
+Qed.
+
+
+Ltac destruct_CForalls S :=
+    match type of S with
+    | (CForall ?P _)  =>
+    repeat (
+      match goal with
+      | [H : CForall P (_ +++ _) |- _] => 
+          let n1 := fresh S "_" in
+          let n2 := fresh S "_" in
+          apply CForall_Capp in H; destruct H as [n1 n2]
+      end
+    )
+    end.
+
+Lemma rewrite_flatten_binds: forall 
+  {R A: Type} {binder: R -> Type}
+  (binder_intro : forall (r : R),
+      (A -> binder r) -> binder r)
+  HA x xs (cs: A -> list_binded_of (x::xs)), 
+(flatten_binds HA binder_intro (x :: xs) cs)
+= list_binded_cons x (binder_intro x (hd_of x xs cs))
+   xs (flatten_binds HA binder_intro xs (tl_of x xs cs)).
+Proof.
+  intros.
+  reflexivity.
+Qed.
+
+
+Lemma Cpost_conn_Cpres_inv_exgiven: forall A (HA: inhabited A)
+  (ass' : A -> assert) (s_pres: S_partial_pres)
+  (c_pres': A -> C_partial_pres s_pres),
+ CForall (@path_to_semax CS Espec Delta)
+  (Cpost_conn_Cpres
+    (bind_C_partial_post A HA (mk_S_partial_post [])
+        (fun a : A => mk_C_partial_post (ass' a) []))
+    (flatten_partial_pres_binds HA s_pres c_pres')) ->
+  CForall (@pre_to_semax CS Espec Delta (EX y, ass' y))
+    (flatten_partial_pres_binds HA s_pres c_pres').
+Proof.
+  intros A HA ass' s_pres.
+  induction s_pres;intros.
+  - constructor.
+  - 
+  unfold flatten_partial_pres_binds in H.
+  rewrite rewrite_flatten_binds in H.
+  inversion H.
+  apply inj_pair2 in H2. apply inj_pair2 in H4. 
+  dependent destruction H.
+
+  (* unfold flatten_binds in H.
+  simpl in H. 
+  unfold Spost_conn_Spres in H. simpl in H.
+  
+  inversion H. simpl in H. *)
+  unfold flatten_partial_pres_binds. simpl.
+
+
+  constructor.
+
+  replace c_pres' with
+  (fun x => list_binded_cons a (hd_of a s_pres c_pres' x)
+    s_pres (tl_of a s_pres c_pres' x)).
+
+
+
+    simpl.
+
+
+
+  )
+  
+  unfold Spost_conn_Spres in *. simpl in *.
+    fold   Spost_conn_Spres in *.
+    dependent destruction H. simpl in H.
+  unfold Cpost_conn_Cpres in H.
+
+
+
+
+
+
+Lemma ex_given_sound: forall A HA P Q s_res 
+  (ass': A -> assert)
+  (c_res': A -> C_result s_res),
+split_Semax Delta P Q (C_split_exgiven s_res A HA ass' c_res') ->
+ENTAIL Delta, allp_fun_id Delta && P |-- exp ass' /\
+forall a, split_Semax Delta (exp ass') Q (c_res' a).
+Proof.
+  intros. hnf in H.
+  destruct s_res.
+  - destruct s. simpl in H.
+    destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+    split.
+    { dependent destruction S1.
+      simpl in H. apply semax_skip_inv in H. auto. }
+    apply given_sound with (HA:=HA).
+    repeat split.
+    + destruct_CForalls S2.
+      simpl in S2_1.
+
+    (* ((fun S =>
+    match S with
+    | CForall P _ => *)
+    repeat (
+      match goal with
+      | [H : CForall (@path_to_semax CS Espec Delta) (_ +++ _) |- _] => 
+          let n1 := fresh H "_" in
+          let n2 := fresh H "_" in
+          apply CForall_Capp in H; destruct H as [n1 n2]
+      end
+    ).
+    (* end) S2). *)
+
+
+    let n1 := fresh "S2_" in 
+    let n2 := fresh "S2_" in destruct S2 as [n1 n2].
+      ltac().
+        destruct S2. 
+
+    }
+      
+    Search pre_to_semax.
+
+    }
+    hnf. destruct (c_res' a) eqn:E.
+    repeat split;auto.
+    + apply given_pre_sound with (b:=a) in S1.
+      unfold C_result_proj_C_pre in S1.
+      rewrite E in S1. auto.
+    + apply given_path_sound with (b:=a) in S2.
+      unfold C_result_proj_C_path in S2.
+      rewrite E in S2. auto.
+    + apply given_post_sound with (b:=a) in S3.
+      unfold C_result_proj_C_post_normal in S3.
+      rewrite E in S3. auto.
+    + apply given_post_sound with (b:=a) in S4.
+      unfold C_result_proj_C_post_break in S4.
+      rewrite E in S4. auto.
+    + apply given_post_sound with (b:=a) in S5.
+      unfold C_result_proj_C_post_continue in S5.
+      rewrite E in S5. auto.
+    + apply given_post_ret_sound with (b:=a) in S6.
+      unfold C_result_proj_C_post_return in S6.
+      rewrite E in S6. auto.
+  - destruct H.
+
 
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (s_stm: S_statement)
@@ -203,12 +370,17 @@ Proof.
 
   - (* given *)
     intros. simpl in H0.
-    destruct HA. apply H with (a:=a).
+    destruct HA.
+    (* inhabited used here! *)
+    apply H with (a:=a).
     apply given_sound with (a:=a) in H0 .
     auto.
 
   - (* exgiven *)
-    admit.
+    intros. simpl in H0.
+    simpl. unfold C_split_exgiven in H0.  
+  
+  admit.
 
   - (* assign *)
     admit.

@@ -161,7 +161,6 @@ Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
       forall (a:A), pre_to_semax pre (c_pre' a)
   end.
 
-  Print ret_assert.
 
 Definition return_ret_assert (Q: option val -> environ->mpred) : ret_assert :=
   {| RA_normal := seplog.FF; RA_break := seplog.FF; RA_continue := seplog.FF; RA_return := Q |}.

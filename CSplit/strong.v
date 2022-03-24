@@ -139,7 +139,7 @@ Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ
 
 Lemma semax_skip_inv: forall CS Espec Delta P R,
   @semax CS Espec Delta P (Clight.Sskip) R ->
-  ENTAIL Delta, local (tc_environ Delta) && (allp_fun_id Delta && P) |-- RA_normal R.
+  ENTAIL Delta, (allp_fun_id Delta && P) |-- RA_normal R.
 Proof.
   intros.
   remember (Clight.Sskip) as c1.
@@ -154,10 +154,7 @@ Proof.
     2:{ apply IHsemax. }
     apply andp_right;try solve_andp.
     apply andp_right;try solve_andp.
-    apply andp_right;try solve_andp.
-    eapply derives_trans.
-    2:{ apply H. }
-    solve_andp.
+    auto.
 Qed.
 
 Ltac unfold_der := unfold normal_ret_assert,
@@ -1208,9 +1205,7 @@ Proof.
   apply semax_skip_inv in H.
   eapply semax_conseq with (P':= andp (Q1) (Q2))
   (R':= (normal_ret_assert (andp (Q1) (Q2)))); unfold normal_ret_assert.
-  { apply andp_right.
-    { eapply derives_trans;[|apply H0]. solve_andp. }
-    { eapply derives_trans;[|apply H]. solve_andp. }
+  { apply andp_right;auto.
   }
   { unfold RA_normal.  solve_andp. }
   { unfold RA_break. repeat apply andp_left2. apply FF_left. }
@@ -1843,7 +1838,7 @@ intros.
   + pose proof (fun x => semax_skip_inv _ _ _ _ _ (H x)).
     eapply semax_conseq with (R':=R).
     - rewrite !exp_andp2; apply exp_left.
-      intro x. specialize (H0 x). eapply derives_trans;[|apply H0]. solve_andp.
+      intro x. specialize (H0 x). apply H0.
     - solve_andp.
     - solve_andp.
     - solve_andp.
@@ -2445,8 +2440,7 @@ Proof.
     apply semax_skip_inv in E2.
     unfold_der. eapply semax_conseq;[..|apply E1];
     try (intros; solve_andp).
-    unfold_der. eapply derives_trans;[|apply E2].
-    solve_andp.
+    unfold_der. auto.
 Qed.
 
 
@@ -2466,6 +2460,5 @@ split;intro.
   apply semax_skip_inv in E1.
   unfold_der. eapply semax_conseq;[..|apply E2];
   try (intros; solve_andp).
-  unfold_der. eapply derives_trans;[|apply E1].
-  solve_andp.
+  auto.
 Qed.
