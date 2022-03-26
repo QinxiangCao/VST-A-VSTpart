@@ -107,14 +107,13 @@ forall b, CForall (@pre_to_semax CS Espec Delta P) (c_pres b).
 Proof.
   intros. revert c_pres H b. dependent induction s_pres;intros.
   - intros. rewrite lb_nil_inv . constructor.
-  - destruct a. inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+  - destruct a. destruct H.
     destruct (C_partial_pres_inv (c_pres b)) as [r [cl E]].
-    specialize (IHs_pres _ H5 b).
+    specialize (IHs_pres _ H0 b).
     unfold tl_of in IHs_pres. rewrite E in IHs_pres.
     rewrite E. constructor;auto.
-    simpl. simpl in H3.
-    eapply semax_post'';[|apply H3].
+    simpl.
+    eapply semax_post'';[|apply H].
     apply andp_left2. simpl. intro w.
     eapply derives_trans.
     { apply allp_instantiate' with (x:=b). }
@@ -130,13 +129,12 @@ Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
   - intros. rewrite lb_nil_inv . constructor.
   - inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
     destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
-    specialize (IHs_posts _ H5 b).
+    specialize (IHs_posts _ H1 b).
     unfold tl_of in IHs_posts. rewrite E in IHs_posts.
     rewrite E. constructor;auto.
-    simpl in H3. specialize (H3 b).
-    unfold hd_of in H3. rewrite E in H3. auto.
+    simpl in H0. specialize (H0 b).
+    unfold hd_of in H0. rewrite E in H0. auto.
 Qed.
 
 
@@ -149,13 +147,12 @@ Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
   - intros. rewrite lb_nil_inv . constructor.
   - inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
     destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
-    specialize (IHs_posts _ H5 b).
+    specialize (IHs_posts _ H1 b).
     unfold tl_of in IHs_posts. rewrite E in IHs_posts.
     rewrite E. constructor;auto.
-    simpl in H3. specialize (H3 b).
-    unfold hd_of in H3. rewrite E in H3. auto.
+    simpl in H0. specialize (H0 b).
+    unfold hd_of in H0. rewrite E in H0. auto.
 Qed.
 
 Lemma given_path_sound: forall B HA  s_paths 
@@ -167,13 +164,12 @@ Proof.
   intros. revert c_paths H b. dependent induction s_paths;intros.
   - intros. rewrite lb_nil_inv . constructor.
   - inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
     destruct (lb_cons_inv (c_paths b)) as [r [cl E]].
-    specialize (IHs_paths _ H5 b).
+    specialize (IHs_paths _ H1 b).
     unfold tl_of in IHs_paths. rewrite E in IHs_paths.
     rewrite E. constructor;auto.
-    simpl in H3. specialize (H3 b).
-    unfold hd_of in H3. rewrite E in H3. auto.
+    simpl in H0. specialize (H0 b).
+    unfold hd_of in H0. rewrite E in H0. auto.
 Qed.
 
 Lemma given_sound: forall A HA P Q s_res 
@@ -220,11 +216,11 @@ Proof.
     + split;try constructor. simpl in H. auto.
     + simpl. destruct H. auto.
   - split;intro.
-    + dependent destruction H.
+    + simpl in H. destruct H.
       apply IHcl1 in H0. destruct H0.
        simpl in H. repeat split;try constructor; auto.
     + simpl. destruct H.
-      dependent destruction H.
+      destruct H.
       constructor;auto. apply IHcl1.
       split;auto.
 Qed.
@@ -295,13 +291,12 @@ Proof.
   induction s_pres;intros.
   - rewrite lb_nil_inv. constructor.
   - inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
     destruct (lb_cons_inv (c_pres' a0)) as [r [cl E]].
-    specialize (IHs_pres _ H5 a0).
+    specialize (IHs_pres _ H1 a0).
     unfold tl_of in IHs_pres. rewrite E in IHs_pres.
     rewrite E. constructor;auto.
-    simpl in H3. specialize (H3 a0).
-    unfold hd_of in H3. rewrite E in H3. auto.
+    simpl in H0. specialize (H0 a0).
+    unfold hd_of in H0. rewrite E in H0. auto.
     apply path_to_semax_nil_pre. auto.
 Qed.
 
@@ -316,11 +311,10 @@ Proof.
   intros.
   induction atoms.
   - constructor.
-  - inversion H. apply inj_pair2 in H2.
-    apply inj_pair2 in H4. subst.
+  - destruct H. 
     constructor.
-    { destruct a0. simpl in H3.
-      apply H3. }
+    { destruct a0. simpl in H.
+      apply H. }
     { auto. }
 Qed.
 
@@ -337,11 +331,10 @@ Proof.
   intros.
   induction atoms.
   - constructor.
-  - inversion H. apply inj_pair2 in H2.
-    apply inj_pair2 in H4. subst.
+  - inversion H.
     constructor.
-    { destruct a0. simpl in H3.
-      apply H3. }
+    { destruct a0. simpl in H.
+      apply H. }
     { auto. }
 Qed.
 
@@ -461,65 +454,12 @@ Proof.
   dependent destruction S3.
   simpl in H. simpl in H0.
   apply semax_skip_inv in H.
-  apply semax_skip_inv in H0.
+  apply semax_skip_inv in H1.
   eapply semax_pre';[apply H|..].
-  eapply semax_pre';[apply H0|..].
+  eapply semax_pre';[apply H1|..].
   rewrite normal_ret_assert_elim.
   apply semax_skip_der.
 Qed.
-
-(* Lemma C_partial_pre_inv: forall {path}
- (c_pre: C_partial_pre (mk_S_partial_pre path)),
- exists Q, c_pre = mk_C_partial_pre path Q.
-Proof.
-  intros.
-  dependent destruction c_pre.
-  - exists post. auto.
-  -  *)
-(* 
-Inductive post_to_semax : tycontext -> assert -> forall s_post : S_partial_post, C_partial_post s_post -> Prop :=
-| post_to_semax_basic:
-  forall pre path post Delta,
-    @semax CS Espec Delta pre (path_to_statement path)
-        (normal_ret_assert post) ->
-    post_to_semax Delta post (mk_S_partial_post path) (mk_C_partial_post pre path)
-| post_to_semax_bind:
-  forall A HA s_post' c_post' post Delta,
-    (forall a, post_to_semax Delta post s_post' (c_post' a)) ->
-  post_to_semax Delta post s_post' (bind_C_partial_post A HA s_post' c_post')
-  .
-
-Lemma post_conn_atom_to_semax_inv:
-forall Q atom {s_post} (c_post: C_partial_post s_post),
-  post_to_semax Delta Q _ (Cpost_conn_atom c_post atom) ->
-  post_to_semax Delta (EX R, R && !! atom_to_semax Delta R Q atom) _ c_post.
-Proof.
-  intros.
-  dependent induction H.
-  - admit.
-  - 
-  
-  destruct atom as [path2].
-  induction c_post.
-  - admit.
-  - simpl in H. dependent destruction H.
-
-
-
-
-  dependent induction H.
-  - simpl in x.  constructor. simpl.
-  
-  induction c_post.
-  - simpl in H. apply path_to_statement_app in H.
-    apply semax_seq_inv in H. destruct H as [R [H1 H2]].
-    eapply semax_post'';[|apply H1].
-    rewrite normal_ret_assert_elim. Exists R.
-    apply andp_right;try solve_andp. apply prop_right.
-    auto.
-  - simpl in H. intros a. auto.
-Qed. *)
-
 
 Lemma post_conn_pre_to_semax_inv:
 forall 
@@ -579,11 +519,10 @@ Proof.
   induction s_atoms.
   - auto.
   - simpl in H. inversion H.
-    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
-    apply IHs_atoms in H5.
-    apply atom_conn_pre_to_semax_inv in H3.
+    apply IHs_atoms in H1.
+    apply atom_conn_pre_to_semax_inv in H0.
     constructor;auto.
-    eapply atom_to_semax_derives_post;[|apply H3].
+    eapply atom_to_semax_derives_post;[|apply H0].
     Intros Q. Exists Q.
     apply andp_right;try solve_andp.
     apply prop_right. constructor;auto.
@@ -634,15 +573,12 @@ Proof.
   - simpl. tauto.
   - split;intro.
     + simpl in H. inversion H.
-      apply inj_pair2 in H2.
-      apply inj_pair2 in H4. subst.
-      destruct_CForalls H5.
-      apply IHs_atoms in H5_0. destruct H5_0.
+      destruct_CForalls H1.
+      apply IHs_atoms in H1_0. destruct H1_0.
       simpl. split.
       * constructor;auto.
       * apply CForall_Capp;auto.
     + destruct H. inversion H.
-      apply inj_pair2 in H3. apply inj_pair2 in H5. subst.
       simpl in H0. apply CForall_Capp in H0.
       destruct H0.
       simpl. constructor;auto.
@@ -705,7 +641,7 @@ Proof.
   intros.
   induction cl.
   - constructor.
-  - dependent destruction H0.
+  - destruct H0.
     constructor;auto.
 Qed.
 
@@ -718,37 +654,6 @@ Forall (@atom_to_semax CS Espec Delta P
   (EX Q, Q && !! CForall (@pre_to_semax CS Espec Delta Q) c_pres))
   s_atoms.
 Proof with auto.
-  (* intros P s_atoms.
-  induction s_atoms as [|s_atom s_atoms'];intros.
-  - right. auto.
-  - simpl in H. destruct_CForalls H.
-    induction c_pres.
-    + left...
-    + right. simpl in H_.
-
-
-  - right. destruct (lb_cons_inv c_pres) as [c_pre [c_pres' E]].
-    subst. simpl in H. destruct_CForalls H.
-    apply IHs_atoms in H_0. destruct H_0.
-    { subst s_atoms. clear IHs_atoms.
-      induction c_pres.
-      + constructor;auto.
-      + unfold atom_conn_Cpres in H_.
-        simpl in H_.
-        inversion H_. apply inj_pair2 in H1.
-        apply inj_pair2 in H3. subst.
-        apply IHc_pres in H4. constructor;auto.
-        apply atom_conn_pre_to_semax_inv in H2.
-
-        Search pre_to_semax.
-
-        eapply pre_to_semax_derives. ;[|apply H2].
-        
-        constructor. 
-      apply IHs_atoms in H_0. destruct H_0.
-    
-    } *)
-
   intros P s_atoms s_pres.
   induction s_pres as [|s_pre s_pres'];intros.
   - left;auto.
@@ -763,10 +668,10 @@ Proof with auto.
       apply Forall_forall with (x:=x) in H0;auto.
       eapply atom_to_semax_derives_post;
         [..|apply atom_to_semax_conj_rule;[apply H|apply H0]].
-      merge_Q. apply prop_right.
+      merge_Q2. apply prop_right.
       constructor;auto.
-      { inversion H2. apply inj_pair2 in H6. subst.
-        eapply pre_to_semax_derives;[..|apply H7].
+      { inversion H2.
+        eapply pre_to_semax_derives;[..|apply H4].
         solve_andp.
       }
       { eapply CForall_impl;[|apply H3].

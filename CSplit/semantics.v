@@ -3,15 +3,14 @@ Require Export CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
-
-Inductive CForall {A:Type} {binder: A -> Type} 
-(P : forall (a: A), binder a -> Prop ) :
-forall {sl: list A}, (@list_binded_of A binder sl) -> Prop :=
-| CForall_nil : CForall P list_binded_nil
-| CForall_cons : forall (sx : A) (cx : binder sx)
-                (sl' : list A) (cl' : @list_binded_of A binder sl'),
-                P sx cx -> CForall P cl' -> 
-                CForall P (list_binded_cons sx cx sl' cl').
+Fixpoint CForall {A:Type} {binder: A -> Type} 
+(P : forall (a: A), binder a -> Prop ) {sl: list A}
+(cl : @list_binded_of A binder sl) : Prop :=
+match cl with
+| {} => True
+| list_binded_cons sx cx sl' cl' =>
+    P sx cx /\ CForall P cl'
+end.
 
 (* Fixpoint CIn {A:Type} {binder: A -> Type}
   {sx: A} (cx: binder sx) 
@@ -378,9 +377,9 @@ Lemma pre_to_semax_derives_group_weak: forall P1 P2
   CForall (@pre_to_semax P1) c_pres.
 Proof. 
   intros.
-  induction H0.
+  induction c_pres.
   - constructor.
-  - constructor;auto. eapply pre_to_semax_derives_weak.
+  - destruct H0. constructor;auto. eapply pre_to_semax_derives_weak.
     apply H. auto.
 Qed.
 
@@ -392,9 +391,9 @@ Lemma pre_to_semax_derives_group: forall P1 P2
   CForall (@pre_to_semax P1) c_pres.
 Proof. 
   intros.
-  induction H0.
+  induction c_pres.
   - constructor.
-  - constructor;auto. eapply pre_to_semax_derives.
+  - destruct H0. constructor;auto. eapply pre_to_semax_derives.
     apply H. auto.
 Qed.
 
