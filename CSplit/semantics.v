@@ -397,6 +397,20 @@ Proof.
     apply H. auto.
 Qed.
 
+Lemma post_to_semax_derives_group: forall Q1 Q2
+  s_posts (c_posts : C_partial_posts s_posts),
+  ENTAIL Delta, Q1 |-- Q2  ->
+  CForall (@post_to_semax Q1) c_posts ->
+  CForall (@post_to_semax Q2) c_posts.
+Proof. 
+  intros.
+  induction c_posts.
+  - constructor.
+  - destruct H0. constructor;auto.
+    eapply post_to_semax_derives.
+    apply H. auto.
+Qed.
+
 Lemma atom_to_semax_derives_pre: forall p P1 P2 Q,
   P1 |-- P2 ->
   atom_to_semax P2 Q p ->
@@ -452,6 +466,22 @@ Proof.
     { solve_andp. }
     { intros. solve_andp. }
   - simpl in *. auto.
+Qed.
+
+
+Lemma post_to_semax_conj_rule_group: forall Q1 Q2 s_posts
+  (c_posts : C_partial_posts s_posts),
+CForall (@post_to_semax Q1) c_posts ->
+CForall (@post_to_semax Q2) c_posts ->
+CForall (@post_to_semax (Q1 && Q2)) c_posts.
+Proof.
+  intros.
+  induction c_posts.
+  - constructor.
+  - destruct H. destruct H0.
+    specialize (IHc_posts H1 H2).
+    constructor;auto.
+    apply post_to_semax_conj_rule;auto.
 Qed.
 
 Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,

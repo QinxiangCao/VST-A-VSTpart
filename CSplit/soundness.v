@@ -650,6 +650,18 @@ Ltac merge_Q5:=
   Exists (Q1 && (Q2 && (Q3 && (Q4 && Q5))));
   repeat apply andp_right; try solve_andp.
 
+Ltac solve_split:=
+  match goal with
+  | E: Forall (atom_ret_to_semax Delta _ ?R) ?ret_atoms 
+    |- Forall (atom_ret_to_semax Delta ?Q ?R) ?ret_atoms => 
+      eapply atom_return_to_semax_derives_pre_group;[|apply E]; solve_andp
+  | E: Forall (atom_to_semax Delta _ ?R) ?ret_atoms 
+      |- Forall (atom_to_semax Delta ?Q ?R) ?ret_atoms => 
+        eapply atom_to_semax_derives_pre_group;[|apply E]; solve_andp
+  | E: CForall (@pre_to_semax _ _ Delta _) ?pres 
+    |- CForall (@pre_to_semax _ _ Delta _) ?pres => 
+      eapply pre_to_semax_derives_group;[|apply E]; solve_andp
+  end.
 
 Lemma CForall_impl: forall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop )
@@ -677,6 +689,94 @@ Proof.
   - destruct H0. destruct H.
     constructor;auto.
 Qed.
+
+Lemma remove_entail: forall P Q,
+  P |-- Q ->
+  ENTAIL Delta, P |-- Q.
+Proof.
+  intros. apply andp_left2. auto.
+Qed.
+
+Lemma exclude_nil_cons: forall {A:Type} (a:A) ls P,
+  a :: ls = [] \/ P ->
+  P.
+Proof.
+  intros.
+  destruct H.
+  inversion H.
+  auto.
+Qed.
+
+
+Ltac combine_aux_post_auto:=
+  match goal with
+  | t: C_partial_pres [] |- _ => 
+    rewrite (lb_nil_inv t) in *
+  | _ => idtac
+  end;
+  match goal with
+    | E1: CForall (@post_to_semax _ _ Delta _) ?T,
+      E2: CForall (@post_to_semax _ _ Delta _) ?T,
+      E3: CForall (@post_to_semax _ _ Delta _) ?T,
+      E4: CForall (@post_to_semax _ _ Delta _) ?T,
+      E5: CForall (@post_to_semax _ _ Delta _) ?T|-
+      CForall (@post_to_semax _ _ Delta _) ?T =>
+      eapply post_to_semax_derives_group;
+      [|eapply post_to_semax_conj_rule_group;
+         [apply E1|
+          eapply post_to_semax_conj_rule_group;
+          [apply E2|
+           eapply post_to_semax_conj_rule_group;
+           [apply E3|
+            eapply post_to_semax_conj_rule_group;
+            [apply E4|apply E5]]]]];
+      try (apply remove_entail);
+      merge_Q5; apply prop_right;
+      repeat split;try solve [constructor]; try solve_split
+    | E1: CForall (@post_to_semax _ _ Delta _) ?T,
+      E2: CForall (@post_to_semax _ _ Delta _) ?T,
+      E3: CForall (@post_to_semax _ _ Delta _) ?T,
+      E4: CForall (@post_to_semax _ _ Delta _) ?T |-
+      CForall (@post_to_semax _ _ Delta _) ?T =>
+      eapply post_to_semax_derives_group;
+      [|eapply post_to_semax_conj_rule_group;
+         [apply E1|
+          eapply post_to_semax_conj_rule_group;
+          [apply E2|
+           eapply post_to_semax_conj_rule_group;
+           [apply E3|apply E4]]]];
+           try (apply remove_entail);
+           merge_Q4; apply prop_right;
+           repeat split;try solve [constructor]; try solve_split
+    | E1: CForall (@post_to_semax _ _ Delta _) ?T,
+      E2: CForall (@post_to_semax _ _ Delta _) ?T,
+      E3: CForall (@post_to_semax _ _ Delta _) ?T |-
+      CForall (@post_to_semax _ _ Delta _) ?T =>
+      eapply post_to_semax_derives_group;
+      [|eapply post_to_semax_conj_rule_group;
+         [apply E1|
+         eapply post_to_semax_conj_rule_group;[apply E2|apply E3]]];
+         try (apply remove_entail);
+         merge_Q3; apply prop_right;
+         repeat split;try solve [constructor]; try solve_split
+    | E1: CForall (@post_to_semax _ _ Delta _) ?T,
+      E2: CForall (@post_to_semax _ _ Delta _) ?T|-
+      CForall (@post_to_semax _ _ Delta _) ?T =>
+      eapply post_to_semax_derives_group;
+        [|eapply post_to_semax_conj_rule_group;[apply E1|apply E2]];
+        try (apply remove_entail);
+      merge_Q2; apply prop_right;
+      repeat split;try solve [constructor]; try solve_split
+    | E1: CForall (@post_to_semax _ _ Delta _) ?T |-
+      CForall (@post_to_semax _ _ Delta _) ?T =>
+      let Q1 := fresh "Q" in
+      eapply post_to_semax_derives_group;
+      [|apply E1];try (apply remove_entail);
+      merge_Q1; apply prop_right; repeat split;
+      try solve [constructor]; try solve_split
+    | _ => idtac
+   end.
+
 
 Lemma atoms_conn_pres_group_inv: forall P s_atoms 
   s_pres {c_pres: C_partial_pres s_pres},
@@ -1101,16 +1201,31 @@ Proof.
     destruct H;auto.
 Qed.
 
+Definition s_res_has_path (s_res : S_result) : Prop :=
+  match s_res with
+  | None => False
+  | Some (mk_S_result_rec s_pre s_path
+    s_post_normal s_post_break s_post_continue s_post_return
+    s_atom_normal s_atom_break s_atom_continue s_atom_return) 
+    => ~ (s_pre = [] /\ s_atom_normal = []
+        /\ s_atom_break = [] /\ s_atom_continue = []
+        /\ s_atom_return = [])
+  end.
+
+
+
 
 Lemma seq_soundness: forall P Q s_res1 s_res2
   (c_res1: C_result s_res1) (c_res2: C_result s_res2),
+  s_res_has_path s_res2 ->
   split_Semax Delta P Q
     (C_split_sequence s_res1 s_res2 c_res1 c_res2) ->
   exists R,
     split_Semax Delta P (normal_ret_assert R) c_res1 /\
     split_Semax Delta R Q c_res2.
 Proof.
-  intros.
+  intros P Q s_res1 s_res2. intros c_res1 c_res2.
+  intros Hpath H.
   destruct s_res1 as [s_res1|];
   [destruct s_res1 as [
     s_pre1 s_path1 
@@ -1154,15 +1269,17 @@ Proof.
     )). split.
   
   + repeat split;auto.
+    * destruct s_pre2,s_atom_normal2,
+      s_atom_break2,s_atom_continue2,s_atom_return2;
+      try apply exclude_nil_cons in S18;
+      try apply exclude_nil_cons in S16;
+      try apply exclude_nil_cons in S13;
+      try apply exclude_nil_cons in S11;
+      try apply exclude_nil_cons in S15;
+      [exfalso; apply Hpath; repeat split;auto|..];
+      combine_aux_post_auto.
 
-
-
-  destruct_CForalls S1.
-  destruct_CForalls S2.
-  
-
-
-
+Admitted.
 
 
 
