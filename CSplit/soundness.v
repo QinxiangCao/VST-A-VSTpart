@@ -568,20 +568,167 @@ Proof.
     apply prop_right;simpl;auto.
 Qed.
 
+Lemma atoms_conn_pre_to_semax_inv: forall P s_atoms s_pre
+  (c_pre: C_partial_pre s_pre),
+CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms {c_pre})
+-> Forall (atom_to_semax Delta P
+   (EX Q, Q &&
+    !! CForall (@pre_to_semax CS Espec Delta Q) { c_pre })) s_atoms.
+Proof.
+  intros.
+  induction s_atoms.
+  - auto.
+  - simpl in H. inversion H.
+    apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
+    apply IHs_atoms in H5.
+    apply atom_conn_pre_to_semax_inv in H3.
+    constructor;auto.
+    eapply atom_to_semax_derives_post;[|apply H3].
+    Intros Q. Exists Q.
+    apply andp_right;try solve_andp.
+    apply prop_right. constructor;auto.
+    constructor.
+Qed.
+
+(* 
+
+dependent destruction cannot qed
+
+Lemma atoms_conn_Cpres_distrib:
+  forall Delta P s_atoms s_pre c_pre s_pres' c_pres',
+  CForall (@pre_to_semax CS Espec Delta P) 
+      (atoms_conn_Cpres s_atoms
+         (list_binded_cons s_pre c_pre s_pres' c_pres')) <->
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms { c_pre }) /\
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms c_pres').
+Proof.
+  intros. dependent induction s_atoms.
+  - simpl. tauto.
+  - split;intro.
+    + simpl in H. dependent destruction H.
+      { destruct_CForalls H0.
+        apply IHs_atoms in H0_0. destruct H0_0.
+        simpl. split.
+        * constructor;auto.
+        * apply CForall_Capp;auto.
+      }
+    + destruct H. dependent destruction H.
+      simpl in H1. apply CForall_Capp in H1.
+      destruct H1.
+      simpl. constructor;auto.
+      apply CForall_Capp. split;auto.
+      apply IHs_atoms. auto.
+    
+
+Qed. *)
+
+Lemma atoms_conn_Cpres_distrib:
+  forall Delta P s_atoms s_pre c_pre s_pres' c_pres',
+  CForall (@pre_to_semax CS Espec Delta P) 
+      (atoms_conn_Cpres s_atoms
+         (list_binded_cons s_pre c_pre s_pres' c_pres')) <->
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms { c_pre }) /\
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms c_pres').
+Proof.
+  intros. dependent induction s_atoms.
+  - simpl. tauto.
+  - split;intro.
+    + simpl in H. inversion H.
+      apply inj_pair2 in H2.
+      apply inj_pair2 in H4. subst.
+      destruct_CForalls H5.
+      apply IHs_atoms in H5_0. destruct H5_0.
+      simpl. split.
+      * constructor;auto.
+      * apply CForall_Capp;auto.
+    + destruct H. inversion H.
+      apply inj_pair2 in H3. apply inj_pair2 in H5. subst.
+      simpl in H0. apply CForall_Capp in H0.
+      destruct H0.
+      simpl. constructor;auto.
+      apply CForall_Capp. split;auto.
+      apply IHs_atoms. auto.
+Qed.
+
+
+
+(*-------------------------
+Tactics for combining proofs 
+for individual path/partial_paths
+-------------------------*)
+Ltac merge_Q2:=
+  let Q1 := fresh "Q" in
+  let Q2 := fresh "Q" in
+  Intros Q1; Intros Q2; Exists (andp Q1 Q2);
+  repeat apply andp_right; try solve_andp.
+
+Ltac merge_Q1:=
+  let Q := fresh "Q" in
+  Intros Q; Exists Q;
+  repeat apply andp_right; try solve_andp.
+
+Ltac merge_Q3:=
+  let Q1 := fresh "Q" in
+  let Q2 := fresh "Q" in
+  let Q3 := fresh "Q" in
+  Intros Q1; Intros Q2; Intros Q3; 
+  Exists (Q1 && (Q2 && Q3));
+  repeat apply andp_right; try solve_andp.
+
+Ltac merge_Q4:=
+  let Q1 := fresh "Q" in
+  let Q2 := fresh "Q" in
+  let Q3 := fresh "Q" in
+  let Q4 := fresh "Q" in
+  Intros Q1; Intros Q2; Intros Q3;  Intros Q4;
+  Exists (Q1 && (Q2 && (Q3 && Q4)));
+  repeat apply andp_right; try solve_andp.
+
+Ltac merge_Q5:=
+  let Q1 := fresh "Q" in
+  let Q2 := fresh "Q" in
+  let Q3 := fresh "Q" in
+  let Q4 := fresh "Q" in
+  let Q5 := fresh "Q" in
+  Intros Q1; Intros Q2; Intros Q3;  Intros Q4; Intros Q5;
+  Exists (Q1 && (Q2 && (Q3 && (Q4 && Q5))));
+  repeat apply andp_right; try solve_andp.
+
+
+Lemma CForall_impl: forall {A:Type} {binder: A -> Type} 
+(P : forall (a: A), binder a -> Prop )
+(Q : forall (a: A), binder a -> Prop )
+{sl: list A} (cl: @list_binded_of A binder sl),
+(forall s (c: binder s), P s c -> Q s c) ->
+CForall P cl -> CForall Q cl.
+Proof.
+  intros.
+  induction cl.
+  - constructor.
+  - dependent destruction H0.
+    constructor;auto.
+Qed.
 
 Lemma atoms_conn_pres_group_inv: forall P s_atoms 
   s_pres {c_pres: C_partial_pres s_pres},
 CForall (@pre_to_semax CS Espec Delta P)
   (atoms_conn_Cpres s_atoms c_pres) ->
-(s_atoms = []) \/
+(s_pres = []) \/
 Forall (@atom_to_semax CS Espec Delta P
-  (EX Q, Q && !! CForall (@pre_to_semax CS Espec Delta P) c_pres))
+  (EX Q, Q && !! CForall (@pre_to_semax CS Espec Delta Q) c_pres))
   s_atoms.
-Proof.
-  intros P s_atoms.
-  induction s_atoms;intros.
-  - left;auto.
-  - right. simpl in H. destruct_CForalls H.
+Proof with auto.
+  (* intros P s_atoms.
+  induction s_atoms as [|s_atom s_atoms'];intros.
+  - right. auto.
+  - simpl in H. destruct_CForalls H.
+    induction c_pres.
+    + left...
+    + right. simpl in H_.
+
+
+  - right. destruct (lb_cons_inv c_pres) as [c_pre [c_pres' E]].
+    subst. simpl in H. destruct_CForalls H.
     apply IHs_atoms in H_0. destruct H_0.
     { subst s_atoms. clear IHs_atoms.
       induction c_pres.
@@ -600,7 +747,34 @@ Proof.
         constructor. 
       apply IHs_atoms in H_0. destruct H_0.
     
+    } *)
+
+  intros P s_atoms s_pres.
+  induction s_pres as [|s_pre s_pres'];intros.
+  - left;auto.
+  - right. destruct (lb_cons_inv c_pres) as [c_pre [c_pres' E]]. subst.
+    apply atoms_conn_Cpres_distrib in H. destruct H.
+    apply IHs_pres' in H0. destruct H0;auto.
+    { subst s_pres'. rewrite (lb_nil_inv c_pres').
+      apply atoms_conn_pre_to_semax_inv in H. auto. }
+    { apply atoms_conn_pre_to_semax_inv in H.
+      apply Forall_forall. intros.
+      apply Forall_forall with (x:=x) in H;auto.
+      apply Forall_forall with (x:=x) in H0;auto.
+      eapply atom_to_semax_derives_post;
+        [..|apply atom_to_semax_conj_rule;[apply H|apply H0]].
+      merge_Q. apply prop_right.
+      constructor;auto.
+      { inversion H2. apply inj_pair2 in H6. subst.
+        eapply pre_to_semax_derives;[..|apply H7].
+        solve_andp.
+      }
+      { eapply CForall_impl;[|apply H3].
+        intros. eapply pre_to_semax_derives;[..|apply H4].
+        solve_andp.
+      }
     }
+Qed.
 
 
 Lemma seq_soundness: forall P Q s_res1 s_res2
