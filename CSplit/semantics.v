@@ -3,6 +3,7 @@ Require Export CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
+
 Inductive CForall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop ) :
 forall {sl: list A}, (@list_binded_of A binder sl) -> Prop :=
@@ -156,8 +157,8 @@ Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
   | mk_C_partial_pre path post =>
       @semax CS Espec Delta pre (path_to_statement path)
       (normal_ret_assert post)
-  | bind_C_partial_pre A HA s_pre' c_pre' =>
-      forall (a:A), pre_to_semax pre (c_pre' a)
+  (* | bind_C_partial_pre A HA s_pre' c_pre' =>
+      forall (a:A), pre_to_semax pre (c_pre' a) *)
   end.
 
 
@@ -230,7 +231,7 @@ Proof.
   induction c_pre.
   + simpl. eapply semax_pre';[..|apply H0].
     auto.
-  + simpl in *. auto.
+  (* + simpl in *. auto. *)
 Qed.
 
 Lemma pre_to_semax_derives_weak: forall P Q s_pre 
@@ -301,12 +302,12 @@ Proof.
     intros Q.
     apply semax_extract_prop.
     intros. auto.
-  - intros x. specialize (H x).
+  (* - intros x. specialize (H x).
     eapply pre_to_semax_derives. 2:{ apply H. }
     Intros Q. Exists Q.
     apply andp_right.
     + apply prop_right. apply H0.
-    + solve_andp.
+    + solve_andp. *)
 Qed.
 
 Lemma post_to_semax_reverse: forall { s_post }
@@ -337,8 +338,8 @@ Proof.
   intros.
   induction c_pre.
   - simpl in H. simpl. auto.
-  - simpl in H0, H. destruct s.
-    simpl in H. simpl. auto.
+  (* - simpl in H0, H. destruct s.
+    simpl in H. simpl. auto. *)
 Qed.
 
 

@@ -213,14 +213,44 @@ Inductive C_full_path : S_full_path -> Type :=
 
 Notation C_full_paths := (@list_binded_of _ C_full_path).
 
+(* Inductive C_assert : assert -> Type :=
+| mk_C_assert : 
+    forall (post: assert), C_assert post
+| bind_C_partial_pre :
+    forall (A: Type) (HA: inhabited A) (s: assert)
+           (ass': A -> C_assert s),
+      C_assert s
+. *)
+(* To be used for splitting
+  Given x. .... P(x) .... Q(x)
+
+  the result of split given-body:
+   pre := fun x => .... P(x)
+   path := fun x => P(x)---Q(x)
+
+  the result of split given:
+   pre  := ----{ allp x => P(x) }
+   path := Binded x. { P(x) }---{ Q(x) }
+
+*)
+
+(* Fixpoint flatten_C_partial_pre_assert {s_ass: assert}
+ (c_ass: C_partial_pre_assert s_ass) : assert :=
+  match c_ass with
+  | mk_C_partial_pre_assert post => post
+  | bind_C_partial_pre A HA s ass' => allp 
+      (fun a => flatten_C_partial_pre_assert (ass' a))
+  end. *)
+
 Inductive C_partial_pre : S_partial_pre -> Type :=
 | mk_C_partial_pre : 
     forall (path: path) (post: assert),
+           (* (post': C_partial_pre_assert post), *)
       C_partial_pre (mk_S_partial_pre path)
-| bind_C_partial_pre :
+(* | bind_C_partial_pre :
     forall (A: Type) (HA: inhabited A) (s: S_partial_pre)
            (c': A -> C_partial_pre s),
-      C_partial_pre s
+      C_partial_pre s *)
 .
 
 Notation C_partial_pres := (@list_binded_of _ C_partial_pre).
@@ -508,9 +538,9 @@ match s_atom1 with
   return C_partial_pre (atom_conn_Spre (mk_atom path1) s_pre2') with
   | mk_C_partial_pre path2 post2 =>
       mk_C_partial_pre (path1 ++ path2) post2
-  | bind_C_partial_pre A HA s_pre2 c_pre2' =>
+  (* | bind_C_partial_pre A HA s_pre2 c_pre2' =>
       bind_C_partial_pre A HA (atom_conn_Spre (mk_atom path1) s_pre2)
-        (fun a => atom_conn_Cpre (mk_atom path1) (c_pre2' a))
+        (fun a => atom_conn_Cpre (mk_atom path1) (c_pre2' a)) *)
   end
 end.
 
@@ -604,7 +634,7 @@ Fixpoint Cposts_conn_returns
   end.
 
 
-Fixpoint Cpost_conn_Cpre_aux
+Definition Cpost_conn_Cpre_aux
   (pre: assert)
   (path1: path)
   {s_pre2: S_partial_pre}
@@ -614,10 +644,10 @@ match c_pre2 in C_partial_pre s_pre2'
 return C_full_path (Spost_conn_Spre (mk_S_partial_post path1) s_pre2') with
 | mk_C_partial_pre path2 post =>
     mk_C_full_path pre (path1 ++ path2) post
-| bind_C_partial_pre A HA s_pre2 c_pre2' =>
+(* | bind_C_partial_pre A HA s_pre2 c_pre2' =>
     bind_C_full_path A HA 
       (Spost_conn_Spre (mk_S_partial_post path1) s_pre2)
-      (fun a => Cpost_conn_Cpre_aux pre path1 (c_pre2' a))
+      (fun a => Cpost_conn_Cpre_aux pre path1 (c_pre2' a)) *)
 end.
 
 Fixpoint Cpost_conn_Cpre
@@ -672,11 +702,11 @@ match s_pre with
 | mk_S_partial_pre path =>
   match c_pre in C_partial_pre s_pre0
   return C_partial_pre (add_exp_to_Spre e s_pre0) with
-  | mk_C_partial_pre path post =>
+  | mk_C_partial_pre path  post =>
       mk_C_partial_pre (inl e :: path) post
-  | bind_C_partial_pre A HA s_pre c_pre' =>
+  (* | bind_C_partial_pre A HA s_pre c_pre' =>
       bind_C_partial_pre A HA (add_exp_to_Spre e s_pre) 
-        (fun a => add_exp_to_Cpre e (c_pre' a))
+        (fun a => add_exp_to_Cpre e (c_pre' a)) *)
   end
 end.
 
@@ -687,15 +717,16 @@ Definition add_exp_to_Cpres e
     (fun s_pre c_pre => @add_exp_to_Cpre e s_pre c_pre) c_pres.
 
 Fixpoint add_P_to_Cpre P { s_pre } 
-  (c_pre: C_partial_pre s_pre) :=
+  (c_pre: C_partial_pre s_pre) : C_full_path (add_P_to_Spre s_pre) :=
 match s_pre with
 | mk_S_partial_pre path =>
-  match c_pre with
+  match c_pre in C_partial_pre path0
+  return C_full_path (add_P_to_Spre path0) with
   | mk_C_partial_pre path Q =>
       mk_C_full_path P path Q
-  | bind_C_partial_pre A HA s_pre c_pre' =>
+  (* | bind_C_partial_pre A HA s_pre c_pre' =>
       bind_C_full_path A HA (add_P_to_Spre s_pre)
-        (fun a => add_P_to_Cpre P (c_pre' a))
+        (fun a => add_P_to_Cpre P (c_pre' a)) *)
   end
 end. 
 
@@ -759,7 +790,7 @@ Fixpoint add_Q_to_Catoms Q s_atoms : C_partial_pres (add_Q_to_atoms s_atoms) :=
   | nil => list_binded_nil
   | cons (mk_atom path) s_atoms =>
       list_binded_cons 
-        (mk_S_partial_pre path )
+        (mk_S_partial_pre path)
         (mk_C_partial_pre path Q)
         (add_Q_to_atoms s_atoms)
         (add_Q_to_Catoms Q s_atoms)
@@ -1143,14 +1174,51 @@ match res with
 end.
 
 
-Definition flatten_partial_pres_binds {A:Type}
+Definition assert_of_pre {A:Type} s_pre :
+  (A -> C_partial_pre s_pre)
+  -> (A -> assert) :=
+  match s_pre with
+  | mk_S_partial_pre path =>
+    fun c_pre =>
+    fun a => match (c_pre a) with
+             | mk_C_partial_pre path post =>
+              post
+    end
+  end.
+
+Definition hd_assert_of_pre {A:Type} {s_pre s_pres} :
+(A -> C_partial_pres (s_pre::s_pres))
+-> (A -> assert) :=
+match s_pre with
+| mk_S_partial_pre path =>
+  fun c_pres =>
+  fun a => match (c_pres a) with
+            | list_binded_cons
+                (mk_S_partial_pre path)
+                (mk_C_partial_pre path' post)
+                s_pres c_pres' =>
+            post
+  end
+end.
+
+
+Fixpoint flatten_partial_pres_binds {A:Type}
   (HA: inhabited A)
   (s_pres: S_partial_pres)
-  (c_pres': A -> C_partial_pres s_pres)
-  : C_partial_pres s_pres :=
-  @flatten_binds S_partial_pre A C_partial_pre HA (bind_C_partial_pre A HA) s_pres c_pres'.
-
-
+  : ( A -> C_partial_pres s_pres)
+  -> C_partial_pres s_pres :=
+  match s_pres with
+  | nil => fun _ => list_binded_nil
+  | (mk_S_partial_pre path) :: s_pres' =>
+     fun c_pres' =>
+     (* let c_pre := hd_of (mk_S_partial_pre path) s_pres' c_pres' in *)
+     let c_pres := tl_of (mk_S_partial_pre path) s_pres' c_pres' in
+     let c_pre_ass := hd_assert_of_pre c_pres' in
+     let new_c_pre := mk_C_partial_pre path (allp c_pre_ass) in
+      list_binded_cons
+        (mk_S_partial_pre path) new_c_pre
+        s_pres' (flatten_partial_pres_binds HA s_pres' c_pres)
+  end.
 
 Definition flatten_partial_posts_binds {A:Type}
   (HA: inhabited A)

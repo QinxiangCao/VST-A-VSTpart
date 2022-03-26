@@ -60,6 +60,43 @@ Qed.
   (s_x:R) (s_res : list R) (c_res' : A -> binder (s_x :: s_res))
 (flatten_partial_pres_binds HA (a0 :: s_pres) c_pres') = *)
 
+Lemma C_partial_pre_inv: 
+forall { p } (r: C_partial_pre (mk_S_partial_pre p)),
+  { post | r = mk_C_partial_pre p post }.
+Proof.
+  intros.
+  dependent induction r.
+  exists post. auto.
+Qed.
+
+
+
+Lemma C_partial_pres_inv: forall { p sl }
+ (cl: C_partial_pres ((mk_S_partial_pre p)::sl)),
+ exists Q cl',
+ cl= list_binded_cons (mk_S_partial_pre p)
+   (mk_C_partial_pre p Q) sl cl'.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+  destruct (C_partial_pre_inv r');subst.
+  exists x, cl...
+Qed.
+
+(* Lemma hd_of_sem {R A:Type} {binder: R -> Type}:
+forall {s:R} {sl:list R} {c_res:A -> list_binded_of (s::sl)},
+forall a c cs, c_res a = list_binded_cons s c sl cs ->
+  @hd_of R A binder s sl c_res a = c.
+Proof.
+  intros.
+  generalize dependent a.
+  induction sl.
+  - unfold hd_of. simpl.
+  unfold hd_of.
+  inversion H. *)
+
+
+
 
 
 Lemma given_pre_sound: forall B HA P s_pres 
@@ -70,16 +107,19 @@ forall b, CForall (@pre_to_semax CS Espec Delta P) (c_pres b).
 Proof.
   intros. revert c_pres H b. dependent induction s_pres;intros.
   - intros. rewrite lb_nil_inv . constructor.
-  - inversion H.
+  - destruct a. inversion H.
     apply inj_pair2 in H2. apply inj_pair2 in H4. subst.
-    destruct (lb_cons_inv (c_pres b)) as [r [cl E]].
+    destruct (C_partial_pres_inv (c_pres b)) as [r [cl E]].
     specialize (IHs_pres _ H5 b).
     unfold tl_of in IHs_pres. rewrite E in IHs_pres.
     rewrite E. constructor;auto.
-    simpl in H3. specialize (H3 b).
-    unfold hd_of in H3. rewrite E in H3. auto.
+    simpl. simpl in H3.
+    eapply semax_post'';[|apply H3].
+    apply andp_left2. simpl. intro w.
+    eapply derives_trans.
+    { apply allp_instantiate' with (x:=b). }
+    rewrite E. apply derives_refl.
 Qed.
-
 
 Lemma given_post_sound: forall B HA P s_posts 
   (c_posts: B -> C_partial_posts s_posts),
@@ -239,9 +279,9 @@ Proof.
   intros.
   induction c_pre.
   - simpl in H. auto.
-  - simpl in *. intros a0.
+  (* - simpl in *. intros a0.
     apply H0 with (a0:=a0).
-    auto.
+    auto. *)
 Qed.
 
 Lemma Cpost_conn_Cpres_inv_exgiven: forall A (HA: inhabited A)
@@ -486,17 +526,22 @@ forall
 {s_pre} (c_pre: C_partial_pre s_pre)
 {s_post} (c_post: C_partial_post s_post),
   path_to_semax Delta (Cpost_conn_Cpre c_post c_pre) ->
-  exists R, post_to_semax Delta (R && !! pre_to_semax Delta R c_pre) c_post.
+  post_to_semax Delta (EX R, R && !! pre_to_semax Delta R c_pre) c_post.
 Proof.
   intros.
   induction c_post.
   { unfold Cpost_conn_Cpre in H.
-    induction c_pre.
-    + admit.
-    + simpl in H. simpl.
-  
-  simpl in H. }
-Admitted.
+    induction c_pre. simpl in H.
+    apply path_to_statement_app in H.
+    apply semax_seq_inv' in H.
+    eapply post_to_semax_derives.
+    2:{ apply H. }
+    Intros Q. Exists Q.
+    apply andp_right. solve_andp.
+    apply prop_right. auto.
+  }
+  { intros a. apply H0. auto. }
+Qed.
 
 
 Lemma atom_conn_Cpre_nil: forall P s_pre (c_pre: C_partial_pre s_pre),
@@ -505,11 +550,6 @@ Lemma atom_conn_Cpre_nil: forall P s_pre (c_pre: C_partial_pre s_pre),
 Proof.
   intros. induction c_pre.
   - simpl. tauto.
-  - split;intros.
-    { simpl. intros a.
-      apply H. simpl in H0. auto. }
-    { simpl in H0. simpl.
-      intros a. apply H. auto. }
 Qed.
 
 Lemma atom_conn_pre_to_semax_inv:
@@ -517,14 +557,6 @@ forall P atom {s_pre} (c_pre: C_partial_pre s_pre),
   pre_to_semax Delta P (atom_conn_Cpre atom c_pre) ->
   atom_to_semax Delta P (EX Q, Q && !! pre_to_semax Delta Q c_pre) atom.
 Proof.
-  (* intros. destruct atom as [path1]. revert P s_pre c_pre H.
-  induction path1;intros.
-  - apply (proj1 (atom_conn_Cpre_nil _ _ _)) in H.
-    destruct c_pre.
-    { admit. }
-    { hnf. eapply semax_pre;[..|apply semax_skip].
-      Exists P. apply andp_right. solve_andp. apply prop_right. auto. }
-  -  *)
   intros P atom s_pre. destruct atom as [path]. 
   
   induction c_pre;intros.
@@ -534,20 +566,7 @@ Proof.
     rewrite normal_ret_assert_elim. Exists Q.
     apply andp_right;try solve_andp.
     apply prop_right;simpl;auto.
-  - simpl in H.
-    assert ( forall a, atom_to_semax Delta P
-      (EX Q : environ -> mpred, Q && !! pre_to_semax Delta Q (c' a))%assert
-      (mk_atom path1)).
-    { intros. auto. }
-
-      
-  destruct HA.
-    eapply atom_to_semax_derives_post.
-    2:{ apply (H0 a). apply H. }
-    Intros Q. Exists Q. apply andp_right.
-    solve_andp. apply prop_right.
-    simpl. 
-
+Qed.
 
 
 Lemma atoms_conn_pres_group_inv: forall P s_atoms 
@@ -555,9 +574,9 @@ Lemma atoms_conn_pres_group_inv: forall P s_atoms
 CForall (@pre_to_semax CS Espec Delta P)
   (atoms_conn_Cpres s_atoms c_pres) ->
 (s_atoms = []) \/
-CForall (@pre_to_semax CS Espec Delta 
-  (EX Q, Q && !! Forall (@atom_to_semax CS Espec Delta P Q) s_atoms))
-  c_pres.
+Forall (@atom_to_semax CS Espec Delta P
+  (EX Q, Q && !! CForall (@pre_to_semax CS Espec Delta P) c_pres))
+  s_atoms.
 Proof.
   intros P s_atoms.
   induction s_atoms;intros.
@@ -566,12 +585,13 @@ Proof.
     apply IHs_atoms in H_0. destruct H_0.
     { subst s_atoms. clear IHs_atoms.
       induction c_pres.
-      + constructor.
+      + constructor;auto.
       + unfold atom_conn_Cpres in H_.
         simpl in H_.
         inversion H_. apply inj_pair2 in H1.
         apply inj_pair2 in H3. subst.
         apply IHc_pres in H4. constructor;auto.
+        apply atom_conn_pre_to_semax_inv in H2.
 
         Search pre_to_semax.
 
@@ -581,11 +601,6 @@ Proof.
       apply IHs_atoms in H_0. destruct H_0.
     
     }
-  
-  dependent destruction H.
-  
-  
-  right. simpl in H. left
 
 
 Lemma seq_soundness: forall P Q s_res1 s_res2
