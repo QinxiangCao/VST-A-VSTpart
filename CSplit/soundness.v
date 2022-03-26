@@ -204,6 +204,19 @@ Ltac destruct_CForalls S :=
     end.
 
 
+Ltac destruct_FForalls :=
+  repeat (
+    match goal with
+    | [H : CForall ?P (_ +++ _) |- _] => 
+        let n1 := fresh H in
+        apply CForall_Capp in H; destruct H as [H n1]
+    | [H : Forall ?P (_ ++ _) |- _] => 
+        let n1 := fresh H in
+        apply Forall_app in H; destruct H as [H n1]
+    end
+  ).
+
+
 Lemma rewrite_flatten_binds: forall 
   {R A: Type} {binder: R -> Type}
   (binder_intro : forall (r : R),
@@ -386,6 +399,237 @@ Proof.
   solve_andp.
 Qed.
 
+Lemma semax_skip_der: forall Q,
+semax Delta (RA_normal Q) Clight.Sskip Q.
+Proof.
+  intros.
+  destruct Q;unfold_der.
+  eapply semax_post'';[..|apply semax_skip];unfold_der;
+    try solve [intros; apply ENTAIL_FF_left].
+  solve_andp.
+Qed.
+
+Lemma assert_sound: forall P Q a,
+  split_Semax Delta P Q (C_split Sassert (Cassert a)) ->
+  semax Delta P Clight.Sskip Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  dependent destruction S1.
+  dependent destruction S3.
+  simpl in H. simpl in H0.
+  apply semax_skip_inv in H.
+  apply semax_skip_inv in H0.
+  eapply semax_pre';[apply H|..].
+  eapply semax_pre';[apply H0|..].
+  rewrite normal_ret_assert_elim.
+  apply semax_skip_der.
+Qed.
+
+(* Lemma C_partial_pre_inv: forall {path}
+ (c_pre: C_partial_pre (mk_S_partial_pre path)),
+ exists Q, c_pre = mk_C_partial_pre path Q.
+Proof.
+  intros.
+  dependent destruction c_pre.
+  - exists post. auto.
+  -  *)
+(* 
+Inductive post_to_semax : tycontext -> assert -> forall s_post : S_partial_post, C_partial_post s_post -> Prop :=
+| post_to_semax_basic:
+  forall pre path post Delta,
+    @semax CS Espec Delta pre (path_to_statement path)
+        (normal_ret_assert post) ->
+    post_to_semax Delta post (mk_S_partial_post path) (mk_C_partial_post pre path)
+| post_to_semax_bind:
+  forall A HA s_post' c_post' post Delta,
+    (forall a, post_to_semax Delta post s_post' (c_post' a)) ->
+  post_to_semax Delta post s_post' (bind_C_partial_post A HA s_post' c_post')
+  .
+
+Lemma post_conn_atom_to_semax_inv:
+forall Q atom {s_post} (c_post: C_partial_post s_post),
+  post_to_semax Delta Q _ (Cpost_conn_atom c_post atom) ->
+  post_to_semax Delta (EX R, R && !! atom_to_semax Delta R Q atom) _ c_post.
+Proof.
+  intros.
+  dependent induction H.
+  - admit.
+  - 
+  
+  destruct atom as [path2].
+  induction c_post.
+  - admit.
+  - simpl in H. dependent destruction H.
+
+
+
+
+  dependent induction H.
+  - simpl in x.  constructor. simpl.
+  
+  induction c_post.
+  - simpl in H. apply path_to_statement_app in H.
+    apply semax_seq_inv in H. destruct H as [R [H1 H2]].
+    eapply semax_post'';[|apply H1].
+    rewrite normal_ret_assert_elim. Exists R.
+    apply andp_right;try solve_andp. apply prop_right.
+    auto.
+  - simpl in H. intros a. auto.
+Qed. *)
+
+
+Lemma post_conn_pre_to_semax_inv:
+forall 
+{s_pre} (c_pre: C_partial_pre s_pre)
+{s_post} (c_post: C_partial_post s_post),
+  path_to_semax Delta (Cpost_conn_Cpre c_post c_pre) ->
+  exists R, post_to_semax Delta (R && !! pre_to_semax Delta R c_pre) c_post.
+Proof.
+  intros.
+  induction c_post.
+  { unfold Cpost_conn_Cpre in H.
+    induction c_pre.
+    + admit.
+    + simpl in H. simpl.
+  
+  simpl in H. }
+Admitted.
+
+
+Lemma atom_conn_Cpre_nil: forall P s_pre (c_pre: C_partial_pre s_pre),
+  pre_to_semax Delta P (atom_conn_Cpre (mk_atom []) c_pre) 
+  <-> pre_to_semax Delta P c_pre.
+Proof.
+  intros. induction c_pre.
+  - simpl. tauto.
+  - split;intros.
+    { simpl. intros a.
+      apply H. simpl in H0. auto. }
+    { simpl in H0. simpl.
+      intros a. apply H. auto. }
+Qed.
+
+Lemma atom_conn_pre_to_semax_inv:
+forall P atom {s_pre} (c_pre: C_partial_pre s_pre),
+  pre_to_semax Delta P (atom_conn_Cpre atom c_pre) ->
+  atom_to_semax Delta P (EX Q, Q && !! pre_to_semax Delta Q c_pre) atom.
+Proof.
+  (* intros. destruct atom as [path1]. revert P s_pre c_pre H.
+  induction path1;intros.
+  - apply (proj1 (atom_conn_Cpre_nil _ _ _)) in H.
+    destruct c_pre.
+    { admit. }
+    { hnf. eapply semax_pre;[..|apply semax_skip].
+      Exists P. apply andp_right. solve_andp. apply prop_right. auto. }
+  -  *)
+  intros P atom s_pre. destruct atom as [path]. 
+  
+  induction c_pre;intros.
+  - simpl in H. apply path_to_statement_app in H.
+    apply semax_seq_inv in H. destruct H as [Q [H1 H2]].
+    eapply semax_post'';[|apply H1].
+    rewrite normal_ret_assert_elim. Exists Q.
+    apply andp_right;try solve_andp.
+    apply prop_right;simpl;auto.
+  - simpl in H.
+    assert ( forall a, atom_to_semax Delta P
+      (EX Q : environ -> mpred, Q && !! pre_to_semax Delta Q (c' a))%assert
+      (mk_atom path1)).
+    { intros. auto. }
+
+      
+  destruct HA.
+    eapply atom_to_semax_derives_post.
+    2:{ apply (H0 a). apply H. }
+    Intros Q. Exists Q. apply andp_right.
+    solve_andp. apply prop_right.
+    simpl. 
+
+
+
+Lemma atoms_conn_pres_group_inv: forall P s_atoms 
+  s_pres {c_pres: C_partial_pres s_pres},
+CForall (@pre_to_semax CS Espec Delta P)
+  (atoms_conn_Cpres s_atoms c_pres) ->
+(s_atoms = []) \/
+CForall (@pre_to_semax CS Espec Delta 
+  (EX Q, Q && !! Forall (@atom_to_semax CS Espec Delta P Q) s_atoms))
+  c_pres.
+Proof.
+  intros P s_atoms.
+  induction s_atoms;intros.
+  - left;auto.
+  - right. simpl in H. destruct_CForalls H.
+    apply IHs_atoms in H_0. destruct H_0.
+    { subst s_atoms. clear IHs_atoms.
+      induction c_pres.
+      + constructor.
+      + unfold atom_conn_Cpres in H_.
+        simpl in H_.
+        inversion H_. apply inj_pair2 in H1.
+        apply inj_pair2 in H3. subst.
+        apply IHc_pres in H4. constructor;auto.
+
+        Search pre_to_semax.
+
+        eapply pre_to_semax_derives. ;[|apply H2].
+        
+        constructor. 
+      apply IHs_atoms in H_0. destruct H_0.
+    
+    }
+  
+  dependent destruction H.
+  
+  
+  right. simpl in H. left
+
+
+Lemma seq_soundness: forall P Q s_res1 s_res2
+  (c_res1: C_result s_res1) (c_res2: C_result s_res2),
+  split_Semax Delta P Q
+    (C_split_sequence s_res1 s_res2 c_res1 c_res2) ->
+  exists R,
+    split_Semax Delta P (normal_ret_assert R) c_res1 /\
+    split_Semax Delta R Q c_res2.
+Proof.
+  intros.
+  destruct s_res1 as [s_res1|];
+  [destruct s_res1 as [
+    s_pre1 s_path1 
+    s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
+    s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1]|].
+  2:{ simpl in H. destruct H. }
+  destruct s_res2 as [s_res2|];
+  [destruct s_res2 as [
+    s_pre2 s_path2
+    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+    s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2]|].
+  2:{ simpl in H. destruct H. }
+  simpl in H.
+  destruct c_res1 as [
+    c_pre1 c_path1 c_post_normal1 c_post_break1
+    c_post_continue1 c_post_return1] eqn:Ec1,
+    c_res2 as [
+    c_pre2 c_path2 c_post_normal2 c_post_break2
+    c_post_continue2 c_post_return2] eqn:Ec2.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  destruct_FForalls.
+
+  destruct_CForalls S1.
+  destruct_CForalls S2.
+  
+
+
+
+
+
+
+
+
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (s_stm: S_statement)
 (c_stm: C_statement s_stm),
@@ -405,15 +649,7 @@ Proof.
 
     admit.
   - (* Sassert *)
-    intros. simpl.
-    simpl in H.
-    destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
-    dependent destruction S1.
-    dependent destruction S3.
-    simpl in H. simpl in H0.
-    apply semax_skip_inv in H.
-    apply semax_skip_inv in H0.
-    admit.
+    intros. apply assert_sound with (a:=a). auto.
 
   - (* Sskip *)
     admit.
