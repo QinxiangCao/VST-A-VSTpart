@@ -565,6 +565,16 @@ Proof.
   - split;intro.
 Qed.
 
+Lemma Cpost_return_conn_distrib: forall a s_posts (c_posts: C_partial_posts s_posts),
+(Cmap (fun s_post1 : S_partial_post => Spost_conn_return s_post1 a)
+    (fun (s_post1 : S_partial_post) (c_post1 : C_partial_post s_post1) =>
+    Cpost_conn_return c_post1 a) c_posts) = (Cposts_conn_return c_posts a).
+Proof.
+  intros. induction c_posts.
+  - simpl. tauto.
+  - split;intro.
+Qed.
+
 Lemma Cposts_atoms_conn_distrib:
   forall Delta P s_atoms s_post c_post s_posts' c_posts',
   CForall (@post_to_semax CS Espec Delta P) 
@@ -837,6 +847,261 @@ Proof.
     }
 Qed.
 
+
+
+Lemma nocontinue_split_result: forall c, nocontinue (path_to_statement c) = true.
+Proof.
+  intros.
+  induction c.
+  + simpl.
+    auto.
+  + destruct a.
+    - simpl. auto.
+    - simpl.
+      destruct a; auto.
+Qed.
+
+Lemma noreturn_split_result: forall c, noreturn (path_to_statement c) = true.
+Proof.
+  intros.
+  induction c.
+  + simpl.
+    auto.
+  + destruct a.
+    - simpl. auto.
+    - simpl.
+      destruct a; auto.
+Qed.
+
+Lemma post_conn_return_to_semax_inv: forall Q s_post 
+(c_post: C_partial_post s_post) atom,
+post_ret_to_semax Delta Q (Cpost_conn_return c_post atom) ->
+post_to_semax Delta
+  (EX R, R && !! atom_ret_to_semax Delta R Q atom) c_post.
+Proof.
+  intros.
+  induction c_post.
+  - destruct atom. simpl in H.
+    apply semax_seq_inv in H. destruct H as [Qr [H H']].
+    apply path_to_statement_app in H.
+    apply semax_seq_inv' in H. unfold post_to_semax.
+
+    eapply semax_noreturn_inv
+    with (Post':=
+    (normal_ret_assert ((EX Q0 : environ -> mpred,
+    !! semax Delta Q0 (path_to_statement p)
+         (overridePost Qr (return_ret_assert Q)) && Q0
+    ))))
+    in H;
+    try solve [unfold_der;reflexivity].
+    2:{ apply noreturn_split_result. }
+    
+    eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
+    { rewrite !normal_ret_assert_elim.
+      Intros R. Exists R. apply andp_right.
+      solve_andp. apply prop_right.
+      simpl. apply semax_seq with (Q0:=Qr);auto.
+    }
+
+  - intros a. apply H0. simpl in H. destruct atom.
+    apply H.
+Qed.
+
+
+Lemma posts_conn_return_group_inv: forall s_posts
+  (c_posts: C_partial_posts s_posts) atom Q,
+CForall (@post_ret_to_semax CS Espec Delta Q)
+        (Cposts_conn_return c_posts atom) ->
+CForall (@post_to_semax CS Espec Delta 
+  (EX R, R && !! atom_ret_to_semax Delta R Q atom)) c_posts.
+Proof.
+  intros.
+  induction c_posts;auto.
+  destruct H.
+  rewrite Cpost_return_conn_distrib in H0.
+  specialize (IHc_posts H0).
+  constructor;auto.
+  apply post_conn_return_to_semax_inv. auto.
+Qed.
+
+Lemma posts_conn_returns_group_inv: forall s_posts
+  (c_posts: C_partial_posts s_posts) atoms Q,
+CForall (@post_ret_to_semax CS Espec Delta Q)
+        (Cposts_conn_returns c_posts atoms) ->
+atoms = [] \/
+CForall (@post_to_semax CS Espec Delta 
+  (EX R, R && !! Forall (atom_ret_to_semax Delta R Q) atoms)) c_posts.
+Proof.
+  intros. induction atoms.
+  - auto.
+  - right. simpl in H.
+    destruct_CForalls H.
+    specialize (IHatoms H_0).
+    destruct IHatoms.
+    { subst. apply posts_conn_return_group_inv in H_.
+      eapply CForall_impl;[|apply H_].
+      intros. eapply post_to_semax_derives;[..|apply H].
+      Intros R. Exists R. apply andp_right.
+      solve_andp. apply prop_right.
+      constructor;auto.
+    }
+    { apply posts_conn_return_group_inv in H_.
+      eapply CForall_impl with (P:=
+      (@post_to_semax CS Espec Delta
+        ((EX R1, R1 && !! (atom_ret_to_semax Delta R1 Q a))
+        && EX R2, R2 && !! Forall (atom_ret_to_semax Delta R2 Q) atoms))).
+      { intros. eapply post_to_semax_derives;[..|apply H0].
+        merge_Q2. apply prop_right. constructor.
+        { eapply atom_return_to_semax_derives_pre;[|apply H1]. solve_andp. }
+        { eapply Forall_impl;[|apply H2].
+          intros. eapply atom_return_to_semax_derives_pre;[|apply H3].
+          solve_andp. }
+      }
+      pose proof CForall_conj _ _ _ H_ H.
+      eapply CForall_impl;[|apply H0].
+      intros.
+      simpl in H1. destruct H1. apply post_to_semax_conj_rule;auto.
+    }
+Qed.
+
+Lemma atom_conn_atom_to_semax_inv: forall s_atom1 s_atom2 P R,
+(atom_to_semax Delta P R) (atom_conn_atom s_atom1 s_atom2) ->
+(atom_to_semax Delta P 
+  (EX Q, Q && !! (atom_to_semax Delta Q R) s_atom2)) s_atom1.
+Proof.
+  intros.
+  destruct s_atom2, s_atom1. unfold atom_to_semax.
+  simpl in H. apply path_to_statement_app in H.
+  apply semax_seq_inv' in H.
+  eapply semax_post'';[|apply H].
+  Intros Q. rewrite normal_ret_assert_elim.
+  Exists Q. apply andp_right. solve_andp.
+  apply prop_right;auto.
+Qed.
+
+Lemma atom_conn_atoms_to_semax_inv: forall s_atom1 s_atoms2 P R,
+Forall (atom_to_semax Delta P R) (atom_conn_atoms s_atom1 s_atoms2) ->
+s_atoms2 = [] \/
+(atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_to_semax Delta Q R) s_atoms2)) s_atom1.
+Proof.
+  intros.
+  induction s_atoms2.
+  - auto.
+  - simpl in H. inversion H;subst.
+    specialize (IHs_atoms2 H3). destruct IHs_atoms2.
+    { subst. right.
+      apply atom_conn_atom_to_semax_inv in H2.
+      eapply atom_to_semax_derives_post;[|apply H2].
+      Intros Q.
+      Exists Q. apply andp_right. solve_andp.
+      apply prop_right. constructor;auto.
+    }
+    { subst. right.
+      apply atom_conn_atom_to_semax_inv in H2.
+      pose proof atom_to_semax_conj_rule _ _ _ _ _ H0 H2.
+      eapply atom_to_semax_derives_post;[|apply H1].
+      merge_Q2. apply prop_right. constructor.
+      { eapply atom_to_semax_derives_pre;[|apply H5]. solve_andp. }
+      { eapply Forall_impl;[|apply H4]. intros.
+        eapply atom_to_semax_derives_pre;[|apply H6]. solve_andp. }
+    }
+Qed.
+
+Lemma atoms_conn_atoms_group_inv: forall s_atoms1 s_atoms2 P R,
+Forall (atom_to_semax Delta P R) (atoms_conn_atoms s_atoms1 s_atoms2) ->
+s_atoms2 = [] \/
+Forall (atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_to_semax Delta Q R) s_atoms2)) s_atoms1.
+Proof.
+  intros. induction s_atoms1.
+  - right. constructor.
+  - unfold atoms_conn_atoms in H.
+    simpl in H. apply Forall_app in H. destruct H.
+    specialize (IHs_atoms1 H0).
+    destruct IHs_atoms1;auto.
+    apply atom_conn_atoms_to_semax_inv in H.
+    destruct H;auto.
+Qed.
+
+
+Lemma atom_conn_return_to_semax_inv: forall s_atom1 s_atom2 P R,
+(atom_ret_to_semax Delta P R) (atom_conn_return s_atom1 s_atom2) ->
+(atom_to_semax Delta P 
+  (EX Q, Q && !! (atom_ret_to_semax Delta Q R) s_atom2)) s_atom1.
+Proof.
+  intros.
+  destruct s_atom2, s_atom1. unfold atom_to_semax.
+  simpl in H.
+
+  apply semax_seq_inv in H. destruct H as [Qr [H H']].
+  apply path_to_statement_app in H.
+  apply semax_seq_inv' in H.
+
+  eapply semax_noreturn_inv
+  with (Post':=
+  (normal_ret_assert ((EX Q0 : environ -> mpred,
+  !! semax Delta Q0 (path_to_statement p)
+        (overridePost Qr (return_ret_assert R)) && Q0
+  ))))
+  in H;
+  try solve [unfold_der;reflexivity].
+  2:{ apply noreturn_split_result. }
+  
+  eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
+  { rewrite !normal_ret_assert_elim.
+    Intros Q. Exists Q. apply andp_right.
+    solve_andp. apply prop_right.
+    simpl. apply semax_seq with (Q0:=Qr);auto.
+  }
+Qed.
+
+Lemma atom_conn_returns_to_semax_inv: forall s_atom1 s_atoms2 P R,
+Forall (atom_ret_to_semax Delta P R) (atom_conn_returns s_atom1 s_atoms2) ->
+s_atoms2 = [] \/
+(atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_ret_to_semax Delta Q R) s_atoms2)) s_atom1.
+Proof.
+  intros.
+  induction s_atoms2.
+  - auto.
+  - simpl in H. inversion H;subst.
+    specialize (IHs_atoms2 H3). destruct IHs_atoms2.
+    { subst. right.
+      apply atom_conn_return_to_semax_inv in H2.
+      eapply atom_to_semax_derives_post;[|apply H2].
+      Intros Q.
+      Exists Q. apply andp_right. solve_andp.
+      apply prop_right. constructor;auto.
+    }
+    { subst. right.
+      apply atom_conn_return_to_semax_inv in H2.
+      pose proof atom_to_semax_conj_rule _ _ _ _ _ H0 H2.
+      eapply atom_to_semax_derives_post;[|apply H1].
+      merge_Q2. apply prop_right. constructor.
+      { eapply atom_return_to_semax_derives_pre;[|apply H5]. solve_andp. }
+      { eapply Forall_impl;[|apply H4]. intros.
+        eapply atom_return_to_semax_derives_pre;[|apply H6]. solve_andp. }
+    }
+Qed.
+
+Lemma atoms_conn_returns_group_inv: forall s_atoms1 s_atoms2 P R,
+Forall (atom_ret_to_semax Delta P R) (atoms_conn_returns s_atoms1 s_atoms2) ->
+s_atoms2 = [] \/
+Forall (atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_ret_to_semax Delta Q R) s_atoms2)) s_atoms1.
+Proof.
+  intros. induction s_atoms1.
+  - right. constructor.
+  - unfold atoms_conn_atoms in H.
+    simpl in H. apply Forall_app in H. destruct H.
+    specialize (IHs_atoms1 H0).
+    destruct IHs_atoms1;auto.
+    apply atom_conn_returns_to_semax_inv in H.
+    destruct H;auto.
+Qed.
+
+
 Lemma seq_soundness: forall P Q s_res1 s_res2
   (c_res1: C_result s_res1) (c_res2: C_result s_res2),
   split_Semax Delta P Q
@@ -870,6 +1135,27 @@ Proof.
 
   apply atoms_conn_pres_group_inv in S19.
   apply posts_conn_pres_group_inv in S18.
+  apply posts_conn_atoms_group_inv in S16.
+  apply posts_conn_atoms_group_inv in S15.
+  apply posts_conn_atoms_group_inv in S13.
+  apply posts_conn_returns_group_inv in S11.
+  apply atoms_conn_atoms_group_inv in S7.
+  apply atoms_conn_atoms_group_inv in S22.
+  apply atoms_conn_atoms_group_inv in S21.
+  apply atoms_conn_returns_group_inv in S20.
+
+  exists (
+    EX R, R && !! (
+      CForall (@pre_to_semax CS Espec Delta R) c_pre2
+    /\ Forall (atom_to_semax Delta R (RA_normal Q)) s_atom_normal2
+    /\ Forall (atom_to_semax Delta R (RA_break Q)) s_atom_break2
+    /\ Forall (atom_to_semax Delta R (RA_continue Q)) s_atom_continue2
+    /\ Forall (atom_ret_to_semax Delta R (RA_return Q)) s_atom_return2
+    )). split.
+  
+  + repeat split;auto.
+
+
 
   destruct_CForalls S1.
   destruct_CForalls S2.
