@@ -717,6 +717,21 @@ Proof.
       merge_Q1. apply prop_right. auto.
 Qed.
 
+Ltac group_inv :=
+  repeat (match goal with
+  | E: CForall (@pre_to_semax _ _ _ _) (atoms_conn_Cpres _ _) |- _ =>
+      apply atoms_conn_pres_group_inv in E
+  | E: CForall (@path_to_semax _ _ _) (Cposts_conn_Cpres _ _) |- _ =>
+      apply posts_conn_pres_group_inv in E
+  | E: CForall (@post_to_semax _ _ _ _) (Cposts_conn_atoms _ _) |- _ =>
+      apply posts_conn_atoms_group_inv in E
+  | E: CForall (@post_ret_to_semax _ _ _ _) (Cposts_conn_returns _ _) |- _ =>
+      apply posts_conn_returns_group_inv in E
+  | E: Forall (atom_to_semax _ _ _) (atoms_conn_atoms _ _) |- _ =>
+      apply atoms_conn_atoms_group_inv in E
+  | _ => idtac
+  end).
+
 
 Lemma loop_soundness: forall P Q s_res1 s_res2
   (c_res1: C_result s_res1) (c_res2: C_result s_res2),
@@ -752,51 +767,24 @@ Proof.
     destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
     destruct_FForalls.
 
+           (add_Q_to_Catoms FF s_atom_continue2))
+
   destruct Q as [ Qn Qb Qc Qr];unfold_der.
-
-  apply atoms_conn_pres_group_inv in S35.
-  apply atoms_conn_pres_group_inv in S36.
-  apply posts_conn_pres_group_inv in S27.
-  apply posts_conn_pres_group_inv in S28.
-  apply posts_conn_pres_group_inv in S29.
-  apply posts_conn_pres_group_inv in S30.
-  apply posts_conn_pres_group_inv in S31.
-  apply posts_conn_pres_group_inv in S32.
-  apply posts_conn_pres_group_inv in S33.
-  apply posts_conn_atoms_group_inv in S19.
-  apply posts_conn_atoms_group_inv in S20.
-  apply posts_conn_atoms_group_inv in S21.
-  apply posts_conn_atoms_group_inv in S22.
-  apply posts_conn_atoms_group_inv in S23.
-  apply posts_conn_atoms_group_inv in S24.
-  apply posts_conn_atoms_group_inv in S25.
-  apply posts_conn_returns_group_inv in S11.
-  apply posts_conn_returns_group_inv in S12.
-  apply posts_conn_returns_group_inv in S13.
-  apply posts_conn_returns_group_inv in S14.
-  apply posts_conn_returns_group_inv in S15.
-  apply posts_conn_returns_group_inv in S16.
-  apply posts_conn_returns_group_inv in S17.
-  apply atoms_conn_atoms_group_inv in S41.
-  apply atoms_conn_atoms_group_inv in S42.
-  apply atoms_conn_atoms_group_inv in S43.
-  apply atoms_conn_returns_group_inv in S38.
-  apply atoms_conn_returns_group_inv in S39.
-  apply atoms_conn_returns_group_inv in S40.
-
-
+  group_inv.
   exists (
   EX R:assert, andp R (
     !!
       ( CForall (@pre_to_semax CS Espec Delta R) c_pre2 /\
         CForall (@pre_to_semax CS Espec Delta R) 
             (atoms_conn_Cpres [] c_pre1) /\
+        CForall (@pre_to_semax CS Espec Delta R)
+            (add_Q_to_Catoms FF s_atom_continue2) /\
         Forall (atom_ret_to_semax Delta R Qr) s_atom_return2 /\
         Forall (atom_to_semax Delta R Qn) s_atom_break2 /\
         Forall (atom_to_semax Delta R Qn) 
             (atoms_conn_atoms [] s_atom_break1) /\
         Forall (atom_ret_to_semax Delta R Qr) 
-            (atoms_conn_returns [] s_atom_return1)) 
+            (atoms_conn_returns [] s_atom_return1))
     )).
 
   
@@ -810,19 +798,45 @@ Proof.
       try apply exclude_nil_cons in S24;
       try apply exclude_nil_cons in S11;
       try apply exclude_nil_cons in S16;
+      try apply exclude_nil_cons in S36;
       [exfalso; apply Hpath; repeat split;auto|..];
       combine_aux_post_auto.
-      pose S37.
-      destruct a. destruct c. 
+    * 
+      (* Search c_post_continue1. *)
+      destruct s_pre2,
+      s_atom_break2,s_atom_continue2,s_atom_return2;
+      try apply exclude_nil_cons in S21;
+      try apply exclude_nil_cons in S12;
+      try apply exclude_nil_cons in S28;
+      try apply exclude_nil_cons in S25;
+      try apply exclude_nil_cons in S17;
+      try apply exclude_nil_cons in S31;
+      try apply exclude_nil_cons in S37;
+      [exfalso; apply Hpath; repeat split;auto|..];
+      combine_aux_post_auto.
+    *
+      (* Search s_atom_normal1. *)
+      destruct s_pre2,
+      s_atom_break2,s_atom_continue2,s_atom_return2;
+      try apply exclude_nil_cons in S46;
+      try apply exclude_nil_cons in S39;
+      try apply exclude_nil_cons in S14;
+      try apply exclude_nil_cons in S32;
+      try apply exclude_nil_cons in S41;
+      try apply exclude_nil_cons in S34;
+      try apply exclude_nil_cons in S22;
+      [exfalso; apply Hpath; repeat split;auto|..];
+      combine_aux_post_auto.
 
-      Search c_post_normal1.
-      hnf in H.
+      pose S14.
 
-      Search semax FF.
+      Search s_atom_normal1.
 
-
-      unfold add_Q_to_Catoms in c. simpl in c.
-      eapply post_to_semax_derives_group with (Q1:=FF);auto.
+      unfold add_Q_to_Catoms.
+      unfold atoms_conn_Cpres.
+      replace (atoms_conn_atoms [] s_atom_break1) with (@nil atom).
+      replace (atoms_conn_returns [] s_atom_return1) with (@nil atom_ret).
+      combine_aux_atom_auto.
 
       hnf in Hpath.
       eapply post_to_semax_derives_group;
