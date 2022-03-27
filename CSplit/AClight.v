@@ -1975,6 +1975,56 @@ with
     C_split_return e
 end.
 
+(****************************)
+(****************************)
+(* Dependent Type Inversion *)
+(****************************)
+(****************************)
+
+Require Import Coq.Program.Equality.
+
+Lemma lb_nil_inv: forall {R:Type} {binder:R->Type}
+ (cl: @list_binded_of R binder []),
+ cl= {}.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+Qed.
+
+Lemma lb_cons_inv: forall {R:Type} {binder:R->Type}
+ {s: R} {sl: list R}
+ (cl: @list_binded_of R binder (s::sl)),
+ exists c cl',
+ cl= list_binded_cons s c sl cl'.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+  exists r', cl...
+Qed.
+
+Lemma C_partial_pre_inv: 
+forall { p } (r: C_partial_pre (mk_S_partial_pre p)),
+  { post | r = mk_C_partial_pre p post }.
+Proof.
+  intros.
+  dependent induction r.
+  exists post. auto.
+Qed.
+
+Lemma C_partial_pres_inv: forall { p sl }
+ (cl: C_partial_pres ((mk_S_partial_pre p)::sl)),
+ exists Q cl',
+ cl= list_binded_cons (mk_S_partial_pre p)
+   (mk_C_partial_pre p Q) sl cl'.
+Proof with auto.
+  intros.
+  dependent destruction cl...
+  destruct (C_partial_pre_inv r');subst.
+  exists x, cl...
+Qed.
+
+
+
 (* ---------------------------- *)
 (* ---------------------------- *)
 (* Lemmas about path empty      *)
