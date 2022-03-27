@@ -420,6 +420,17 @@ Ltac merge_Q5:=
   Exists (Q1 && (Q2 && (Q3 && (Q4 && Q5))));
   repeat apply andp_right; try solve_andp.
 
+Ltac merge_Q6:=
+  let Q1 := fresh "Q" in
+  let Q2 := fresh "Q" in
+  let Q3 := fresh "Q" in
+  let Q4 := fresh "Q" in
+  let Q5 := fresh "Q" in
+  let Q6 := fresh "Q" in
+  Intros Q1; Intros Q2; Intros Q3;  Intros Q4; Intros Q5; Intros Q6;
+  Exists (Q1 && (Q2 && (Q3 && (Q4 && (Q5 && Q6)))));
+  repeat apply andp_right; try solve_andp.
+
 Ltac solve_split:=
   match goal with
   | E: Forall (atom_ret_to_semax Delta _ ?R) ?ret_atoms 
@@ -448,6 +459,27 @@ Ltac combine_aux_post_auto:=
   | _ => idtac
   end;
   match goal with
+  | E1: CForall (@post_to_semax _ _ Delta _) ?T,
+    E2: CForall (@post_to_semax _ _ Delta _) ?T,
+    E3: CForall (@post_to_semax _ _ Delta _) ?T,
+    E4: CForall (@post_to_semax _ _ Delta _) ?T,
+    E5: CForall (@post_to_semax _ _ Delta _) ?T,
+    E6: CForall (@post_to_semax _ _ Delta _) ?T|-
+    CForall (@post_to_semax _ _ Delta _) ?T =>
+    eapply post_to_semax_derives_group;
+    [|eapply post_to_semax_conj_rule_group;
+      [apply E1|
+        eapply post_to_semax_conj_rule_group;
+        [apply E2|
+        eapply post_to_semax_conj_rule_group;
+        [apply E3|
+          eapply post_to_semax_conj_rule_group;
+          [apply E4|
+          eapply post_to_semax_conj_rule_group;
+            [apply E5|apply E6]]]]]];
+    try (apply remove_entail);
+    merge_Q6; apply prop_right;
+    repeat split;try solve [constructor]; try solve_split
     | E1: CForall (@post_to_semax _ _ Delta _) ?T,
       E2: CForall (@post_to_semax _ _ Delta _) ?T,
       E3: CForall (@post_to_semax _ _ Delta _) ?T,
@@ -724,15 +756,33 @@ Proof.
 
   apply atoms_conn_pres_group_inv in S35.
   apply atoms_conn_pres_group_inv in S36.
-  apply posts_conn_pres_group_inv in S18.
-  apply posts_conn_atoms_group_inv in S16.
-  apply posts_conn_atoms_group_inv in S15.
-  apply posts_conn_atoms_group_inv in S13.
+  apply posts_conn_pres_group_inv in S27.
+  apply posts_conn_pres_group_inv in S28.
+  apply posts_conn_pres_group_inv in S29.
+  apply posts_conn_pres_group_inv in S30.
+  apply posts_conn_pres_group_inv in S31.
+  apply posts_conn_pres_group_inv in S32.
+  apply posts_conn_pres_group_inv in S33.
+  apply posts_conn_atoms_group_inv in S19.
+  apply posts_conn_atoms_group_inv in S20.
+  apply posts_conn_atoms_group_inv in S21.
+  apply posts_conn_atoms_group_inv in S22.
+  apply posts_conn_atoms_group_inv in S23.
+  apply posts_conn_atoms_group_inv in S24.
+  apply posts_conn_atoms_group_inv in S25.
   apply posts_conn_returns_group_inv in S11.
-  apply atoms_conn_atoms_group_inv in S7.
-  apply atoms_conn_atoms_group_inv in S22.
-  apply atoms_conn_atoms_group_inv in S21.
-  apply atoms_conn_returns_group_inv in S20.
+  apply posts_conn_returns_group_inv in S12.
+  apply posts_conn_returns_group_inv in S13.
+  apply posts_conn_returns_group_inv in S14.
+  apply posts_conn_returns_group_inv in S15.
+  apply posts_conn_returns_group_inv in S16.
+  apply posts_conn_returns_group_inv in S17.
+  apply atoms_conn_atoms_group_inv in S41.
+  apply atoms_conn_atoms_group_inv in S42.
+  apply atoms_conn_atoms_group_inv in S43.
+  apply atoms_conn_returns_group_inv in S38.
+  apply atoms_conn_returns_group_inv in S39.
+  apply atoms_conn_returns_group_inv in S40.
 
 
   exists (
@@ -749,28 +799,46 @@ Proof.
             (atoms_conn_returns [] s_atom_return1)) 
     )).
 
-
-  exists (
-    EX R, R && !! (
-      CForall (@pre_to_semax CS Espec Delta R) c_pre2
-    /\ Forall (atom_to_semax Delta R (RA_normal Q)) s_atom_normal2
-    /\ Forall (atom_to_semax Delta R (RA_break Q)) s_atom_break2
-    /\ Forall (atom_to_semax Delta R (RA_continue Q)) s_atom_continue2
-    /\ Forall (atom_ret_to_semax Delta R (RA_return Q)) s_atom_return2
-    )). split. *)
   
   + repeat split;unfold  loop1_ret_assert;unfold_der;auto.
     * 
-      rewrite overridePost_normal'.
-      destruct s_pre2,s_atom_normal2,
+      destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S18;
-      try apply exclude_nil_cons in S16;
-      try apply exclude_nil_cons in S13;
+      try apply exclude_nil_cons in S27;
+      try apply exclude_nil_cons in S30;
+      try apply exclude_nil_cons in S19;
+      try apply exclude_nil_cons in S24;
       try apply exclude_nil_cons in S11;
-      try apply exclude_nil_cons in S15;
+      try apply exclude_nil_cons in S16;
       [exfalso; apply Hpath; repeat split;auto|..];
       combine_aux_post_auto.
+      pose S37.
+      destruct a. destruct c. 
+
+      Search c_post_normal1.
+      hnf in H.
+
+      Search semax FF.
+
+
+      unfold add_Q_to_Catoms in c. simpl in c.
+      eapply post_to_semax_derives_group with (Q1:=FF);auto.
+
+      hnf in Hpath.
+      eapply post_to_semax_derives_group;
+      [|eapply post_to_semax_conj_rule_group;
+        [apply E1|
+          eapply post_to_semax_conj_rule_group;
+          [apply E2|
+          eapply post_to_semax_conj_rule_group;
+          [apply E3|
+            eapply post_to_semax_conj_rule_group;
+            [apply E4|
+            eapply post_to_semax_conj_rule_group;
+              [apply E5|apply E6]]]]]];
+      try (apply remove_entail);
+      merge_Q6; apply prop_right;
+
     * eapply post_to_semax_derives_group;[|apply S4].
       destruct Q;unfold_der. solve_andp.
     * eapply post_to_semax_derives_group;[|apply S5].
