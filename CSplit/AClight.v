@@ -907,20 +907,24 @@ Definition S_split_loop res1 res2 :=
             (atoms_conn_Spres s_atom_normal2 s_pre1) ++
           Sposts_conn_Spres s_post_continue1
             (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-          Sposts_conn_Spres s_post_normal2
-            (atoms_conn_Spres s_atom_normal1 s_pre2) ++
-          Sposts_conn_Spres s_post_normal2
-            (atoms_conn_Spres s_atom_continue1 s_pre2) ++
+          Sposts_conn_Spres 
+            (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+            s_pre2 ++
+          Sposts_conn_Spres 
+            (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+            s_pre2 ++
           add_Q_to_Sposts s_post_continue2)
       (* S_post_normal *)
         (s_post_break1 ++ s_post_break2 ++
           Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
           Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
           Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
-          Sposts_conn_atoms s_post_normal2
-            (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
-          Sposts_conn_atoms s_post_normal2
-            (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
+          Sposts_conn_atoms
+            (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+            s_atom_break2 ++
+          Sposts_conn_atoms 
+            (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+            s_atom_break2 ++
           Sposts_conn_atoms s_post_normal1
             (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
           Sposts_conn_atoms s_post_continue1
@@ -932,10 +936,12 @@ Definition S_split_loop res1 res2 :=
           Sposts_conn_returns s_post_normal1 s_atom_return2 ++
           Sposts_conn_returns s_post_continue1 s_atom_return2 ++
           Sposts_conn_returns s_post_normal2 s_atom_return1 ++
-          Sposts_conn_returns s_post_normal2
-            (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
-          Sposts_conn_returns s_post_normal2 
-            (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
+          Sposts_conn_returns 
+            (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+            s_atom_return2 ++
+          Sposts_conn_returns 
+            (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+            s_atom_return2 ++
           Sposts_conn_returns s_post_normal1 
             (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
           Sposts_conn_returns s_post_continue1 
@@ -1802,20 +1808,24 @@ match res1, res2 with
           (atoms_conn_Spres s_atom_normal2 s_pre1) ++
         Sposts_conn_Spres s_post_continue1
           (atoms_conn_Spres s_atom_normal2 s_pre1) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_normal1 s_pre2) ++
-        Sposts_conn_Spres s_post_normal2
-          (atoms_conn_Spres s_atom_continue1 s_pre2) ++
+        Sposts_conn_Spres 
+          (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+          s_pre2 ++
+        Sposts_conn_Spres 
+          (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+          s_pre2 ++
         add_Q_to_Sposts s_post_continue2)
     (* S_post_normal *)
       (s_post_break1 ++ s_post_break2 ++
         Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
         Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
         Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_normal1 s_atom_break2) ++
-        Sposts_conn_atoms s_post_normal2
-          (atoms_conn_atoms s_atom_continue1 s_atom_break2) ++
+        Sposts_conn_atoms
+          (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+          s_atom_break2 ++
+        Sposts_conn_atoms 
+          (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+          s_atom_break2 ++
         Sposts_conn_atoms s_post_normal1
           (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
         Sposts_conn_atoms s_post_continue1
@@ -1827,10 +1837,12 @@ match res1, res2 with
         Sposts_conn_returns s_post_normal1 s_atom_return2 ++
         Sposts_conn_returns s_post_continue1 s_atom_return2 ++
         Sposts_conn_returns s_post_normal2 s_atom_return1 ++
-        Sposts_conn_returns s_post_normal2
-          (atoms_conn_returns s_atom_normal1 s_atom_return2) ++
-        Sposts_conn_returns s_post_normal2 
-          (atoms_conn_returns s_atom_continue1 s_atom_return2) ++
+        Sposts_conn_returns 
+          (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
+          s_atom_return2 ++
+        Sposts_conn_returns 
+          (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
+          s_atom_return2 ++
         Sposts_conn_returns s_post_normal1 
           (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
         Sposts_conn_returns s_post_continue1 
@@ -1860,20 +1872,24 @@ match res1, res2 with
           (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
         Cposts_conn_Cpres c_post_continue1
           (atoms_conn_Cpres s_atom_normal2 c_pre1) +++
-        Cposts_conn_Cpres c_post_normal2
-          (atoms_conn_Cpres s_atom_normal1 c_pre2) +++
-        Cposts_conn_Cpres c_post_normal2
-          (atoms_conn_Cpres s_atom_continue1 c_pre2) +++
+        Cposts_conn_Cpres 
+          (Cposts_conn_atoms c_post_normal2 s_atom_normal1)
+          c_pre2 +++
+        Cposts_conn_Cpres 
+          (Cposts_conn_atoms c_post_normal2 s_atom_continue1)
+          c_pre2 +++
         add_Q_to_Cposts seplog.FF c_post_continue2)
     (* C_post_normal *)
       (c_post_break1 +++ c_post_break2 +++
         Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
         Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
         Cposts_conn_atoms c_post_continue1 s_atom_break2 +++
-        Cposts_conn_atoms c_post_normal2
-          (atoms_conn_atoms s_atom_normal1 s_atom_break2) +++
-        Cposts_conn_atoms c_post_normal2
-          (atoms_conn_atoms s_atom_continue1 s_atom_break2) +++
+        Cposts_conn_atoms
+          (Cposts_conn_atoms c_post_normal2 s_atom_normal1)
+          s_atom_break2 +++
+        Cposts_conn_atoms 
+          (Cposts_conn_atoms c_post_normal2 s_atom_continue1)
+          s_atom_break2 +++
         Cposts_conn_atoms c_post_normal1
           (atoms_conn_atoms s_atom_normal2 s_atom_break1) +++
         Cposts_conn_atoms c_post_continue1
@@ -1885,10 +1901,12 @@ match res1, res2 with
       Cposts_conn_returns c_post_normal1 s_atom_return2 +++
       Cposts_conn_returns c_post_continue1 s_atom_return2 +++
       Cposts_conn_returns c_post_normal2 s_atom_return1 +++
-      Cposts_conn_returns c_post_normal2 
-        (atoms_conn_returns s_atom_normal1 s_atom_return2) +++
-      Cposts_conn_returns c_post_normal2 
-        (atoms_conn_returns s_atom_continue1 s_atom_return2) +++
+      Cposts_conn_returns 
+        (Cposts_conn_atoms c_post_normal2 s_atom_normal1)
+        s_atom_return2 +++
+      Cposts_conn_returns 
+        (Cposts_conn_atoms c_post_normal2 s_atom_continue1)
+        s_atom_return2 +++
       Cposts_conn_returns c_post_normal1 
         (atoms_conn_returns s_atom_normal2 s_atom_return1) +++
       Cposts_conn_returns c_post_continue1 

@@ -686,6 +686,133 @@ Proof.
 Qed.
 
 
+Lemma loop_soundness: forall P Q s_res1 s_res2
+  (c_res1: C_result s_res1) (c_res2: C_result s_res2),
+  s_res_has_path s_res2 ->
+  split_Semax Delta P Q
+    (C_split_loop_refined s_res1 s_res2 c_res1 c_res2) ->
+  exists R,
+    split_Semax Delta P (loop1_ret_assert R Q) c_res1 /\
+    split_Semax Delta R (loop1_ret_assert P Q) c_res2.
+Proof.
+  intros P Q s_res1 s_res2. intros c_res1 c_res2.
+  intros Hpath H.
+  destruct s_res1 as [s_res1|];
+  [destruct s_res1 as [
+    s_pre1 s_path1 
+    s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
+    s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1]|].
+  2:{ simpl in H. destruct H. }
+  destruct s_res2 as [s_res2|];
+  [destruct s_res2 as [
+    s_pre2 s_path2
+    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+    s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2]|].
+  2:{ simpl in H. destruct H. }
+
+  destruct s_atom_normal2.
+  { destruct c_res1 as [
+    c_pre1 c_path1 c_post_normal1 c_post_break1
+    c_post_continue1 c_post_return1] eqn:Ec1,
+    c_res2 as [
+    c_pre2 c_path2 c_post_normal2 c_post_break2
+    c_post_continue2 c_post_return2] eqn:Ec2.
+    destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+    destruct_FForalls.
+
+  destruct Q as [ Qn Qb Qc Qr];unfold_der.
+
+  apply atoms_conn_pres_group_inv in S35.
+  apply atoms_conn_pres_group_inv in S36.
+  apply posts_conn_pres_group_inv in S18.
+  apply posts_conn_atoms_group_inv in S16.
+  apply posts_conn_atoms_group_inv in S15.
+  apply posts_conn_atoms_group_inv in S13.
+  apply posts_conn_returns_group_inv in S11.
+  apply atoms_conn_atoms_group_inv in S7.
+  apply atoms_conn_atoms_group_inv in S22.
+  apply atoms_conn_atoms_group_inv in S21.
+  apply atoms_conn_returns_group_inv in S20.
+
+
+  exists (
+  EX R:assert, andp R (
+    !!
+      ( CForall (@pre_to_semax CS Espec Delta R) c_pre2 /\
+        CForall (@pre_to_semax CS Espec Delta R) 
+            (atoms_conn_Cpres [] c_pre1) /\
+        Forall (atom_ret_to_semax Delta R Qr) s_atom_return2 /\
+        Forall (atom_to_semax Delta R Qn) s_atom_break2 /\
+        Forall (atom_to_semax Delta R Qn) 
+            (atoms_conn_atoms [] s_atom_break1) /\
+        Forall (atom_ret_to_semax Delta R Qr) 
+            (atoms_conn_returns [] s_atom_return1)) 
+    )).
+
+
+  exists (
+    EX R, R && !! (
+      CForall (@pre_to_semax CS Espec Delta R) c_pre2
+    /\ Forall (atom_to_semax Delta R (RA_normal Q)) s_atom_normal2
+    /\ Forall (atom_to_semax Delta R (RA_break Q)) s_atom_break2
+    /\ Forall (atom_to_semax Delta R (RA_continue Q)) s_atom_continue2
+    /\ Forall (atom_ret_to_semax Delta R (RA_return Q)) s_atom_return2
+    )). split. *)
+  
+  + repeat split;unfold  loop1_ret_assert;unfold_der;auto.
+    * 
+      rewrite overridePost_normal'.
+      destruct s_pre2,s_atom_normal2,
+      s_atom_break2,s_atom_continue2,s_atom_return2;
+      try apply exclude_nil_cons in S18;
+      try apply exclude_nil_cons in S16;
+      try apply exclude_nil_cons in S13;
+      try apply exclude_nil_cons in S11;
+      try apply exclude_nil_cons in S15;
+      [exfalso; apply Hpath; repeat split;auto|..];
+      combine_aux_post_auto.
+    * eapply post_to_semax_derives_group;[|apply S4].
+      destruct Q;unfold_der. solve_andp.
+    * eapply post_to_semax_derives_group;[|apply S5].
+      destruct Q;unfold_der. solve_andp.
+    * eapply post_ret_to_semax_derives_group;[|apply S6].
+      destruct Q;unfold_der. intros. solve_andp.
+    * 
+      rewrite overridePost_normal'.
+      destruct s_pre2,s_atom_normal2,
+      s_atom_break2,s_atom_continue2,s_atom_return2;
+      try apply exclude_nil_cons in S20;
+      try apply exclude_nil_cons in S21;
+      try apply exclude_nil_cons in S22;
+      try apply exclude_nil_cons in S7;
+      try apply exclude_nil_cons in S19;
+      [exfalso; apply Hpath; repeat split;auto|..];
+      combine_aux_atom_auto.
+    * eapply atom_to_semax_derives_post_group;[|apply S8].
+      destruct Q;unfold_der. solve_andp.
+    * eapply atom_to_semax_derives_post_group;[|apply S9].
+      destruct Q;unfold_der. solve_andp.
+    * eapply atom_return_to_semax_derives_post_group;[|apply S10].
+      destruct Q;unfold_der. intros. solve_andp.
+  + repeat split;auto.
+    * eapply pre_to_semax_derives_group;[|apply pre_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+    * eapply atom_to_semax_derives_pre_group;
+      [|apply atom_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+    * eapply atom_to_semax_derives_pre_group;
+      [|apply atom_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+    * eapply atom_to_semax_derives_pre_group;
+      [|apply atom_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+    * eapply atom_return_to_semax_derives_pre_group;
+      [|apply atom_return_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+Qed.
+
+
+
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (s_stm: S_statement)
 (c_stm: C_statement s_stm),
@@ -748,6 +875,7 @@ Proof.
   - (* loop *)
     intros. simpl.
     simpl in H.
+    eapply semax_loop.
     admit.
 
   - (* break *)
