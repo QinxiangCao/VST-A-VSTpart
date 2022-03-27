@@ -896,7 +896,11 @@ Definition S_split_loop res1 res2 :=
       Some (mk_S_result_rec 
       (* S_pre *)
         (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-          atoms_conn_Spres s_atom_continue1 s_pre2)
+          atoms_conn_Spres s_atom_continue1 s_pre2 ++
+          atoms_conn_Spres s_atom_normal1
+            (add_Q_to_atoms s_atom_continue2) ++
+          atoms_conn_Spres s_atom_continue1
+            (add_Q_to_atoms s_atom_continue2))
       (* S_path *)
         (s_path1 ++ s_path2 ++ 
           Sposts_conn_Spres s_post_normal1 s_pre2 ++
@@ -1784,8 +1788,6 @@ match res1, res2 with
   end
 end.
 
-Check add_Q_to_Catoms.
-
 Definition C_split_loop
 (res1 res2 : S_result)
 : C_result res1 ->
@@ -1808,7 +1810,11 @@ match res1, res2 with
     mk_C_result_rec 
     (* S_pre *)
       (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-        atoms_conn_Spres s_atom_continue1 s_pre2)
+        atoms_conn_Spres s_atom_continue1 s_pre2 ++
+        atoms_conn_Spres s_atom_normal1
+            (add_Q_to_atoms s_atom_continue2) ++
+        atoms_conn_Spres s_atom_continue1
+          (add_Q_to_atoms s_atom_continue2))
     (* S_path *)
       (s_path1 ++ s_path2 ++ 
         Sposts_conn_Spres s_post_normal1 s_pre2 ++
@@ -1881,7 +1887,11 @@ match res1, res2 with
         atoms_conn_returns s_atom_normal2 s_atom_return1)
     (* C_pre *)
       (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
-        atoms_conn_Cpres s_atom_continue1 c_pre2)
+        atoms_conn_Cpres s_atom_continue1 c_pre2 +++
+        atoms_conn_Cpres s_atom_normal1
+            (add_Q_to_Catoms seplog.FF s_atom_continue2) +++
+        atoms_conn_Cpres s_atom_continue1
+          (add_Q_to_Catoms seplog.FF s_atom_continue2))
     (* C_path *)
       (c_path1 +++ c_path2 +++
         Cposts_conn_Cpres c_post_normal1 c_pre2 +++
@@ -2239,13 +2249,12 @@ Proof.
         S_atom_continue1, S_atom_return1; analyze_nils;
       try solve [apply IHs2; auto];
       try solve [apply IHs1;auto].
-      destruct S_atom_normal0, S_atom_continue0;
-      analyze_nils;
-      try solve [apply IHs1;auto].
-      * apply IHs1. repeat split;auto.
-      * analyze_nils. apply IHs2. repeat split;auto.
-      * analyze_nils. apply IHs2. repeat split;auto.
-      * analyze_nils. apply IHs2. repeat split;auto.
+      apply or_comm in H10.
+      destruct H11.
+      2:{ apply add_Q_to_atoms_nil in H. inversion H. }
+      destruct H10.
+      1:{ apply add_Q_to_atoms_nil in H3. inversion H3. }
+      subst. apply IHs1;auto.
     + destruct S_atom_normal0;simpl;auto.
       destruct S_atom_continue0;simpl;auto.
       intros C.
