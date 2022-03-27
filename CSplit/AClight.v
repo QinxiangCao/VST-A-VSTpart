@@ -1133,7 +1133,7 @@ Fixpoint S_split (s: S_statement) : S_result :=
   | Sloop s1 s2 => 
       let res1 := S_split s1 in
       let res2 := S_split s2 in
-      S_split_loop res1 res2
+      S_split_loop_refined res1 res2
   end.
 
 
@@ -1966,7 +1966,7 @@ with
     C_split_ifthenelse e (S_split s1) (S_split s2)
     (C_split s1 c1) (C_split s2 c2)
 | Cloop s1 s2 c1 c2 =>
-    C_split_loop (S_split s1) (S_split s2) (C_split s1 c1) (C_split s2 c2)
+    C_split_loop_refined (S_split s1) (S_split s2) (C_split s1 c1) (C_split s2 c2)
 | Cbreak =>
     C_split_break
 | Ccontinue =>
@@ -1974,3 +1974,177 @@ with
 | Creturn e =>
     C_split_return e
 end.
+
+(* ---------------------------- *)
+(* ---------------------------- *)
+(* Lemmas about path empty      *)
+(* ---------------------------- *)
+(* ---------------------------- *)
+
+
+Definition s_res_has_path (s_res : S_result) : Prop :=
+  match s_res with
+  | None => True
+  | Some (mk_S_result_rec s_pre s_path
+    s_post_normal s_post_break s_post_continue s_post_return
+    s_atom_normal s_atom_break s_atom_continue s_atom_return) 
+    => ~ (s_pre = [] /\ s_atom_normal = []
+        /\ s_atom_break = [] /\ s_atom_continue = []
+        /\ s_atom_return = [])
+  end.
+
+
+Lemma exclude_nil_cons: forall {A:Type} (a:A) ls P,
+  a :: ls = [] \/ P ->
+  P.
+Proof.
+  intros.
+  destruct H.
+  inversion H.
+  auto.
+Qed.
+
+
+Lemma atoms_conn_atoms_nil: forall atoms1 atoms2,
+  atoms_conn_atoms atoms1 atoms2 = []
+  <-> atoms1 = [] \/ atoms2 = [].
+Proof.
+  intros. split.
+  - intros.
+    destruct atoms1;auto.
+    right. destruct atoms2;auto.
+    inversion H.
+  - intros. destruct H. 
+  + rewrite H. eauto.
+  + rewrite H. induction atoms1;eauto.
+Qed.
+
+Lemma atoms_conn_returns_nil: forall atoms1 rets2,
+  atoms_conn_returns atoms1 rets2 = []
+  <-> atoms1 = [] \/ rets2 = [].
+Proof.
+  intros. split.
+  -
+  destruct atoms1;auto.
+  right. destruct rets2;auto.
+  inversion H.
+  - intros. destruct H. 
+  + rewrite H.
+  destruct rets2;eauto.
+  + rewrite H. 
+  destruct atoms1;eauto. 
+  unfold atoms_conn_returns. 
+  simpl. 
+  induction atoms1 ; eauto.
+Qed.
+
+
+Lemma atoms_conn_pres_nil: forall atoms pres,
+  atoms_conn_Spres atoms pres = [] <->
+  atoms = [] \/ pres = [].
+Proof.
+  split.
+  + induction atoms. 
+  - intros. simpl in H. auto.
+  - intros. right. destruct pres;auto.
+    simpl in *. inversion H.
+  + induction atoms;eauto.
+    intros. destruct H;eauto.
+    - rewrite H. eauto.
+    - rewrite H. simpl.
+      rewrite H in IHatoms. 
+     apply IHatoms.  eauto.
+Qed.
+
+Lemma add_exp_to_atoms_nil: forall a l,  add_exp_to_atoms a l = [] -> l = [].
+Proof.
+  intros.
+  destruct l;auto.
+  inv H.
+Qed.
+
+Lemma add_exp_to_return_atoms_nil: forall a l,  add_exp_to_ret_atoms a l = [] -> l = [].
+Proof.
+  intros.
+  destruct l;auto.
+  inv H.
+Qed.
+
+Lemma add_exp_to_pres_nil: forall a l,  add_exp_to_Spres a l = [] -> l = [].
+Proof.
+  intros.
+  destruct l;auto.
+  inv H.
+Qed.
+
+
+Lemma add_Q_to_atoms_nil: forall a,  add_Q_to_atoms a = [] -> a = [].
+Proof.
+  intros.
+  destruct a;auto.
+  inv H.
+Qed.
+
+Ltac analyze_nils :=
+  repeat (match goal with
+  | H: _ ++ _ = [] |- _ => apply app_eq_nil in H;destruct H
+  | H: atoms_conn_atoms _ _ = [] |- _
+      => apply atoms_conn_atoms_nil in H
+  | H: atoms_conn_returns _ _ = [] |- _
+      => apply atoms_conn_returns_nil in H
+  | H: atoms_conn_Spres _ _ = [] |- _
+      => apply atoms_conn_pres_nil in H
+  | H: add_exp_to_atoms _ _ = [] |- _
+      => apply add_exp_to_atoms_nil in H
+  | H: add_exp_to_Spres _ _ = [] |- _
+      => apply add_exp_to_pres_nil in H
+  | H: add_exp_to_ret_atoms _ _ = [] |- _
+      => apply add_exp_to_return_atoms_nil in H
+  | H: add_Q_to_atoms _ = [] |- _
+      => apply add_Q_to_atoms_nil in H
+  end);subst;
+  repeat (match goal with
+  | H: _ :: _ = [] \/ _ |- _ =>
+      apply exclude_nil_cons in H
+  | _ => idtac
+  end);subst.
+
+Lemma S_split_has_path: forall s,
+  s_res_has_path (S_split s).
+Proof.
+  induction s;simpl;auto;
+  try solve 
+  [intros C; destruct C as (C1 & C2 & C3 & C4 & C5);
+  inv C1; inv C2; inv C3; inv C4; inv C5].
+  - destruct (S_split s1);destruct (S_split s2);auto.
+    2:{ simpl. destruct s. auto. }
+    destruct s, s0. simpl in *.
+    intros C.
+    destruct C as (C1 & C2 & C3 & C4 & C5).
+    analyze_nils.
+    destruct S_atom_normal0;try tauto.
+  - destruct (S_split s1), (S_split s2);auto.
+    2:{ simpl. destruct s. auto. }
+    destruct s, s0. simpl in *.
+    intros C.
+    destruct C as (C1 & C2 & C3 & C4 & C5).
+    analyze_nils. subst. tauto.
+  - destruct (S_split s1), (S_split s2);auto.
+    2:{ simpl. destruct s. auto. }
+    destruct s, s0. simpl in *.
+    destruct S_atom_normal1.
+    + intros C.
+      destruct C as (C1 & C2 & C3 & C4 & C5).
+      analyze_nils.
+      destruct S_atom_normal0, S_atom_continue0.
+      * apply IHs1. repeat split;auto.
+      * analyze_nils. apply IHs2. repeat split;auto.
+      * analyze_nils. apply IHs2. repeat split;auto.
+      * analyze_nils. apply IHs2. repeat split;auto.
+    + destruct S_atom_normal0;simpl;auto.
+      destruct S_atom_continue0;simpl;auto.
+      intros C.
+      destruct C as (C1 & C2 & C3 & C4 & C5).
+      analyze_nils.
+      tauto.
+Qed.

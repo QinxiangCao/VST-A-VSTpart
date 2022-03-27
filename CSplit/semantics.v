@@ -259,6 +259,21 @@ Proof.
   + simpl in *. auto.
 Qed.
 
+Lemma post_ret_to_semax_derives: forall P Q s_post
+  (c_post: C_partial_post_ret s_post),
+  (forall v, ENTAIL Delta, Q v |--  P v) ->
+  post_ret_to_semax Q c_post ->
+  post_ret_to_semax P c_post.
+Proof.
+  intros. induction c_post.
+  + simpl in H0. simpl.
+    eapply semax_conseq with (P':=pre)(R':= return_ret_assert Q);auto;
+    unfold return_ret_assert, RA_normal, RA_break, RA_continue, RA_return;
+    intros;try solve_andp.
+    { eapply derives_trans;[|apply H]. solve_andp. }
+  + simpl in *. auto.
+Qed.
+
 Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
   P2 |-- P1 ->
   ENTAIL Delta, Q1 |-- Q2 ->
@@ -309,6 +324,7 @@ Proof.
     + solve_andp. *)
 Qed.
 
+
 Lemma post_to_semax_reverse: forall { s_post }
   (c_post: C_partial_post s_post) atom R,
   post_to_semax R (Cpost_conn_atom c_post atom) ->
@@ -346,6 +362,7 @@ Qed.
    Assertion Derivation 
    for paths/partial paths/atoms 
 --------------------------------------------------- *)
+
 Lemma atom_return_to_semax_derives_pre: forall p P1 P2 Q,
 P1 |-- P2 ->
 atom_ret_to_semax P2 Q p ->
@@ -355,6 +372,18 @@ Proof.
  eapply atom_return_to_semax_derives.
  { apply H. }
  { intros. solve_andp. }
+ { auto. }
+Qed.
+
+Lemma atom_return_to_semax_derives_post: forall p P Q1 Q2,
+(forall v, ENTAIL Delta, Q1 v |-- Q2 v) ->
+atom_ret_to_semax P Q1 p ->
+atom_ret_to_semax P Q2 p.
+Proof.
+ intros.
+ eapply atom_return_to_semax_derives.
+ { apply derives_refl. }
+ { intros. apply H. }
  { auto. }
 Qed.
 
@@ -411,6 +440,20 @@ Proof.
     apply H. auto.
 Qed.
 
+Lemma post_ret_to_semax_derives_group: forall Q1 Q2
+  s_posts (c_posts : C_partial_post_rets s_posts),
+  (forall v, ENTAIL Delta, Q1 v |-- Q2 v) ->
+  CForall (@post_ret_to_semax Q1) c_posts ->
+  CForall (@post_ret_to_semax Q2) c_posts.
+Proof. 
+  intros.
+  induction c_posts.
+  - constructor.
+  - destruct H0. constructor;auto.
+    eapply post_ret_to_semax_derives.
+    apply H. auto.
+Qed.
+
 Lemma atom_to_semax_derives_pre: forall p P1 P2 Q,
   P1 |-- P2 ->
   atom_to_semax P2 Q p ->
@@ -444,6 +487,109 @@ Proof.
   - apply derives_refl.
   - apply H.
   - auto.
+Qed.
+
+Lemma atom_to_semax_derives_post_group: forall p P Q1 Q2,
+  ENTAIL Delta, Q1 |-- Q2 ->
+  Forall (atom_to_semax P Q1) p ->
+  Forall (atom_to_semax P Q2) p.
+Proof.
+  intros. induction p.
+  - constructor.
+  - inv H0. apply IHp in H4.
+    constructor; auto.
+    eapply atom_to_semax_derives_post;[|apply H3].
+    auto.
+Qed.
+
+Lemma atom_return_to_semax_derives_post_group: 
+forall p P Q1 Q2,
+  (forall v, ENTAIL Delta, Q1 v|-- Q2 v) ->
+  Forall (atom_ret_to_semax P Q1) p ->
+  Forall (atom_ret_to_semax P Q2) p.
+Proof.
+  intros. induction p.
+  - constructor.
+  -  inv H0. apply IHp in H4.
+    constructor; auto.
+    eapply atom_return_to_semax_derives_post;[|apply H3].
+    auto.
+Qed.
+
+
+Lemma pre_to_semax_sem_group: forall (s_pres: S_partial_pres)
+  (c_pres: C_partial_pres s_pres),
+  (CForall (@pre_to_semax
+        (EX Q, Q && !! (CForall (@pre_to_semax Q) c_pres))) 
+      c_pres).
+Proof.
+  intros.
+  induction c_pres.
+  - constructor.
+  - split;auto.
+    + pose proof pre_to_semax_sem _ r'.
+      eapply pre_to_semax_derives;[|apply H].
+      Intros Q. Exists Q. apply andp_right.
+      apply prop_right;auto. destruct H0. auto. solve_andp.
+    + eapply pre_to_semax_derives_group;[|apply IHc_pres].
+      Intros Q. Exists Q. apply andp_right. solve_andp.
+      apply prop_right;auto. destruct H. auto.
+Qed.
+
+
+Lemma atom_to_semax_sem: forall x  R,
+ (atom_to_semax 
+        (EX Q : assert,
+          !! (atom_to_semax Q R x) && Q)) R
+      x.
+Proof.
+  intros. destruct x.
+  apply semax_extract_exists. intros Q.
+  apply semax_extract_prop.
+  intros. auto.
+Qed.
+  
+Lemma atom_return_to_semax_sem: forall x R,
+ (atom_ret_to_semax 
+        (EX Q : assert,
+          !! (atom_ret_to_semax Q R x) && Q)) R
+      x.
+Proof.
+  intros. destruct x as [p v].
+  apply semax_extract_exists. intros Q.
+  apply semax_extract_prop.
+  intros. auto.
+Qed.
+
+
+Lemma atom_to_semax_sem_group: forall xs R,
+ Forall (atom_to_semax (EX Q : assert, !! Forall (atom_to_semax Q R) xs && Q) R) xs.
+Proof.
+  intros. induction xs;auto.
+  - pose proof atom_to_semax_sem a R.
+    constructor.
+    + eapply atom_to_semax_derives_pre;[|apply H]. Intros Q.
+      Exists Q. apply andp_right. apply prop_right.
+      inv H0. auto. solve_andp. 
+    + eapply atom_to_semax_derives_pre_group;[|apply IHxs]. Intros Q.
+      Exists Q. apply andp_right. apply prop_right.
+      inv H0. auto. solve_andp.
+Qed.
+
+
+Lemma atom_return_to_semax_sem_group: forall xs R,
+ Forall (atom_ret_to_semax 
+  (EX Q : assert, !! Forall (atom_ret_to_semax Q R) xs && Q) R) xs.
+Proof.
+  intros. induction xs;auto.
+  - pose proof atom_return_to_semax_sem a R.
+    constructor.
+    + eapply atom_return_to_semax_derives_pre;[|apply H]. Intros Q.
+      Exists Q. apply andp_right. apply prop_right.
+      inv H0. auto. solve_andp. 
+    + eapply atom_return_to_semax_derives_pre_group;[|apply IHxs]. Intros Q.
+      Exists Q. apply andp_right. apply prop_right.
+      inv H0. auto. solve_andp.
 Qed.
 
 Lemma post_to_semax_conj_rule: forall Q1 Q2 s_post
@@ -500,6 +646,19 @@ Proof.
   { solve_andp. }
   { solve_andp. }
   { intros. solve_andp. }
+Qed.
+
+Lemma atom_to_semax_conj_rule_group: forall P Q1 Q2 atoms,
+  Forall (atom_to_semax P Q1) atoms ->
+  Forall (atom_to_semax P Q2) atoms ->
+  Forall (atom_to_semax P (Q1 && Q2)) atoms.
+Proof.
+  intros. induction atoms;auto.
+  inversion H;subst.
+  inversion H0;subst.
+  specialize (IHatoms H4 H6).
+  pose proof atom_to_semax_conj_rule _ _ _ _ H3 H5.
+  constructor;auto.
 Qed.
 
 End Semantics.
