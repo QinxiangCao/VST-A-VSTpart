@@ -928,7 +928,7 @@ Definition S_split_loop res1 res2 :=
             (add_Q_to_atoms s_atom_continue2) ++
           add_Q_to_Sposts s_post_continue2)
       (* S_post_normal *)
-        (s_post_break1 ++ s_post_break2 ++
+        (s_post_break1 ++ s_post_break2 ++ s_post_normal2 ++
           Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
           Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
           Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
@@ -1842,7 +1842,7 @@ match res1, res2 with
           (add_Q_to_atoms s_atom_continue2) ++
         add_Q_to_Sposts s_post_continue2)
     (* S_post_normal *)
-      (s_post_break1 ++ s_post_break2 ++
+      (s_post_break1 ++ s_post_break2 ++ s_post_normal2 ++
         Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
         Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
         Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
@@ -1919,7 +1919,7 @@ match res1, res2 with
           (add_Q_to_Catoms seplog.FF s_atom_continue2) +++
         add_Q_to_Cposts seplog.FF c_post_continue2)
     (* C_post_normal *)
-      (c_post_break1 +++ c_post_break2 +++
+      (c_post_break1 +++ c_post_break2 +++ c_post_normal2 +++
         Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
         Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
         Cposts_conn_atoms c_post_continue1 s_atom_break2 +++

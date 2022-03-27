@@ -934,6 +934,23 @@ Proof.
   apply prop_right;auto.
 Qed.
 
+Lemma add_Q_to_Cposts_inv: forall P 
+  s_post (c_post: C_partial_posts s_post),
+CForall (@path_to_semax) (add_Q_to_Cposts FF c_post) ->
+CForall (@post_to_semax P) c_post.
+Proof.
+  induction c_post;auto.
+  intros. destruct H.
+  apply IHc_post in H0. split;auto.
+  clear H0 IHc_post.
+  induction r'.
+  - hnf. hnf in H. eapply semax_post'';[|apply H].
+    eapply derives_trans;[|apply FF_left].
+    solve_andp.
+  - simpl. intros a. apply H0.
+    simpl in H. destruct s. simpl in H.
+    apply H.
+Qed.
 
 (* Rewriting Lemmas *)
 Lemma atoms_conn_Cpres_distrib:
@@ -1159,7 +1176,7 @@ Proof.
       destruct H. split;auto. apply IHs_atoms1. auto.
 Qed.
 
-Lemma post_conn_atom_conn_return_distrb: forall Q s_post1
+Lemma post_conn_atom_conn_return_assoc: forall Q s_post1
   (post1 :C_partial_post s_post1) atom2 atom1,
 post_ret_to_semax Q (Cpost_conn_return post1 (atom_conn_return atom1 atom2)) <->
 post_ret_to_semax Q (Cpost_conn_return (Cpost_conn_atom post1 atom1) atom2).
@@ -1171,7 +1188,7 @@ Proof.
     * intros a. apply H. auto.
 Qed.
 
-Lemma post_conn_atom_conn_atom_distrb: forall Q s_post1
+Lemma post_conn_atom_conn_atom_assoc: forall Q s_post1
   (post1 :C_partial_post s_post1) atom2 atom1,
 post_to_semax Q (Cpost_conn_atom post1 (atom_conn_atom atom1 atom2)) <->
 post_to_semax Q (Cpost_conn_atom (Cpost_conn_atom post1 atom1) atom2).
@@ -1184,7 +1201,7 @@ Proof.
 Qed.
 
 
-Lemma posts_conn_atom_conn_returns_distrb: forall Q s_post1
+Lemma posts_conn_atom_conn_returns_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
 CForall (@post_ret_to_semax Q)
 (Cposts_conn_returns post1 (atom_conn_returns atom2 atom1)) <->
@@ -1204,7 +1221,7 @@ Proof.
       apply IHpost1 in H0. split;auto.
       2:{ rewrite Cpost_return_conn_distrib.
           rewrite Cpost_atom_conn_distrib. auto. }
-      apply post_conn_atom_conn_return_distrb. auto.
+      apply post_conn_atom_conn_return_assoc. auto.
     + apply CForall_Capp. apply CForall_Capp in H.
       destruct H. split;auto.
       2:{ apply IHatom1. auto. }
@@ -1214,10 +1231,10 @@ Proof.
       rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
       2:{ rewrite Cpost_return_conn_distrib. auto. }
-      apply post_conn_atom_conn_return_distrb. auto.
+      apply post_conn_atom_conn_return_assoc. auto.
 Qed.
 
-Lemma posts_conn_atom_conn_atoms_distrb: forall Q s_post1
+Lemma posts_conn_atom_conn_atoms_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
 CForall (@post_to_semax Q)
 (Cposts_conn_atoms post1 (atom_conn_atoms atom2 atom1)) <->
@@ -1237,7 +1254,7 @@ Proof.
       apply IHpost1 in H0. split;auto.
       2:{ rewrite Cpost_atom_conn_distrib.
           rewrite Cpost_atom_conn_distrib. auto. }
-      apply post_conn_atom_conn_atom_distrb. auto.
+      apply post_conn_atom_conn_atom_assoc. auto.
     + apply CForall_Capp. apply CForall_Capp in H.
       destruct H. split;auto.
       2:{ apply IHatom1. auto. }
@@ -1247,11 +1264,11 @@ Proof.
       rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
       2:{ rewrite Cpost_atom_conn_distrib. auto. }
-      apply post_conn_atom_conn_atom_distrb. auto.
+      apply post_conn_atom_conn_atom_assoc. auto.
 Qed.
 
 (* Rewriting distr semax rules *)
-Lemma posts_conn_atoms_conn_returns_distrb: forall Q s_post1
+Lemma posts_conn_atoms_conn_returns_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
 CForall (@post_ret_to_semax Q)
 (Cposts_conn_returns post1 (atoms_conn_returns atom2 atom1)) <->
@@ -1268,16 +1285,16 @@ Proof.
       apply Cposts_returns_conn_app_distrib2 in H.
       destruct H. split;auto.
       2:{ apply IHatom2. auto. }
-      apply posts_conn_atom_conn_returns_distrb. auto.
+      apply posts_conn_atom_conn_returns_assoc. auto.
     + apply Cposts_returns_conn_app_distrib in H.
       destruct H. apply IHatom2 in H0.
       unfold atoms_conn_returns. simpl.
       apply Cposts_returns_conn_app_distrib2.
       split;auto.
-      apply posts_conn_atom_conn_returns_distrb. auto.
+      apply posts_conn_atom_conn_returns_assoc. auto.
 Qed.
 
-Lemma posts_conn_atoms_conn_atoms_distrb: forall Q s_post1
+Lemma posts_conn_atoms_conn_atoms_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
 CForall (@post_to_semax Q)
 (Cposts_conn_atoms post1 (atoms_conn_atoms atom2 atom1)) <->
@@ -1294,13 +1311,13 @@ Proof.
       apply Cposts_atoms_conn_app_distrib2 in H.
       destruct H. split;auto.
       2:{ apply IHatom2. auto. }
-      apply posts_conn_atom_conn_atoms_distrb. auto.
+      apply posts_conn_atom_conn_atoms_assoc. auto.
     + apply Cposts_atoms_conn_app_distrib in H.
       destruct H. apply IHatom2 in H0.
       unfold atoms_conn_atoms. simpl.
       apply Cposts_atoms_conn_app_distrib2.
       split;auto.
-      apply posts_conn_atom_conn_atoms_distrb. auto.
+      apply posts_conn_atom_conn_atoms_assoc. auto.
 Qed.
 
 
@@ -1385,7 +1402,7 @@ Proof.
 Qed.
 
 
-Lemma post_conn_atom_conn_pre_distrb: forall 
+Lemma post_conn_atom_conn_pre_assoc: forall 
   s_post (post1: C_partial_post s_post)  
   atom2 s_pre (pre1: C_partial_pre s_pre),
 path_to_semax
@@ -1403,7 +1420,7 @@ Proof.
 Qed.    
 
 
-Lemma post_conn_atom_conn_pres_distrb: forall 
+Lemma post_conn_atom_conn_pres_assoc: forall 
   s_post (post1: C_partial_post s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
 CForall (@path_to_semax)
@@ -1416,12 +1433,12 @@ Proof.
   - simpl. split;auto.
   - split;intros.
     + destruct H. apply IHpre1 in H0.
-      split;auto. apply post_conn_atom_conn_pre_distrb. auto.
+      split;auto. apply post_conn_atom_conn_pre_assoc. auto.
     + destruct H. apply IHpre1 in H0.
-      split;auto. apply post_conn_atom_conn_pre_distrb. auto.
+      split;auto. apply post_conn_atom_conn_pre_assoc. auto.
 Qed.
 
-Lemma posts_conn_atom_conn_pres_distrb: forall 
+Lemma posts_conn_atom_conn_pres_assoc: forall 
   s_post (post1: C_partial_posts s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
 CForall (@path_to_semax)
@@ -1436,15 +1453,15 @@ Proof.
     + apply CForall_Capp. apply CForall_Capp in H. destruct H.
       rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
-      apply post_conn_atom_conn_pres_distrb. auto.
+      apply post_conn_atom_conn_pres_assoc. auto.
     + apply CForall_Capp. apply CForall_Capp in H. destruct H.
       rewrite Cpost_atom_conn_distrib. 
       apply IHpost1 in H0. split;auto.
-      apply post_conn_atom_conn_pres_distrb. auto.
+      apply post_conn_atom_conn_pres_assoc. auto.
 Qed.
 
 
-Lemma posts_conn_atoms_conn_pres_distrb: forall 
+Lemma posts_conn_atoms_conn_pres_assoc: forall 
   s_post (post1: C_partial_posts s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
 CForall (@path_to_semax)
@@ -1460,11 +1477,11 @@ Proof.
       destruct H. apply IHatom2 in H0. simpl.
       apply Cposts_Cpres_conn_app_distrib2.
       split;auto.
-      apply posts_conn_atom_conn_pres_distrb. auto.
+      apply posts_conn_atom_conn_pres_assoc. auto.
     + simpl in H. apply Cposts_Cpres_conn_app_distrib2 in H.
       destruct H. apply IHatom2 in H0. simpl.
       apply Cposts_Cpres_conn_app_distrib1. split;auto.
-      apply posts_conn_atom_conn_pres_distrb. auto.
+      apply posts_conn_atom_conn_pres_assoc. auto.
 Qed.
 
 
