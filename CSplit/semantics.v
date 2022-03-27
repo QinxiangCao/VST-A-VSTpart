@@ -1068,6 +1068,41 @@ Proof.
   induction atoms;auto.
 Qed.
 
+Lemma atoms_conn_nil_atoms: forall atoms,
+  atoms_conn_atoms atoms [] = [].
+Proof.
+  induction atoms;auto.
+Qed.
+
+Lemma nil_atoms_conn_atoms: forall atoms,
+  atoms_conn_atoms [] atoms = [].
+Proof.
+  induction atoms;auto.
+Qed.
+
+
+Lemma nil_atoms_conn_returns: forall atoms,
+  atoms_conn_returns [] atoms = [].
+Proof.
+  induction atoms;auto.
+Qed.
+
+Lemma nil_atoms_conn_Cpres: forall spres (cpres: C_partial_pres spres) ,
+  atoms_conn_Cpres [] cpres = {}.
+Proof.
+  induction cpres;auto.
+Qed.
+
+
+Lemma atoms_conn_nil_Spres_sem: forall Q atoms,
+CForall (@pre_to_semax Q) (atoms_conn_Cpres atoms {}).
+Proof.
+  induction atoms;auto.
+  simpl. tauto.
+Qed.
+
+
+
 Lemma Cposts_returns_conn_app_distrib:
   forall P s_atoms s_post1 
     (c_post1: C_partial_posts s_post1) s_post2 
