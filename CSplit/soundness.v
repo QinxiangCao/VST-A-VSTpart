@@ -3,6 +3,8 @@ Require Import CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 Require Import CSplit.semantics.
+Require Import Coq.Program.Equality.
+
 
 Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
   match s with
@@ -33,8 +35,6 @@ Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
 Section Soundness.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
-
-Require Import Coq.Program.Equality.
 
 
 (****************************)
@@ -1026,7 +1026,7 @@ Proof.
       ).
       {
         destruct s_atom_continue1;auto. right. 
-        Search s_atom_continue1 c_post_normal2.
+        (* Search s_atom_continue1 c_post_normal2. *)
         clear - S25 S16 S59 S61 Hpath.
         destruct s_pre2,
         s_atom_break2, s_atom_continue2,s_atom_return2;
@@ -1174,7 +1174,7 @@ Proof.
       try apply exclude_nil_cons in S37;
       combine_aux_post_auto.
     *
-      Search (CForall _ c_post_continue1).
+      (* Search (CForall _ c_post_continue1). *)
       clear - Hpath Hpath' S63 S38 S50 S14 S29 S12 S22.
 
 
@@ -1221,7 +1221,7 @@ Proof.
       [|apply pre_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
     *
-      Search (CForall _ c_post_normal2).
+      (* Search (CForall _ c_post_normal2). *)
       clear - Hpath' S13 S21 S30.
       destruct s_pre1, s_atom_break1, s_atom_return1;
         try (apply exclude_nil_cons in S13);
