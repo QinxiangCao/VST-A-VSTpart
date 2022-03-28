@@ -1265,7 +1265,47 @@ Proof.
 
   }
 Qed.
+
+
+Lemma if_soundness: 
+forall P Q e s_res1 s_res2
+  (c_res1: C_result s_res1) (c_res2: C_result s_res2),
+  s_res_has_path s_res2 -> s_res_has_path s_res1 ->
+  split_Semax Delta P Q
+    (C_split_ifthenelse e s_res1 s_res2 c_res1 c_res2) ->
+  P |-- (!! ((bool_type (typeof e)) = true)) &&
+   (tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr))) && P /\
+  split_Semax Delta (P && local (liftx (typed_true (typeof e)) (eval_expr e))) Q c_res1 /\
+  split_Semax Delta (P && local (liftx (typed_false (typeof e)) (eval_expr e))) Q c_res2.
+Proof.
+  intros P Q e s_res1 s_res2. intros c_res1 c_res2.
+  intros Hpath Hpath' H.
+  destruct s_res1 as [s_res1|];
+  [destruct s_res1 as [
+    s_pre1 s_path1 
+    s_post_normal1 s_post_break1 s_post_continue1 s_post_return1
+    s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1]|].
+  2:{ simpl in H. destruct H. }
+  destruct s_res2 as [s_res2|];
+  [destruct s_res2 as [
+    s_pre2 s_path2
+    s_post_normal2 s_post_break2 s_post_continue2 s_post_return2
+    s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2]|].
+  2:{ simpl in H. destruct H. }
+  destruct c_res1 as [
+    c_pre1 c_path1 c_post_normal1 c_post_break1
+    c_post_continue1 c_post_return1] eqn:Ec1,
+    c_res2 as [
+    c_pre2 c_path2 c_post_normal2 c_post_break2
+    c_post_continue2 c_post_return2] eqn:Ec2.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  destruct_FForalls.
+
+  split;[|split].
+  + admit.
+  + repeat split.
     
+
 
 
 Theorem soundness: forall 
@@ -1325,13 +1365,22 @@ Proof.
     admit.
 
   - (* ifthenelse *)
+    intros. simpl. simpl in H.
+    Print semax_ifthenelse.
     admit.
 
   - (* loop *)
     intros. simpl.
     simpl in H.
-    eapply semax_loop.
-    admit.
+    apply loop_soundness in H.
+    2:{ apply S_split_has_path. }
+    2:{ apply S_split_has_path. }
+    destruct H as [R1 [R2 [H1 [H2 H3]]]].
+    eapply semax_pre'.
+    { apply H1. }
+    apply semax_loop with (Q':=R2).
+    { apply IHc_stm1. auto. }
+    { apply IHc_stm2. auto. }
 
   - (* break *)
     admit.

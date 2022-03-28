@@ -695,7 +695,7 @@ Fixpoint Cposts_conn_Cpres
            (Cposts_conn_Cpres c_posts' c_pres2)
   end.
 
-Fixpoint add_exp_to_Cpre e 
+Definition add_exp_to_Cpre e 
   { s_pre : S_partial_pre }
   ( c_pre : C_partial_pre s_pre) := 
 match s_pre with
@@ -855,7 +855,7 @@ Definition S_split_ifthenelse (e: expr) res1 res2 :=
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) =>
       Some (mk_S_result_rec 
       (* S_pre *)
-        (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres e s_pre2)
+        (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres (semax_lemmas.Cnot e) s_pre2)
       (* S_path *)
         (s_path1 ++ s_path2)
       (* S_post_normal *)
@@ -868,16 +868,16 @@ Definition S_split_ifthenelse (e: expr) res1 res2 :=
         (s_post_return1 ++ s_post_return2)
       (* S_atom_normal *)
         (add_exp_to_atoms e s_atom_normal1 ++
-          add_exp_to_atoms e s_atom_normal2)
+          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_normal2)
       (* S_atom_break *)
         (add_exp_to_atoms e s_atom_break1 ++
-          add_exp_to_atoms e s_atom_break2)     
+          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_break2)     
       (* S_atom_continue *)
         (add_exp_to_atoms e s_atom_continue1 ++
-          add_exp_to_atoms e s_atom_continue2)
+          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_continue2)
       (* S_atom_return *)
         (add_exp_to_ret_atoms e s_atom_return1 ++
-        add_exp_to_ret_atoms e s_atom_return2))
+        add_exp_to_ret_atoms (semax_lemmas.Cnot e) s_atom_return2))
     | None => None
     end
   | None => None
@@ -1750,7 +1750,7 @@ match res1, res2 with
       c_post_break2 c_post_continue2 c_post_return2 =>
     mk_C_result_rec
     (* S_pre *)
-      (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres e s_pre2)
+      (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres (semax_lemmas.Cnot e) s_pre2)
     (* S_path *)
       (s_path1 ++ s_path2)
     (* S_post_normal *)
@@ -1763,18 +1763,18 @@ match res1, res2 with
       (s_post_return1 ++ s_post_return2)
     (* S_atom_normal *)
       (add_exp_to_atoms e s_atom_normal1 ++
-        add_exp_to_atoms e s_atom_normal2)
+        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_normal2)
     (* S_atom_break *)
       (add_exp_to_atoms e s_atom_break1 ++
-        add_exp_to_atoms e s_atom_break2)     
+        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_break2)     
     (* S_atom_continue *)
       (add_exp_to_atoms e s_atom_continue1 ++
-        add_exp_to_atoms e s_atom_continue2)
+        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_continue2)
     (* S_atom_return *)
       (add_exp_to_ret_atoms e s_atom_return1 ++
-      add_exp_to_ret_atoms e s_atom_return2)
+      add_exp_to_ret_atoms (semax_lemmas.Cnot e) s_atom_return2)
     (* C_pre *)
-      (add_exp_to_Cpres e c_pre1 +++ add_exp_to_Cpres e c_pre2)
+      (add_exp_to_Cpres e c_pre1 +++ add_exp_to_Cpres (semax_lemmas.Cnot e) c_pre2)
     (* C_path *)
       (c_path1 +++ c_path2)
     (* C_post_normal *)

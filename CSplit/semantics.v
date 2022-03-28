@@ -1856,5 +1856,375 @@ Proof.
     destruct H;auto.
 Qed.
 
+(* If tc expr *)
+Lemma add_exp_to_pre_tc: forall P a s_pre (pre':C_partial_pre s_pre), 
+  pre_to_semax P (add_exp_to_Cpre a pre') ->
+  ENTAIL Delta, allp_fun_id Delta && P
+  |-- !! (bool_type (typeof a) = true) && 
+    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+Proof.
+  intros.
+  destruct pre'. simpl in H.
+  - apply semax_seq_inv in H. destruct H as [Q' [? ?]].
+    apply semax_ifthenelse_inv in H.
+    eapply derives_trans;[apply H|].
+    solve_andp.
+Qed.
+
+
+Lemma add_exp_to_atom_tc: forall P Q a normal_atom',
+  atom_to_semax P Q (add_exp_to_atom a normal_atom') ->
+  ENTAIL Delta, allp_fun_id Delta && P
+  |-- !! (bool_type (typeof a) = true) && 
+    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+Proof.
+  intros. destruct normal_atom'.
+  apply semax_seq_inv in H. destruct H as [Q' [? ?]].
+  apply semax_ifthenelse_inv in H.
+  eapply derives_trans;[apply H|].
+  solve_andp.
+Qed.
+
+
+Lemma add_exp_to_return_tc: forall P Q a return_atom',
+  atom_ret_to_semax P Q (add_exp_to_ret_atom a return_atom') ->
+  ENTAIL Delta, allp_fun_id Delta && P
+  |-- !! (bool_type (typeof a) = true) && 
+    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+Proof.
+  intros. destruct return_atom'.
+  simpl in H.
+  apply semax_seq_inv in H. destruct H as [Q' [? ?]].
+  apply semax_seq_inv in H. destruct H as [Q'' [? ?]].
+  apply semax_ifthenelse_inv in H.
+  eapply derives_trans;[apply H|].
+  solve_andp.
+Qed.
+
+Lemma if_gen_tc:
+  forall e P Q s_pre1 (c_pre1: C_partial_pres s_pre1) s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
+  ~ (s_pre1 = [] /\ s_atom_normal1 = [] /\ s_atom_break1 = [] /\ s_atom_continue1 = [] /\ s_atom_return1 = []) -> 
+  CForall (@pre_to_semax P) (add_exp_to_Cpres e c_pre1) ->
+  Forall (atom_to_semax P (RA_normal Q)) (add_exp_to_atoms e s_atom_normal1) ->
+  Forall (atom_to_semax P (RA_break Q)) (add_exp_to_atoms e s_atom_break1) ->
+  Forall (atom_to_semax P (RA_continue Q)) (add_exp_to_atoms e s_atom_continue1) ->
+  Forall (atom_ret_to_semax P (RA_return Q))
+          (add_exp_to_ret_atoms e s_atom_return1) ->
+ENTAIL Delta, allp_fun_id Delta && P
+|-- !! (bool_type (typeof e) = true) && tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr)).
+Proof.
+  intros.
+  destruct c_pre1 as [|s_pre' c_pre' s_pre1 c_pre1].
+  2:{ destruct H0. apply add_exp_to_pre_tc in H0. auto. }
+  destruct s_atom_normal1 as [|normal_atom' normal_atom1].
+  2:{ inversion H1;subst. apply add_exp_to_atom_tc in H7. auto. }
+  destruct s_atom_break1 as [|break_atom' break_atom1].
+  2:{ inversion H2;subst. apply add_exp_to_atom_tc in H7. auto. }
+  destruct s_atom_continue1 as [|continue_atom' continue_atom1].
+  2:{ inversion H3;subst. apply add_exp_to_atom_tc in H7. auto. }
+  destruct s_atom_return1 as [|return_atom' return_atom1].
+  2:{ inversion H4;subst. apply add_exp_to_return_tc in H7. auto. }
+  tauto.
+Qed.
+
+(* If-inversions *)
+
+Lemma typed_true_or_typed_false': forall a,
+  bool_type (typeof a) = true ->
+  ENTAIL Delta, (tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)))
+  |-- (local (liftx (typed_true (typeof a)) (eval_expr a))) ||
+  (local (liftx (typed_false (typeof a)) (eval_expr a))).
+Proof.
+  intros.
+  unfold liftx. simpl. intros x.
+  unfold lift. unfold local.
+  unfold lift1.
+  unfold typed_true, typed_false.
+  Intros. unfold tc_environ in H0.
+  pose proof typecheck_expr_sound _ _ a H0.
+  eapply derives_trans.
+  { apply andp_right. apply derives_refl.
+    eapply derives_trans;[|apply H1].
+    unfold tc_expr. simpl.
+    rewrite denote_tc_assert_andp.
+    rewrite andp_unfold. apply andp_left2.
+    apply derives_refl.
+  }
+  apply derives_extract_prop'. intros.
+  eapply expr_lemmas.tc_bool_val with (v:= eval_expr a x) in H;auto.
+  destruct (strict_bool_val (eval_expr a x) (typeof a)).
+  { destruct b.
+    - apply orp_right1. apply prop_right. auto.
+    - apply orp_right2. apply prop_right. auto.
+  }
+  destruct H. inv H.
+Qed.
+
+
+(* 
+
+TODO: may not be able to prove this lemma?
+
+because there is no exclued-middle in typed-true &
+
+Lemma typed_false_typed_not_true: forall e,
+bool_type (typeof e) = true ->
+ENTAIL Delta, (tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr))) &&
+local (liftx (typed_false (typeof e)) (eval_expr e))
+|-- local (liftx (typed_true (typeof (semax_lemmas.Cnot e)))
+                (eval_expr (semax_lemmas.Cnot e))).
+Proof.
+  intros.
+  unfold semax_lemmas.Cnot.
+  unfold liftx. simpl. intros x.
+  unfold lift. unfold local.
+  unfold lift1.
+  unfold typed_true, typed_false.
+  apply derives_extract_prop. intros.
+  rewrite andp_comm.  apply derives_extract_prop. intros.
+  unfold tc_environ in H0.
+  pose proof typecheck_expr_sound _ _ (e) H0.
+  pose proof typecheck_expr_sound _ _ (semax_lemmas.Cnot e) H0.
+  unfold semax_lemmas.Cnot in H2.
+  eapply derives_trans.
+  { apply andp_right. 
+    { eapply derives_trans;[|apply H2].
+      unfold tc_expr. simpl.
+      rewrite denote_tc_assert_andp.
+      rewrite andp_unfold. apply andp_left2.
+      apply derives_refl. }
+    { eapply derives_trans;[|apply H3].
+      unfold tc_expr. solve_andp. }
+  }
+  rewrite andp_comm. apply derives_extract_prop;intros.
+  apply prop_derives. intros.
+  apply expr_lemmas.tc_bool_val in H4;auto.
+  destruct H4. destruct x0. auto.
+  apply expr_lemmas.tc_bool_val in H5;auto.
+  destruct H5. destruct x0.
+  { exfalso. congruence. }
+  { exfalso. congruence. } *)
+
+
+Lemma pre_to_semax_if_true_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
+CForall (@pre_to_semax P) (add_exp_to_Cpres e c_pre) ->
+CForall (@pre_to_semax
+     (P && local (liftx (typed_true (typeof e)) (eval_expr e)))) c_pre.
+Proof.
+  intros.
+  induction c_pre.
+  + constructor.
+  + simpl in H. destruct H. apply IHc_pre in H0.
+    split;auto.
+    clear - H. induction r'.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q [H1 H2]].
+      rewrite overridePost_normal in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_pre' with (P':= Q);auto.
+      rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+      rewrite (add_andp _ _ H1).
+      Intros P'. apply semax_skip_inv in H0.
+      rewrite normal_ret_assert_elim in H0.
+      apply semax_break_inv in H3.
+      eapply derives_trans.
+      { apply andp_right.
+        { apply derives_refl. }
+        { eapply derives_trans;[|apply typed_true_or_typed_false' with (a:=e)];auto. solve_andp. }
+      }
+      rewrite distrib_orp_andp2. apply orp_left.
+      { eapply derives_trans;[|apply H0]. solve_andp. }
+      { eapply derives_trans;[|apply FF_left].
+        eapply derives_trans;[|apply H3]. solve_andp. }
+    }
+Qed.
+
+Lemma pre_to_semax_if_false_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
+CForall (@pre_to_semax P) (add_exp_to_Cpres (semax_lemmas.Cnot e) c_pre) ->
+CForall (@pre_to_semax
+     (P && local (liftx (typed_false (typeof e)) (eval_expr e)))) c_pre.
+Proof.
+  intros.
+  induction c_pre.
+  + constructor.
+  + simpl in H. destruct H. apply IHc_pre in H0.
+    split;auto.
+    clear - H. induction r'.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q [H1 H2]].
+      rewrite overridePost_normal in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_pre' with (P':= Q);auto.
+      rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+      rewrite (add_andp _ _ H1).
+      rewrite (andp_comm (local (tc_environ Delta) && allp_fun_id Delta && P)). rewrite !andp_assoc. apply derives_extract_prop. intros.
+      Intros P'. apply semax_skip_inv in H0.
+      rewrite normal_ret_assert_elim in H0.
+      apply semax_break_inv in H3.
+      eapply derives_trans.
+      { apply andp_right.
+        { apply derives_refl. }
+        { eapply derives_trans;[|apply typed_true_or_typed_false' with (a:= semax_lemmas.Cnot e)];auto. solve_andp. }
+      }
+      rewrite distrib_orp_andp2. apply orp_left.
+      { eapply derives_trans;[|apply H0]. solve_andp. }
+      { eapply derives_trans;[|apply FF_left].
+        eapply derives_trans;[|apply H3]. solve_andp. }
+    }
+Qed.
+
+
+Lemma atom_to_semax_if_true_inv_group: forall P Q e atoms,
+Forall (@atom_to_semax P Q) (add_exp_to_atoms (e) atoms) ->
+Forall (@atom_to_semax 
+    (P && local (liftx (typed_true (typeof e)) (eval_expr e)))
+  Q) (add_exp_to_atoms ( e) atoms).
+Proof.
+  intros.
+  induction atoms.
+  + constructor.
+  + simpl in H. inv H. apply IHatoms in H3.
+    constructor;auto.
+    clear - H2. rename H2 into H. destruct a.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q' [H1 H2]].
+      rewrite overridePost_normal in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_seq with (Q0:= Q');auto.
+      rewrite overridePost_normal.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+        rewrite (add_andp _ _ H1). rewrite <- !andp_assoc.
+        rewrite andp_assoc. rewrite andp_comm.
+        apply derives_refl. }
+      rewrite !exp_andp1. apply semax_extract_exists.
+      intros P'. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      eapply semax_pre';
+      [|apply semax_ifthenelse with (P0:=P')];auto.
+      { solve_andp. }
+    }
+Qed.
+
+
+
+Lemma atom_to_semax_if_false_inv_group: forall P Q e atoms,
+Forall (@atom_to_semax P Q) (add_exp_to_atoms (semax_lemmas.Cnot e) atoms) ->
+Forall (@atom_to_semax 
+    (P && local (liftx (typed_false (typeof e)) (eval_expr e)))
+  Q) (add_exp_to_atoms (semax_lemmas.Cnot e) atoms).
+Proof.
+  intros.
+  induction atoms.
+  + constructor.
+  + simpl in H. inv H. apply IHatoms in H3.
+    constructor;auto.
+    clear - H2. rename H2 into H. destruct a.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q' [H1 H2]].
+      rewrite overridePost_normal in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_seq with (Q0:= Q');auto.
+      rewrite overridePost_normal.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+        rewrite (add_andp _ _ H1). rewrite <- !andp_assoc.
+        rewrite andp_assoc. rewrite andp_comm.
+        apply derives_refl. }
+      rewrite !exp_andp1. apply semax_extract_exists.
+      intros P'. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      eapply semax_pre';
+      [|apply semax_ifthenelse with (P0:=P')];auto.
+      { solve_andp. }
+    }
+Qed.
+
+
+Lemma atom_ret_to_semax_if_true_inv_group: forall P Q e atoms,
+Forall (@atom_ret_to_semax P Q) (add_exp_to_ret_atoms (e) atoms) ->
+Forall (@atom_ret_to_semax 
+    (P && local (liftx (typed_true (typeof e)) (eval_expr e)))
+  Q) (add_exp_to_ret_atoms ( e) atoms).
+Proof.
+  intros.
+  induction atoms.
+  + constructor.
+  + simpl in H. inv H. apply IHatoms in H3.
+    constructor;auto.
+    clear - H2. rename H2 into H. destruct a.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q0 [H1 Hret]].
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q' [H1 H2]].
+      rewrite overridePost_overridePost in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_seq with (Q1:= Q0);auto.
+      eapply semax_seq with (Q1:= Q');auto.
+      rewrite overridePost_overridePost.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+        rewrite (add_andp _ _ H1). rewrite <- !andp_assoc.
+        rewrite andp_assoc. rewrite andp_comm.
+        apply derives_refl. }
+      rewrite !exp_andp1. apply semax_extract_exists.
+      intros P'. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      eapply semax_pre';
+      [|apply semax_ifthenelse with (P0:=P')];auto.
+      { solve_andp. }
+    }
+Qed.
+
+
+
+Lemma atom_ret_to_semax_if_false_inv_group: forall P Q e atoms,
+Forall (@atom_ret_to_semax P Q) (add_exp_to_ret_atoms (semax_lemmas.Cnot e) atoms) ->
+Forall (@atom_ret_to_semax 
+    (P && local (liftx (typed_false (typeof e)) (eval_expr e)))
+  Q) (add_exp_to_ret_atoms (semax_lemmas.Cnot e) atoms).
+
+Proof.
+  intros.
+  induction atoms.
+  + constructor.
+  + simpl in H. inv H. apply IHatoms in H3.
+    constructor;auto.
+    clear - H2. rename H2 into H. destruct a.
+    { simpl in H. hnf.
+      rename H into H1. simpl in H1.
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q0 [H1 Hret]].
+      eapply semax_seq_inv in H1.
+      destruct H1 as [Q' [H1 H2]].
+      rewrite overridePost_overridePost in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_seq with (Q1:= Q0);auto.
+      eapply semax_seq with (Q1:= Q');auto.
+      rewrite overridePost_overridePost.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
+        rewrite (add_andp _ _ H1). rewrite <- !andp_assoc.
+        rewrite andp_assoc. rewrite andp_comm.
+        apply derives_refl. }
+      rewrite !exp_andp1. apply semax_extract_exists.
+      intros P'. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      eapply semax_pre';
+      [|apply semax_ifthenelse with (P0:=P')];auto.
+      { solve_andp. }
+    }
+Qed.
+
 
 End Semantics.
