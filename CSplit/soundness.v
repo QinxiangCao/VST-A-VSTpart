@@ -1273,7 +1273,8 @@ forall P Q e s_res1 s_res2
   s_res_has_path s_res2 -> s_res_has_path s_res1 ->
   split_Semax Delta P Q
     (C_split_ifthenelse e s_res1 s_res2 c_res1 c_res2) ->
-  P |-- (!! ((bool_type (typeof e)) = true)) &&
+  ENTAIL Delta, allp_fun_id Delta && P |-- 
+    (!! ((bool_type (typeof e)) = true)) &&
    (tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr))) && P /\
   split_Semax Delta (P && local (liftx (typed_true (typeof e)) (eval_expr e))) Q c_res1 /\
   split_Semax Delta (P && local (liftx (typed_false (typeof e)) (eval_expr e))) Q c_res2.
@@ -1302,11 +1303,23 @@ Proof.
   destruct_FForalls.
 
   split;[|split].
-  + admit.
-  + repeat split.
-    
-
-
+  + apply andp_right;try solve_andp.
+    simpl in Hpath'.
+    eapply if_gen_tc with (Q0:=Q);[apply Hpath'|..];auto.
+    apply S1.
+  + repeat split;auto.
+    * apply pre_to_semax_if_true_inv_group;auto.
+    * apply atom_to_semax_if_true_inv_group;auto.
+    * apply atom_to_semax_if_true_inv_group;auto.
+    * apply atom_to_semax_if_true_inv_group;auto.
+    * apply atom_ret_to_semax_if_true_inv_group;auto.
+  + repeat split;auto.
+    * apply pre_to_semax_if_false_inv_group;auto.
+    * apply atom_to_semax_if_false_inv_group;auto.
+    * apply atom_to_semax_if_false_inv_group;auto.
+    * apply atom_to_semax_if_false_inv_group;auto.
+    * apply atom_ret_to_semax_if_false_inv_group;auto.
+Qed.
 
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (s_stm: S_statement)
@@ -1366,8 +1379,12 @@ Proof.
 
   - (* ifthenelse *)
     intros. simpl. simpl in H.
-    Print semax_ifthenelse.
-    admit.
+    apply if_soundness in H.
+    2:{ apply S_split_has_path. }
+    2:{ apply S_split_has_path. }
+    destruct H as [E1 [E2 E3]].
+    eapply semax_pre';[apply E1|].
+    apply semax_ifthenelse;auto.
 
   - (* loop *)
     intros. simpl.
