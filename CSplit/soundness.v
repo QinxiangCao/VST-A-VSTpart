@@ -1143,67 +1143,73 @@ Proof.
       [|apply pre_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
     *
-      Search (CForall _ c_post_normal1).
-      clear - Hpath S64 S37 S17 S26 S28 S11 S20.
+      (* Search (CForall _ c_post_normal1). *)
+      clear - Hpath Hpath' S64 S37 S17 S26 S28 S11 S20.
+
+
+      assert (CForall (@post_to_semax CS Espec Delta
+      (EX R:assert, andp R (
+        !!
+          ( CForall (@pre_to_semax CS Espec Delta R)
+                (atoms_conn_Cpres (a :: s_atom_normal2) c_pre1) /\
+            Forall (atom_to_semax Delta R Qn) 
+                (atoms_conn_atoms (a :: s_atom_normal2) s_atom_break1) /\
+            Forall (atom_ret_to_semax Delta R Qr) 
+                (atoms_conn_returns (a :: s_atom_normal2) s_atom_return1))
+      ))) c_post_normal1).
+      { destruct s_pre1, s_atom_break1, s_atom_return1;
+        [exfalso; apply Hpath'; repeat split;auto|..];
+        try apply exclude_nil_cons in S26;
+        try apply exclude_nil_cons in S17;
+        try apply exclude_nil_cons in S64;
+        combine_aux_post_auto.
+      }
+      clear S26 S17 S64.
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
       try apply exclude_nil_cons in S20;
       try apply exclude_nil_cons in S11;
-      try apply exclude_nil_cons in S18;
+      try apply exclude_nil_cons in H;
       try apply exclude_nil_cons in S28;
-      try apply exclude_nil_cons in S26;
-      try apply exclude_nil_cons in S17;
-      try apply exclude_nil_cons in S64;
-      try apply exclude_nil_cons in S37.
+      try apply exclude_nil_cons in S37;
+      combine_aux_post_auto.
+    *
+      Search (CForall _ c_post_continue1).
+      clear - Hpath Hpath' S63 S38 S50 S14 S29 S12 S22.
 
-      [exfalso; apply Hpath; repeat split;auto|..];
-      combine_aux_post_auto.
-    *
-      (* Search (CForall _ c_post_continue1). *)
+
+      assert (CForall (@post_to_semax CS Espec Delta
+      (EX R:assert, andp R (
+        !!
+          ( CForall (@pre_to_semax CS Espec Delta R)
+                (atoms_conn_Cpres (a :: s_atom_normal2) c_pre1) /\
+            Forall (atom_to_semax Delta R Qn) 
+                (atoms_conn_atoms (a :: s_atom_normal2) s_atom_break1) /\
+            Forall (atom_ret_to_semax Delta R Qr) 
+                (atoms_conn_returns (a :: s_atom_normal2) s_atom_return1))
+      ))) c_post_continue1).
+      { destruct s_pre1, s_atom_break1, s_atom_return1;
+        [exfalso; apply Hpath'; repeat split;auto|..];
+        try apply exclude_nil_cons in S14;
+        try apply exclude_nil_cons in S50;
+        try apply exclude_nil_cons in S63;
+        combine_aux_post_auto.
+      }
+      clear S14 S50 S63.
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S22;
-      try apply exclude_nil_cons in S12;
       try apply exclude_nil_cons in S29;
-      try apply exclude_nil_cons in S14;
-      try apply exclude_nil_cons in S50;
-      try apply exclude_nil_cons in S63;
       try apply exclude_nil_cons in S38;
-      [exfalso; apply Hpath; repeat split;auto|..];
+      try apply exclude_nil_cons in H;
+      try apply exclude_nil_cons in S12;
+      try apply exclude_nil_cons in S22;
       combine_aux_post_auto.
-    *
-      eapply atom_to_semax_derives_pre_group;
-      [|apply atom_to_semax_sem_group].
-      merge_Q1. apply prop_right.
-      group_inv.
-      (* Search (Forall _ s_atom_normal1). *)
-      destruct s_pre2,
-      s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in H6;
-      try apply exclude_nil_cons in H8;
-      try apply exclude_nil_cons in H0;
-      try apply exclude_nil_cons in H2;
-      [exfalso; apply Hpath; repeat split;auto|..];
-      combine_aux_atom_auto.
+
     *
       eapply atom_to_semax_derives_pre_group;
       [|apply atom_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
-    * 
-      eapply atom_to_semax_derives_pre_group;
-      [|apply atom_to_semax_sem_group].
-      merge_Q1. apply prop_right.
-      group_inv.
-      (* Search (Forall _ s_atom_continue1). *)
-      destruct s_pre2,
-      s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in H7;
-      try apply exclude_nil_cons in H9;
-      try apply exclude_nil_cons in H3;
-      try apply exclude_nil_cons in H1;
-      [exfalso; apply Hpath; repeat split;auto|..];
-      combine_aux_atom_auto.
-    * 
+    *
       eapply atom_return_to_semax_derives_pre_group;
       [|apply atom_return_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
@@ -1215,73 +1221,9 @@ Proof.
       [|apply pre_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
     *
-      (* Search (CForall _ c_post_normal2). *)
-      assert (s_atom_normal1 = [] \/ CForall
-        (@post_to_semax CS Espec Delta
-          (EX R, R &&
-          !! (CForall (@pre_to_semax CS Espec Delta R)
-                (atoms_conn_Cpres s_atom_normal1 c_pre2) /\
-              CForall (@pre_to_semax CS Espec Delta R)
-                (atoms_conn_Cpres s_atom_normal1 (add_Q_to_Catoms FF s_atom_continue2)) /\
-              Forall (atom_to_semax Delta R Qn)
-                (atoms_conn_atoms s_atom_normal1 s_atom_break2) /\
-              Forall (atom_ret_to_semax Delta R Qr)
-                (atoms_conn_returns s_atom_normal1 s_atom_return2))))
-          c_post_normal2).
-      {
-        destruct s_atom_normal1;auto. right. 
-        (* Search s_atom_normal1 c_post_normal2. *)
-        clear - S60 S62 S24 S15 Hpath.
-        destruct s_pre2,
-        s_atom_break2, s_atom_continue2,s_atom_return2;
-        try (apply exclude_nil_cons in S60);
-        try (apply exclude_nil_cons in S62);
-        try (apply exclude_nil_cons in S24);
-        try (apply exclude_nil_cons in S15);
-        [exfalso; apply Hpath; repeat split;auto|..|
-          eapply post_to_semax_derives_group;
-          [|eapply post_to_semax_conj_rule_group;
-            [apply S60|
-              eapply post_to_semax_conj_rule_group;
-              [apply S62|
-              eapply post_to_semax_conj_rule_group;
-              [apply S24|apply S15]]]];
-              try (apply remove_entail);
-              merge_Q4; apply prop_right;
-              repeat split;try solve [constructor];clean_nil;solve_split
-        ];combine_aux_post_auto.
-      }
-
-      assert (s_atom_continue1 = [] \/ CForall 
-      (@post_to_semax CS Espec Delta
-        (EX R, R &&
-          !! (CForall (@pre_to_semax CS Espec Delta R)
-            (atoms_conn_Cpres s_atom_continue1 c_pre2) /\
-          CForall (@pre_to_semax CS Espec Delta R)
-            (atoms_conn_Cpres s_atom_continue1 (add_Q_to_Catoms FF s_atom_continue2)) /\
-          Forall (atom_to_semax Delta R Qn)
-            (atoms_conn_atoms s_atom_continue1 s_atom_break2) /\
-          Forall (atom_ret_to_semax Delta R Qr)
-            (atoms_conn_returns s_atom_continue1 s_atom_return2))))
-          c_post_normal2
-      ).
-      {
-        destruct s_atom_continue1;auto. right. 
-        Search s_atom_continue1 c_post_normal2.
-        clear - S25 S16 S59 S61 Hpath.
-        destruct s_pre2,
-        s_atom_break2, s_atom_continue2,s_atom_return2;
-        try (apply exclude_nil_cons in S25);
-        try (apply exclude_nil_cons in S16);
-        try (apply exclude_nil_cons in S59);
-        try (apply exclude_nil_cons in S61);
-        [exfalso; apply Hpath; repeat split;auto|..];combine_aux_post_auto.
-      }
-      clear - H H0 S30 S13 S21 Hpath'.
-      destruct s_pre1, s_atom_normal1,
-      s_atom_break1, s_atom_continue1, s_atom_return1;
-        try (apply exclude_nil_cons in H);
-        try (apply exclude_nil_cons in H0);
+      Search (CForall _ c_post_normal2).
+      clear - Hpath' S13 S21 S30.
+      destruct s_pre1, s_atom_break1, s_atom_return1;
         try (apply exclude_nil_cons in S13);
         try (apply exclude_nil_cons in S30);
         try (apply exclude_nil_cons in S21);
@@ -1292,9 +1234,22 @@ Proof.
 
     * eapply atom_to_semax_derives_pre_group;
       [|apply atom_to_semax_sem_group].
-      merge_Q1. apply prop_right. auto.
+      merge_Q1. apply prop_right.
+      group_inv.
+      clear - Hpath' H1 H4 H5.
+      destruct s_pre1, s_atom_break1, s_atom_return1;
+        try (apply exclude_nil_cons in H1);
+        try (apply exclude_nil_cons in H4);
+        try (apply exclude_nil_cons in H5);
+        [exfalso; apply Hpath'; repeat split;auto|..];
+      combine_aux_atom_auto.
 
     * 
+      eapply atom_to_semax_derives_pre_group;
+      [|apply atom_to_semax_sem_group].
+      merge_Q1. apply prop_right. auto.
+
+    *
       eapply atom_to_semax_derives_pre_group;
       [|apply atom_to_semax_sem_group].
       merge_Q1. apply prop_right.
@@ -1307,10 +1262,10 @@ Proof.
     * eapply atom_return_to_semax_derives_pre_group;
       [|apply atom_return_to_semax_sem_group].
       merge_Q1. apply prop_right. auto.
-    
-  }
-Admitted.
 
+  }
+Qed.
+    
 
 
 Theorem soundness: forall 
