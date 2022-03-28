@@ -1321,6 +1321,164 @@ Proof.
     * apply atom_ret_to_semax_if_false_inv_group;auto.
 Qed.
 
+Lemma skip_sound: forall P Q,
+  split_Semax Delta P Q (C_split Sskip (Cskip)) ->
+  semax Delta P Clight.Sskip Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S7;subst.
+  simpl in H1.
+  apply semax_skip_inv in H1.
+  rewrite normal_ret_assert_elim in H1.
+  eapply semax_pre';[apply H1|].
+  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  eapply semax_noreturn_inv with (
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+  );auto.
+  eapply semax_nocontinue_inv with (
+    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+  );auto.
+  eapply semax_nobreak_inv with (
+    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+  );auto.
+  constructor.
+Qed.
+
+Lemma assign_sound: forall e1 e2 P Q,
+  split_Semax Delta P Q (C_split (Sassign e1 e2) (Cassign e1 e2)) ->
+  semax Delta P (Clight.Sassign e1 e2) Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S7;subst.
+  simpl in H1.
+  apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
+  apply semax_skip_inv in H3.
+  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  eapply semax_noreturn_inv with (
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+  );auto.
+  eapply semax_nocontinue_inv with (
+    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+  );auto.
+  eapply semax_nobreak_inv with (
+    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+  );auto.
+  eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
+Qed.
+
+
+Lemma set_sound: forall e1 e2 P Q,
+  split_Semax Delta P Q (C_split (Sset e1 e2) (Cset e1 e2)) ->
+  semax Delta P (Clight.Sset e1 e2) Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S7;subst.
+  simpl in H1.
+  apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
+  apply semax_skip_inv in H3.
+  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  eapply semax_noreturn_inv with (
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+  );auto.
+  eapply semax_nocontinue_inv with (
+    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+  );auto.
+  eapply semax_nobreak_inv with (
+    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+  );auto.
+  eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
+Qed.
+
+
+Lemma call_sound: forall id e ret P Q,
+  split_Semax Delta P Q (C_split (Scall id e ret) (Ccall id e ret)) ->
+  semax Delta P (Clight.Scall id e ret) Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S7;subst.
+  simpl in H1.
+  apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
+  apply semax_skip_inv in H3.
+  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  eapply semax_noreturn_inv with (
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+  );auto.
+  eapply semax_nocontinue_inv with (
+    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+  );auto.
+  eapply semax_nobreak_inv with (
+    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+  );auto.
+  eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
+Qed.
+
+Lemma break_soundness: forall P Q,
+split_Semax Delta P Q (C_split Sbreak Cbreak) ->
+semax Delta P Clight.Sbreak Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S8;subst.
+  simpl in H1.
+  apply semax_skip_inv in H1.
+  rewrite normal_ret_assert_elim in H1.
+  eapply semax_pre';[apply H1|].
+  constructor.
+Qed.
+
+
+Lemma continune_soundness: forall P Q,
+split_Semax Delta P Q (C_split Scontinue Ccontinue) ->
+semax Delta P Clight.Scontinue Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S9;subst.
+  simpl in H1.
+  apply semax_skip_inv in H1.
+  rewrite normal_ret_assert_elim in H1.
+  eapply semax_pre';[apply H1|].
+  constructor.
+Qed.
+
+
+Lemma return_soundness: forall P Q v,
+split_Semax Delta P Q (C_split (Sreturn v) (Creturn v)) ->
+semax Delta P (Clight.Sreturn v) Q.
+Proof.
+  intros.
+  simpl.
+  simpl in H.
+  destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
+  inversion S10;subst.
+  simpl in H1.
+  apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
+  apply semax_skip_inv in H1.
+  apply semax_return_inv in H3.
+  eapply semax_pre';[apply H1|].
+  destruct Q.
+  unfold return_ret_assert in *.  unfold_der.
+  eapply semax_pre';[|apply semax_return].
+  auto.
+Qed.
+
+
 Theorem soundness: forall 
 (P:assert) (Q:ret_assert) (s_stm: S_statement)
 (c_stm: C_statement s_stm),
@@ -1343,7 +1501,7 @@ Proof.
     intros. apply assert_sound with (a:=a). auto.
 
   - (* Sskip *)
-    admit.
+    intros. apply skip_sound. auto.
 
   - (* given *)
     intros. simpl in H0.
@@ -1369,13 +1527,13 @@ Proof.
     apply H with (a:=a). auto.
 
   - (* assign *)
-    admit.
+    intros. apply assign_sound. auto.
 
   - (* call *)
-    admit.
+    intros. apply call_sound. auto.
 
   - (* set *)
-    admit.
+    intros. apply set_sound. auto.
 
   - (* ifthenelse *)
     intros. simpl. simpl in H.
@@ -1400,14 +1558,15 @@ Proof.
     { apply IHc_stm2. auto. }
 
   - (* break *)
-    admit.
+    intros. apply break_soundness. auto.
 
   - (* continue *)
-    admit.
+    intros. apply continune_soundness. auto.
 
   - (* return *)
-    admit.
+    intros. apply return_soundness. auto.
 
-Admitted.
+Qed.
+
 
 End Soundness.
