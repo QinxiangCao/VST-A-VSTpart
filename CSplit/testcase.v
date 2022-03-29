@@ -1,4 +1,4 @@
-Require Import CSplit.soundness.
+Require Import CSplit.AClightFunc.
 
 (* 
 int sgn (int x) {
@@ -18,7 +18,10 @@ int sgn (int x) {
 } 
 *)
 
-Require Import CSplit.AClight.
+Infix "++" := app (right associativity, at level 60).
+Infix "+++" := Capp (right associativity, at level 60) : aclight_scope.
+
+
 
 Arguments Cifthenelse _ {_ _} _ _.
 Arguments Csequence {_ _ } _ _.
@@ -99,7 +102,7 @@ Ltac cbv_conns := cbv [
   add_Q_to_Cposts
   add_Q_to_Catoms
 
-  map concat app Capp Cmap
+  Smap Sconcat Sapp Capp Cmap
 ].
 
 Ltac unfold_split := cbv [
@@ -245,7 +248,7 @@ let res2 := eval cbv [
   add_Q_to_Cposts
   add_Q_to_Catoms
 
-  map concat app Capp Cmap
+  Smap Sconcat Sapp Capp Cmap
 ] in res1 in
 let res3 := eval cbv [
   hd_of
@@ -321,9 +324,10 @@ let res4 :=  eval cbv [
   add_Q_to_Cposts
   add_Q_to_Catoms
 
-  map concat app Capp Cmap
+  Smap Sconcat Sapp Capp Cmap
 ] in res3 in
-    exact res4.
+let res5 := eval simpl in res4 in    
+    exact res5.
 
 (* -------------------------- *)
 (* Example Program 1: sgn(x)  *)
@@ -402,9 +406,8 @@ Goal foo _ (C_split _ dummy_C).
   unfold_split.
   cbv_conns.
   unfold_ex.
-  unfold_split.
   cbv_conns.
-  unfold_ex.
+  simpl.
 Admitted.
 
 
@@ -499,7 +502,7 @@ Definition reverse_S :=
       (Ssequence Sassert
       (Ssequence Sassert
       (Ssequence Sassert
-      (Ssequence Sassert
+      (
       (Ssequence
         (Sset _t (Efield (Ederef (Etempvar _v (tptr (Tstruct _list noattr))) (Tstruct _list noattr)) _tail (tptr (Tstruct _list noattr))))
       (Ssequence
@@ -570,8 +573,7 @@ Definition reverse_C :=
                       SEP   (
                         (* data_at sh t_struct_list (x, t) v; *)
                             listrep sh l1 w; listrep sh l2' t)  ]]
-      Csequence
-        (Cassert FF)
+      
         ((Csequence
             (Cset _t (Efield (Ederef (Etempvar _v (tptr (Tstruct _list noattr))) (Tstruct _list noattr)) _tail (tptr (Tstruct _list noattr)))))
           (Csequence
@@ -609,9 +611,7 @@ Definition res :=
 
 Print res.
 
-  
 End reverse_verif.
-
 
 (* 
 All split functions:
