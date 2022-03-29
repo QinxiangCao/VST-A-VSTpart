@@ -26,9 +26,14 @@ Arguments Cloop {_ _} _ _.
 Arguments list_binded_cons {_ _ _} _ {_} _.
 Arguments bind_C_partial_post_ret {_ _} _.
 Arguments bind_C_partial_post {_ _} _.
+Arguments bind_C_full_path {_ _} _.
+
 
 Notation "'GIVEN' x .. y , c " :=
   (bind_C_partial_post (fun x => .. (bind_C_partial_post (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+
+Notation "'GIVEN' x .. y , c " :=
+  (bind_C_full_path (fun x => .. (bind_C_full_path (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
 
 Notation "'GIVEN' x .. y , c " :=
   (bind_C_partial_post_ret (fun x => .. (bind_C_partial_post_ret (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
@@ -140,6 +145,15 @@ Ltac unfold_ex := cbv [
   flatten_full_paths_binds
   C_split_exgiven
   add_exP_to_Cpre
+
+  
+  
+C_result_proj_C_pre
+C_result_proj_C_post_normal
+C_result_proj_C_post_break
+C_result_proj_C_post_continue
+C_result_proj_C_post_return
+C_result_proj_C_path
 ].
 
 
@@ -244,8 +258,72 @@ let res3 := eval cbv [
   flatten_full_paths_binds
   C_split_exgiven
   add_exP_to_Cpre
+
+C_result_proj_C_pre
+C_result_proj_C_post_normal
+C_result_proj_C_post_break
+C_result_proj_C_post_continue
+C_result_proj_C_post_return
+C_result_proj_C_path
+  
 ] in res2 in
-exact res3.
+let res4 :=  eval cbv [
+  atom_conn_return
+  atom_conn_returns
+  atoms_conn_returns
+  atom_conn_atom
+  atom_conn_atoms
+  atoms_conn_atoms
+  atom_conn_Spre
+  atom_conn_Spres
+  atoms_conn_Spres
+  Spost_conn_atom
+  Sposts_conn_atom
+  Spost_conn_return
+  Sposts_conn_return
+  Sposts_conn_atoms
+  Sposts_conn_returns
+  Spost_conn_Spre
+  Sposts_conn_Spres
+  add_exp_to_Spre
+  add_exp_to_Spres
+  add_exp_to_atom
+  add_exp_to_atoms
+  add_exp_to_ret_atom
+  add_exp_to_ret_atoms
+  add_P_to_Spre
+  add_P_to_atom
+  add_P_to_atom_ret
+  add_Q_to_Spost
+  add_Q_to_atom
+  add_Q_to_atoms
+
+  atom_conn_Cpre
+  atom_conn_Cpres
+  atoms_conn_Cpres
+  Cpost_conn_atom
+  Cposts_conn_atom
+  Cposts_conn_atoms
+  Cpost_conn_return
+  Cposts_conn_return
+  Cposts_conn_returns
+  Cpost_conn_Cpre_aux
+  Cpost_conn_Cpre
+  Cpost_conn_Cpres
+  Cposts_conn_Cpres
+  add_exp_to_Cpre
+  add_exp_to_Cpres
+  add_P_to_Cpre
+  add_P_to_Cpres
+  add_P_to_Catoms
+  add_P_to_Catom_rets
+  add_Q_to_Cpost
+  add_Q_to_Cposts
+  add_Q_to_Catoms
+
+  map concat app Capp Cmap
+] in res3 in
+    exact res4.
 
 (* -------------------------- *)
 (* Example Program 1: sgn(x)  *)
@@ -304,6 +382,41 @@ Print res.
 End sgn_verif.
 
 
+Module dummy_verif.
+
+Definition dummy_C :=
+  EXGIVEN a [[ prop (a = 1) ]]
+  (Csequence
+     Cskip
+     (EXGIVEN b [[ prop (a = b)]]
+      Cassert (prop (a = b + 1)))
+  ).
+
+Definition dummy_S :=
+   (Ssequence Sassert (Ssequence Sskip (Ssequence Sassert Sassert))).
+
+Parameter foo : forall s_res,  (C_result s_res) ->  Prop.
+
+Goal foo _ (C_split _ dummy_C).
+  unfold dummy_C.
+  unfold_split.
+  cbv_conns.
+  unfold_ex.
+  unfold_split.
+  cbv_conns.
+  unfold_ex.
+Admitted.
+
+
+Definition res :=
+  ltac:(compute_split dummy_S dummy_C).
+
+Print res.
+
+End dummy_verif.
+
+
+
 
 (* -------------------------- *)
 (* Example Program 2: 
@@ -335,23 +448,6 @@ Admitted.
  end. *)
 
 Arguments listrep sh contents x : simpl never.
-
-(* 
-
-(
-         (EX t x l2',
-	    PROP  (l2 = x :: l2')
-	    LOCAL (temp _w w; temp _v v)
-	    SEP   (data_at sh t_struct_list (x, t) v;
-	           listrep sh l1 w; listrep sh l2' t))%assert)
-
-(LISingle (
-       (EX w v l1 l2,
-          PROP  (l = rev l1 ++ l2)
-	  LOCAL (temp _w w; temp _v v)
-	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
-
-*)
 
 (* Definition reverse_S :=
 (Ssequence
@@ -501,131 +597,20 @@ Parameter foo : forall s_res,  (C_result s_res) ->  Prop.
 Goal foo _ (C_split reverse_S reverse_C).
   unfold reverse_S. unfold reverse_C.
 
-cbv [
-  S_split_sequence
-  S_split_ifthenelse
-  S_split_loop
-  S_split_loop_refined
-  S_split_assert
-  S_split_skip
-  S_split_assign
-  S_split_call
-  S_split_set
-  S_split_break
-  S_split_continue
-  S_split_return
-
-  S_split
-
-  C_split_assert
-  C_split_sequence
-  C_split_skip
-  C_split_assign
-  C_split_call
-  C_split_set
-  C_split_break
-  C_split_continue
-  C_split_return
-  C_split_ifthenelse
-  C_split_loop
-  C_split_loop_refined
-
-  C_split
-].
-
- cbv [
-  atom_conn_return
-  atom_conn_returns
-  atoms_conn_returns
-  atom_conn_atom
-  atom_conn_atoms
-  atoms_conn_atoms
-  atom_conn_Spre
-  atom_conn_Spres
-  atoms_conn_Spres
-  Spost_conn_atom
-  Sposts_conn_atom
-  Spost_conn_return
-  Sposts_conn_return
-  Sposts_conn_atoms
-  Sposts_conn_returns
-  Spost_conn_Spre
-  Sposts_conn_Spres
-  add_exp_to_Spre
-  add_exp_to_Spres
-  add_exp_to_atom
-  add_exp_to_atoms
-  add_exp_to_ret_atom
-  add_exp_to_ret_atoms
-  add_P_to_Spre
-  add_P_to_atom
-  add_P_to_atom_ret
-  add_Q_to_Spost
-  add_Q_to_atom
-  add_Q_to_atoms
-
-  atom_conn_Cpre
-  atom_conn_Cpres
-  atoms_conn_Cpres
-  Cpost_conn_atom
-  Cposts_conn_atom
-  Cposts_conn_atoms
-  Cpost_conn_return
-  Cposts_conn_return
-  Cposts_conn_returns
-  Cpost_conn_Cpre_aux
-  Cpost_conn_Cpre
-  Cpost_conn_Cpres
-  Cposts_conn_Cpres
-  add_exp_to_Cpre
-  add_exp_to_Cpres
-  add_P_to_Cpre
-  add_P_to_Cpres
-  add_P_to_Catoms
-  add_P_to_Catom_rets
-  add_Q_to_Cpost
-  add_Q_to_Cposts
-  add_Q_to_Catoms
-].
-
-
-cbv [C_split_exgiven].
 unfold_split.
 cbv_conns.
-cbv delta [C_split_exgiven].
-unfold_split.
-cbv_conns.
-cbv delta [C_split_exgiven].
-unfold_split.
-cbv_conns.
-cbv delta [C_split_exgiven].
-unfold_split.
-cbv_conns.
-cbv delta [C_split_exgiven].
-unfold_split.
-cbv_conns.
-cbv delta [C_split_exgiven].
-
-
-
 unfold_ex.
-  
-unfold C_split.
-cbv []
-
-
-
-unfold_split.
-
-(* repeat (unfold_split;
-      cbv_conns;
-      unfold_ex). *)
-      unfold_split;
-      cbv_conns;
-      unfold_ex.
+cbv_conns.
 Admitted.
-  
 
+
+Definition res :=
+  ltac:(compute_split reverse_S reverse_C).
+
+Print res.
+
+  
+End reverse_verif.
 
 
 (* 
