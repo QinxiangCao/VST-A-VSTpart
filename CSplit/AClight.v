@@ -101,9 +101,6 @@ Inductive C_statement : S_statement -> Type :=
 | Cassert: forall (a: assert),
     C_statement Sassert
 | Cskip: C_statement Sskip
-| Cgiven : forall (A:Type) (HA: inhabited A) (c: S_statement)
-    (stm': A -> C_statement c),
-    C_statement c
 | Cexgiven:  forall (A:Type) (HA: inhabited A) 
     (ass: A -> assert)
     (c: S_statement)
@@ -126,10 +123,6 @@ Inductive C_statement : S_statement -> Type :=
 | Ccontinue : C_statement (Scontinue)
 | Creturn : forall (e: option expr), C_statement (Sreturn e)
 .
-
-
-Notation "'GIVEN' x .. y , c " :=
-  (Cgiven _ _ _ (fun x => .. (Cgiven _ _ _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
 
 
 
@@ -191,10 +184,6 @@ Record S_result_rec := mk_S_result_rec {
 }.
 
 Definition S_result := option S_result_rec.
-
-
-Notation "'GIVEN' x .. y , c " :=
-  (Cgiven _ _ _ (fun x => .. (Cgiven _ _ _ (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
 
 (***********************************)
 (** Dependent split results   *)
@@ -1524,45 +1513,6 @@ end
 
 *)
 
-Definition C_split_given (s_res : S_result) (A : Type) (HA: inhabited A) :
-(A -> C_result s_res) ->
-C_result s_res
-(* C_result s_res *)
-:= 
-match s_res with
-| Some (mk_S_result_rec S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return) =>
-fun (c_res': A -> C_result (Some (mk_S_result_rec S_pre S_path S_post_normal S_post_break S_post_continue S_post_return S_atom_normal S_atom_break S_atom_continue S_atom_return))) =>
-let c_pre := C_result_proj_C_pre A c_res' in
-let c_pre := flatten_partial_pres_binds HA (S_pre) c_pre in
-let c_post_normal := C_result_proj_C_post_normal A c_res' in
-let c_post_normal := flatten_partial_posts_binds HA (S_post_normal) c_post_normal in
-let c_post_break := C_result_proj_C_post_break A c_res' in
-let c_post_break := flatten_partial_posts_binds HA (S_post_break) c_post_break in
-let c_post_continue := C_result_proj_C_post_continue A c_res' in
-let c_post_continue := flatten_partial_posts_binds HA (S_post_continue) c_post_continue in
-let c_post_return := C_result_proj_C_post_return A c_res' in
-let c_post_return := flatten_partial_post_rets_binds HA (S_post_return) c_post_return in
-let c_path := C_result_proj_C_path A c_res' in
-let c_path := flatten_full_paths_binds HA (S_path) c_path in
-mk_C_result_rec 
-  S_pre 
-  S_path
-  S_post_normal
-  S_post_break
-  S_post_continue
-  S_post_return
-  S_atom_normal
-  S_atom_break
-  S_atom_continue
-  S_atom_return
-  c_pre
-  c_path
-  c_post_normal
-  c_post_break
-  c_post_continue
-  c_post_return
-| None => fun _ => tt
-end.
 
 Fixpoint add_exP_to_Cpre {A:Type} (HA:inhabited A)
   (c_ass': A -> assert) {s_pres: S_partial_pres} :
@@ -2076,8 +2026,6 @@ with
     C_split_assert a
 | Cskip => 
     C_split_skip
-| Cgiven A HA c a_stm' =>
-    C_split_given (S_split c) A HA (fun a =>  C_split c (a_stm' a))
 | Cexgiven A HA ass c a_stm' =>
     C_split_exgiven (S_split c) A HA ass
       (fun a =>  C_split c (a_stm' a))
