@@ -238,7 +238,7 @@ Fixpoint path_to_semax { s_path: S_full_path }
   | mk_C_full_path pre path post =>
       @semax CS Espec Delta pre (path_to_statement path)
       (normal_ret_assert post)
-  | bind_C_full_path A HA s_path' c_path' =>
+  | bind_C_full_path A s_path' c_path' =>
       forall (a:A), path_to_semax (c_path' a)
   end.
 
@@ -248,7 +248,7 @@ Fixpoint post_to_semax post { s_post : S_partial_post }
   | mk_C_partial_post pre path =>
       @semax CS Espec Delta pre (path_to_statement path)
       (normal_ret_assert post)
-  | bind_C_partial_post A HA s_post' c_post' =>
+  | bind_C_partial_post A s_post' c_post' =>
       forall (a:A), post_to_semax post (c_post' a)
   end.
 
@@ -258,8 +258,6 @@ Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
   | mk_C_partial_pre path post =>
       @semax CS Espec Delta pre (path_to_statement path)
       (normal_ret_assert post)
-  (* | bind_C_partial_pre A HA s_pre' c_pre' =>
-      forall (a:A), pre_to_semax pre (c_pre' a) *)
   end.
 
 
@@ -276,7 +274,7 @@ Fixpoint post_ret_to_semax post { s_post : S_partial_post_ret }
           (path_to_statement path)
           (Clight.Sreturn retval))
       (return_ret_assert post)
-  | bind_C_partial_post_ret A HA s_post' c_post' =>
+  | bind_C_partial_post_ret A s_post' c_post' =>
       forall (a:A), post_ret_to_semax post (c_post' a)
   end.
 

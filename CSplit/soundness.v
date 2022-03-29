@@ -44,10 +44,10 @@ Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 (****************************)
 
 
-Lemma given_post_sound: forall B HA P s_posts 
+Lemma given_post_sound: forall B P s_posts 
   (c_posts: B -> C_partial_posts s_posts),
 CForall (@post_to_semax CS Espec Delta P)
-  (flatten_partial_posts_binds HA s_posts c_posts) ->
+  (flatten_partial_posts_binds s_posts c_posts) ->
 forall b, CForall (@post_to_semax CS Espec Delta P) (c_posts b).
 Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
@@ -62,10 +62,10 @@ Proof.
 Qed.
 
 
-Lemma given_post_ret_sound: forall B HA P s_posts 
+Lemma given_post_ret_sound: forall B P s_posts 
   (c_posts: B -> C_partial_post_rets s_posts),
 CForall (@post_ret_to_semax CS Espec Delta P)
-  (flatten_partial_post_rets_binds HA s_posts c_posts) ->
+  (flatten_partial_post_rets_binds s_posts c_posts) ->
 forall b, CForall (@post_ret_to_semax CS Espec Delta P) (c_posts b).
 Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
@@ -79,10 +79,10 @@ Proof.
     unfold hd_of in H0. rewrite E in H0. auto.
 Qed.
 
-Lemma given_path_sound: forall B HA  s_paths 
+Lemma given_path_sound: forall B  s_paths 
   (c_paths: B -> C_full_paths s_paths),
 CForall (@path_to_semax CS Espec Delta)
-  (flatten_full_paths_binds HA s_paths c_paths) ->
+  (flatten_full_paths_binds s_paths c_paths) ->
 forall b, CForall (@path_to_semax CS Espec Delta ) (c_paths b).
 Proof.
   intros. revert c_paths H b. dependent induction s_paths;intros.
@@ -108,10 +108,10 @@ Lemma rewrite_flatten_binds: forall
   {R A: Type} {binder: R -> Type}
   (binder_intro : forall (r : R),
       (A -> binder r) -> binder r)
-  HA x xs (cs: A -> list_binded_of (x::xs)), 
-(flatten_binds HA binder_intro (x :: xs) cs)
+  x xs (cs: A -> list_binded_of (x::xs)), 
+(flatten_binds binder_intro (x :: xs) cs)
 = list_binded_cons x (binder_intro x (hd_of x xs cs))
-   xs (flatten_binds HA binder_intro xs (tl_of x xs cs)).
+   xs (flatten_binds binder_intro xs (tl_of x xs cs)).
 Proof.
   intros.
   reflexivity.
@@ -131,14 +131,14 @@ Proof.
     auto. *)
 Qed.
 
-Lemma Cpost_conn_Cpres_inv_exgiven: forall A (HA: inhabited A)
+Lemma Cpost_conn_Cpres_inv_exgiven: forall A 
   (ass' : A -> assert) (s_pres: S_partial_pres)
   (c_pres': A -> C_partial_pres s_pres),
 CForall (@path_to_semax CS Espec Delta)
-         (add_exP_to_Cpre HA ass' c_pres') ->
+         (add_exP_to_Cpre ass' c_pres') ->
   forall a, CForall (@pre_to_semax CS Espec Delta (ass' a)) (c_pres' a).
 Proof.
-  intros A HA ass' s_pres.
+  intros A ass' s_pres.
   induction s_pres;intros.
   - rewrite lb_nil_inv. constructor.
   - inversion H.
@@ -151,11 +151,11 @@ Proof.
     apply path_to_semax_nil_pre. auto.
 Qed.
 
-Lemma Cpost_conn_atoms_inv_exgiven: forall A (HA: inhabited A) Q
+Lemma Cpost_conn_atoms_inv_exgiven: forall A Q
   (ass' : A -> assert) (atoms: atoms),
   CForall (@post_to_semax CS Espec Delta Q)
   (Cposts_conn_atoms
-     {bind_C_partial_post A HA (mk_S_partial_post [])
+     {bind_C_partial_post A (mk_S_partial_post [])
         (fun a : A => mk_C_partial_post (ass' a) [])} atoms) ->
   forall a, Forall (atom_to_semax Delta (ass' a) Q) atoms.
 Proof.
@@ -170,11 +170,11 @@ Proof.
 Qed.
 
 
-Lemma Cpost_conn_atom_rets_inv_exgiven: forall A (HA: inhabited A) Q
+Lemma Cpost_conn_atom_rets_inv_exgiven: forall A Q
   (ass' : A -> assert) (atoms: atom_rets),
   CForall (@post_ret_to_semax CS Espec Delta Q)
   (Cposts_conn_returns
-     {bind_C_partial_post A HA (mk_S_partial_post [])
+     {bind_C_partial_post A (mk_S_partial_post [])
         (fun a : A => mk_C_partial_post (ass' a) [])} atoms) ->
   forall a, Forall (atom_ret_to_semax Delta (ass' a) Q) atoms.
 Proof.
@@ -203,10 +203,10 @@ Ltac destruct_Sresult_rec S :=
   let t := fresh "S" in
   destruct S as [t|];[destruct t as [n1 n2 n3 n4 n5 n6 n7 n8 n9 n10] eqn:n|].
 
-Lemma ex_given_sound: forall A HA P Q s_res 
+Lemma ex_given_sound: forall A P Q s_res 
   (ass': A -> assert)
   (c_res': A -> C_result s_res),
-split_Semax Delta P Q (C_split_exgiven s_res A HA ass' c_res') ->
+split_Semax Delta P Q (C_split_exgiven s_res A ass' c_res') ->
 ENTAIL Delta, allp_fun_id Delta && P |-- exp ass' /\
 forall a, split_Semax Delta (ass' a) Q (c_res' a).
 Proof.
@@ -1452,7 +1452,7 @@ Proof.
 
   - (* exgiven *)
     intros. simpl in H0.
-    pose proof ex_given_sound _ _ _ _ _ _ _ H0.
+    pose proof ex_given_sound _ _ _ _ _ _ H0.
     destruct H1. simpl.
     apply semax_seq with (Q0:= exp ass).
     { eapply semax_conseq;

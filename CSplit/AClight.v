@@ -101,7 +101,7 @@ Inductive C_statement : S_statement -> Type :=
 | Cassert: forall (a: assert),
     C_statement Sassert
 | Cskip: C_statement Sskip
-| Cexgiven:  forall (A:Type) (HA: inhabited A) 
+| Cexgiven:  forall (A:Type)
     (ass: A -> assert)
     (c: S_statement)
     (a_stm': A -> C_statement c),
@@ -195,7 +195,7 @@ Inductive C_full_path : S_full_path -> Type :=
     forall (pre: assert) (path: path) (post: assert),
       C_full_path (mk_S_full_path path)
 | bind_C_full_path :
-    forall (A: Type) (HA: inhabited A) (s: S_full_path)
+    forall (A: Type)  (s: S_full_path)
            (c': A -> C_full_path s),
       C_full_path s
 .
@@ -317,7 +317,7 @@ Inductive C_partial_post : S_partial_post -> Type :=
     forall (pre: assert) (path: path),
       C_partial_post (mk_S_partial_post path)
 | bind_C_partial_post :
-    forall (A: Type) (HA: inhabited A) (s: S_partial_post)
+    forall (A: Type) (s: S_partial_post)
            (c': A -> C_partial_post s),
       C_partial_post s
 .
@@ -329,7 +329,7 @@ Inductive C_partial_post_ret : S_partial_post_ret -> Type :=
     forall (pre: assert) (path: path) (ret: option expr),
       C_partial_post_ret (mk_S_partial_post_ret path ret)
 | bind_C_partial_post_ret :
-    forall (A: Type) (HA: inhabited A) (s: S_partial_post_ret)
+    forall (A: Type) (s: S_partial_post_ret)
            (c': A -> C_partial_post_ret s),
       C_partial_post_ret s
 .
@@ -627,8 +627,8 @@ Fixpoint Cpost_conn_atom { s_post1 }
   return C_partial_post (Spost_conn_atom s_post1' (mk_atom path2)) with
   | mk_C_partial_post pre1 path1 =>
       mk_C_partial_post pre1 (path1 ++ path2)
-  | bind_C_partial_post A HA s_post1 c_post1' =>
-      bind_C_partial_post A HA (Spost_conn_atom s_post1 (mk_atom path2))
+  | bind_C_partial_post A s_post1 c_post1' =>
+      bind_C_partial_post A (Spost_conn_atom s_post1 (mk_atom path2))
         (fun a => Cpost_conn_atom (c_post1' a) (mk_atom path2))
   end
 end.
@@ -664,8 +664,8 @@ Fixpoint Cpost_conn_return { s_post1 }
   return C_partial_post_ret (Spost_conn_return s_post1' (mk_atom_ret path2 retval)) with
   | mk_C_partial_post pre1 path1 =>
       mk_C_partial_post_ret pre1 (path1 ++ path2) retval
-  | bind_C_partial_post A HA s_post1 c_post1' =>
-      bind_C_partial_post_ret A HA (Spost_conn_return s_post1 (mk_atom_ret path2 retval))
+  | bind_C_partial_post A s_post1 c_post1' =>
+      bind_C_partial_post_ret A (Spost_conn_return s_post1 (mk_atom_ret path2 retval))
         (fun a => Cpost_conn_return (c_post1' a) (mk_atom_ret path2 retval))
   end
 end.
@@ -717,8 +717,8 @@ match c_post1 in C_partial_post s_post1'
 return C_full_path (Spost_conn_Spre s_post1' s_pre2) with
 | mk_C_partial_post pre path1 =>
     Cpost_conn_Cpre_aux pre path1 c_pre2
-| bind_C_partial_post A HA s_post1 c_post1' =>
-    bind_C_full_path A HA 
+| bind_C_partial_post A s_post1 c_post1' =>
+    bind_C_full_path A 
       (Spost_conn_Spre s_post1 s_pre2)
       (fun a => Cpost_conn_Cpre (c_post1' a) c_pre2)
 end.
@@ -781,9 +781,6 @@ match s_pre with
   return C_full_path (add_P_to_Spre path0) with
   | mk_C_partial_pre path Q =>
       mk_C_full_path P path Q
-  (* | bind_C_partial_pre A HA s_pre c_pre' =>
-      bind_C_full_path A HA (add_P_to_Spre s_pre)
-        (fun a => add_P_to_Cpre P (c_pre' a)) *)
   end
 end. 
 
@@ -824,8 +821,8 @@ match s_post with
   match c_post with
   | mk_C_partial_post P path =>
       mk_C_full_path P path Q
-  | bind_C_partial_post A HA s_post c_post' =>
-      bind_C_full_path A HA (add_Q_to_Spost s_post)
+  | bind_C_partial_post A s_post c_post' =>
+      bind_C_full_path A (add_Q_to_Spost s_post)
         (fun a => add_Q_to_Cpost Q (c_post' a))
   end
 end.
@@ -1235,7 +1232,6 @@ Definition tl_of {R A:Type} {binder: R -> Type} (x: R) (xs: list R)
 
 
 Fixpoint flatten_binds {R A:Type} {binder: R -> Type} 
-(HA: inhabited A)
 (binder_intro : forall (r : R),
     (A -> binder r) -> binder r)
 (res: list R):
@@ -1246,7 +1242,7 @@ match res with
     fun res' =>
     list_binded_cons
       x (binder_intro x (hd_of x xs res'))
-      xs (flatten_binds HA binder_intro xs (tl_of x xs res'))
+      xs (flatten_binds binder_intro xs (tl_of x xs res'))
 end.
 
 
@@ -1279,7 +1275,6 @@ end.
 
 
 Fixpoint flatten_partial_pres_binds {A:Type}
-  (HA: inhabited A)
   (s_pres: S_partial_pres)
   : ( A -> C_partial_pres s_pres)
   -> C_partial_pres s_pres :=
@@ -1293,30 +1288,27 @@ Fixpoint flatten_partial_pres_binds {A:Type}
      let new_c_pre := mk_C_partial_pre path (exp c_pre_ass) in
       list_binded_cons
         (mk_S_partial_pre path) new_c_pre
-        s_pres' (flatten_partial_pres_binds HA s_pres' c_pres)
+        s_pres' (flatten_partial_pres_binds s_pres' c_pres)
   end.
 
 Definition flatten_partial_posts_binds {A:Type}
-  (HA: inhabited A)
   (s_posts: S_partial_posts)
   (c_posts': A -> C_partial_posts s_posts)
   : C_partial_posts s_posts :=
-  flatten_binds HA (bind_C_partial_post A HA) s_posts c_posts'.
+  flatten_binds (bind_C_partial_post A) s_posts c_posts'.
 
 
 Definition flatten_partial_post_rets_binds {A:Type}
-  (HA: inhabited A)
   (s_posts: S_partial_post_rets)
   (c_posts': A -> C_partial_post_rets s_posts)
   : C_partial_post_rets s_posts :=
-  flatten_binds HA (bind_C_partial_post_ret A HA) s_posts c_posts'.
+  flatten_binds (bind_C_partial_post_ret A) s_posts c_posts'.
 
 Definition flatten_full_paths_binds {A:Type}
-  (HA: inhabited A)
   (s_paths: S_full_paths)
   (c_paths': A -> C_full_paths s_paths)
   : C_full_paths s_paths :=
-  flatten_binds HA (bind_C_full_path A HA) s_paths c_paths'.
+  flatten_binds (bind_C_full_path A) s_paths c_paths'.
 
 Section Cres_proj.
 
@@ -1514,7 +1506,7 @@ end
 *)
 
 
-Fixpoint add_exP_to_Cpre {A:Type} (HA:inhabited A)
+Fixpoint add_exP_to_Cpre {A:Type}
   (c_ass': A -> assert) {s_pres: S_partial_pres} :
   (A -> C_partial_pres s_pres)
   -> C_full_paths (Sposts_conn_Spres [(mk_S_partial_post nil)] s_pres) :=
@@ -1527,36 +1519,36 @@ Fixpoint add_exP_to_Cpre {A:Type} (HA:inhabited A)
       fun c_pres =>
         list_binded_cons
           (Spost_conn_Spre (mk_S_partial_post nil) s_pre)
-          (bind_C_full_path A HA (add_P_to_Spre s_pre) (fun a =>
+          (bind_C_full_path A (add_P_to_Spre s_pre) (fun a =>
             Cpost_conn_Cpre 
                 (mk_C_partial_post (c_ass' a) nil)
                 (hd_of s_pre s_pres' c_pres a)
           ))
           (Sposts_conn_Spres [mk_S_partial_post nil] s_pres')
-          (add_exP_to_Cpre HA c_ass' (tl_of s_pre s_pres' c_pres))
+          (add_exP_to_Cpre c_ass' (tl_of s_pre s_pres' c_pres))
 end.
 
 
-Fixpoint C_split_exgiven (s_res: S_result) (A: Type) (HA: inhabited A) (c_ass': A -> assert) : (A -> C_result s_res) ->
+Fixpoint C_split_exgiven (s_res: S_result) (A: Type) 
+ (c_ass': A -> assert) : (A -> C_result s_res) ->
 C_result (S_split_sequence S_split_assert s_res ) :=
 match s_res with
 | Some (mk_S_result_rec s_pre s_path s_post_normal s_post_break s_post_continue s_post_return s_atom_normal s_atom_break s_atom_continue s_atom_return) =>
 fun (c_res': A -> C_result (Some (mk_S_result_rec s_pre s_path s_post_normal s_post_break s_post_continue s_post_return s_atom_normal s_atom_break s_atom_continue s_atom_return)))  =>
 let ex_ass := exp c_ass' in
 let c_pre := C_result_proj_C_pre A c_res' in
-(* let c_pre := flatten_partial_pres_binds HA (s_pre) c_pre in *)
 let c_post_normal := C_result_proj_C_post_normal A c_res' in
-let c_post_normal := flatten_partial_posts_binds HA (s_post_normal) c_post_normal in
+let c_post_normal := flatten_partial_posts_binds (s_post_normal) c_post_normal in
 let c_post_break := C_result_proj_C_post_break A c_res' in
-let c_post_break := flatten_partial_posts_binds HA (s_post_break) c_post_break in
+let c_post_break := flatten_partial_posts_binds (s_post_break) c_post_break in
 let c_post_continue := C_result_proj_C_post_continue A c_res' in
-let c_post_continue := flatten_partial_posts_binds HA (s_post_continue) c_post_continue in
+let c_post_continue := flatten_partial_posts_binds (s_post_continue) c_post_continue in
 let c_post_return := C_result_proj_C_post_return A c_res' in
-let c_post_return := flatten_partial_post_rets_binds HA (s_post_return) c_post_return in
+let c_post_return := flatten_partial_post_rets_binds (s_post_return) c_post_return in
 let c_path := C_result_proj_C_path A c_res' in
-let c_path := flatten_full_paths_binds HA (s_path) c_path in
+let c_path := flatten_full_paths_binds (s_path) c_path in
 
-let ass_post_normal_C := bind_C_partial_post A HA 
+let ass_post_normal_C := bind_C_partial_post A 
           (mk_S_partial_post nil)
           (fun a => mk_C_partial_post (c_ass' a) nil) in
 let ass_post_normal_S := mk_S_partial_post nil in
@@ -1588,7 +1580,7 @@ mk_C_result_rec
 ( { mk_C_partial_pre nil ex_ass})
 (* C_path *)
   (c_path +++
-    add_exP_to_Cpre HA c_ass' c_pre)
+    add_exP_to_Cpre c_ass' c_pre)
     (* Cposts_conn_Cpres { ass_post_normal_C } c_pre) *)
 (* C_post_normal *)
   (c_post_normal +++ 
@@ -2026,8 +2018,8 @@ with
     C_split_assert a
 | Cskip => 
     C_split_skip
-| Cexgiven A HA ass c a_stm' =>
-    C_split_exgiven (S_split c) A HA ass
+| Cexgiven A ass c a_stm' =>
+    C_split_exgiven (S_split c) A ass
       (fun a =>  C_split c (a_stm' a))
 | Cassign e1 e2 =>
     C_split_assign e1 e2
