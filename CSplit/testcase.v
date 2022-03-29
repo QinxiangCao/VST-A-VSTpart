@@ -1,87 +1,5 @@
 Require Import CSplit.soundness.
 
-Print Assumptions soundness.
-
-(* 
-
-Axioms:
-Rdefinitions.up : Rdefinitions.R -> BinNums.Z
-Raxioms.total_order_T : forall r1 r2 : Rdefinitions.R,
-	                    {Rdefinitions.Rlt r1 r2} + {r1 = r2} +
-                        {Rdefinitions.Rgt r1 r2}
-Axioms.prop_ext : ClassicalFacts.prop_extensionality
-FunctionalExtensionality.functional_extensionality_dep : 
-forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
-(forall x : A, f x = g x) -> f = g
-Eqdep.Eq_rect_eq.eq_rect_eq : forall (U : Type) (p : U) 
-                                (Q : U -> Type) (x : Q p) 
-                                (h : p = p), x = eq_rect p Q x p h
-Raxioms.completeness : forall E : Rdefinitions.R -> Prop,
-                       Raxioms.bound E ->
-                       (exists x : Rdefinitions.R, E x) ->
-                       {m : Rdefinitions.R | Raxioms.is_lub E m}
-Classical_Prop.classic : forall P : Prop, P \/ ~ P
-Raxioms.archimed : forall r : Rdefinitions.R,
-                   Rdefinitions.Rgt (Rdefinitions.IZR (Rdefinitions.up r)) r /\
-                   Rdefinitions.Rle
-                     (Rdefinitions.Rminus
-                        (Rdefinitions.IZR (Rdefinitions.up r)) r)
-                     (Rdefinitions.IZR (BinNums.Zpos BinNums.xH))
-Raxioms.Rplus_opp_r : forall r : Rdefinitions.R,
-                      Rdefinitions.Rplus r (Rdefinitions.Ropp r) =
-                      Rdefinitions.IZR BinNums.Z0
-Raxioms.Rplus_lt_compat_l : forall r r1 r2 : Rdefinitions.R,
-                            Rdefinitions.Rlt r1 r2 ->
-                            Rdefinitions.Rlt (Rdefinitions.Rplus r r1)
-                              (Rdefinitions.Rplus r r2)
-Raxioms.Rplus_comm : forall r1 r2 : Rdefinitions.R,
-                     Rdefinitions.Rplus r1 r2 = Rdefinitions.Rplus r2 r1
-Raxioms.Rplus_assoc : forall r1 r2 r3 : Rdefinitions.R,
-                      Rdefinitions.Rplus (Rdefinitions.Rplus r1 r2) r3 =
-                      Rdefinitions.Rplus r1 (Rdefinitions.Rplus r2 r3)
-Raxioms.Rplus_0_l : forall r : Rdefinitions.R,
-                    Rdefinitions.Rplus (Rdefinitions.IZR BinNums.Z0) r = r
-Rdefinitions.Rplus : Rdefinitions.R -> Rdefinitions.R -> Rdefinitions.R
-Rdefinitions.Ropp : Rdefinitions.R -> Rdefinitions.R
-Raxioms.Rmult_plus_distr_l : forall r1 r2 r3 : Rdefinitions.R,
-                             Rdefinitions.Rmult r1 (Rdefinitions.Rplus r2 r3) =
-                             Rdefinitions.Rplus (Rdefinitions.Rmult r1 r2)
-                               (Rdefinitions.Rmult r1 r3)
-Raxioms.Rmult_lt_compat_l : forall r r1 r2 : Rdefinitions.R,
-                            Rdefinitions.Rlt (Rdefinitions.IZR BinNums.Z0) r ->
-                            Rdefinitions.Rlt r1 r2 ->
-                            Rdefinitions.Rlt (Rdefinitions.Rmult r r1)
-                              (Rdefinitions.Rmult r r2)
-Raxioms.Rmult_comm : forall r1 r2 : Rdefinitions.R,
-                     Rdefinitions.Rmult r1 r2 = Rdefinitions.Rmult r2 r1
-Raxioms.Rmult_assoc : forall r1 r2 r3 : Rdefinitions.R,
-                      Rdefinitions.Rmult (Rdefinitions.Rmult r1 r2) r3 =
-                      Rdefinitions.Rmult r1 (Rdefinitions.Rmult r2 r3)
-Raxioms.Rmult_1_l : forall r : Rdefinitions.R,
-                    Rdefinitions.Rmult
-                      (Rdefinitions.IZR (BinNums.Zpos BinNums.xH)) r = r
-Rdefinitions.Rmult : Rdefinitions.R -> Rdefinitions.R -> Rdefinitions.R
-Raxioms.Rlt_trans : forall r1 r2 r3 : Rdefinitions.R,
-                    Rdefinitions.Rlt r1 r2 ->
-                    Rdefinitions.Rlt r2 r3 -> Rdefinitions.Rlt r1 r3
-Raxioms.Rlt_asym : forall r1 r2 : Rdefinitions.R,
-                   Rdefinitions.Rlt r1 r2 -> ~ Rdefinitions.Rlt r2 r1
-Rdefinitions.Rlt : Rdefinitions.R -> Rdefinitions.R -> Prop
-Raxioms.Rinv_l : forall r : Rdefinitions.R,
-                 r <> Rdefinitions.IZR BinNums.Z0 ->
-                 Rdefinitions.Rmult (Rdefinitions.Rinv r) r =
-                 Rdefinitions.IZR (BinNums.Zpos BinNums.xH)
-Rdefinitions.Rinv : Rdefinitions.R -> Rdefinitions.R
-Raxioms.R1_neq_R0 : Rdefinitions.IZR (BinNums.Zpos BinNums.xH) <>
-                    Rdefinitions.IZR BinNums.Z0
-Rdefinitions.R1 : Rdefinitions.R
-Rdefinitions.R0 : Rdefinitions.R
-Rdefinitions.R : Set
-JMeq.JMeq_eq : forall (A : Type) (x y : A), JMeq.JMeq x y -> x = y
-
-
-*)
-
 (* 
 int sgn (int x) {
   //@ With x:Z,
@@ -98,14 +16,17 @@ int sgn (int x) {
     ret = 1;
   return ret;
 } 
-
 *)
 
 Require Import CSplit.AClight.
 
+Arguments Cifthenelse _ {_ _} _ _.
+Arguments Csequence {_ _ } _ _.
+Arguments Cloop {_ _} _ _.
+
+(* Examples: *)
 Parameter _ret : ident.
 Parameter _x : ident.
-
 
 Definition sgn_S :=
 (Ssequence Sassert
@@ -119,84 +40,129 @@ Definition sgn_S :=
       (Sset _ret (Econst_int (Int.repr 1) tint)))
   (Sreturn (Some (Etempvar _ret tint))))).
 
-Arguments Cifthenelse _ {_ _} _ _.
-Arguments Csequence {_ _ } _ _.
+Ltac cbv_conns := cbv [
+  atom_conn_return
+  atom_conn_returns
+  atoms_conn_returns
+  atom_conn_atom
+  atom_conn_atoms
+  atoms_conn_atoms
+  atom_conn_Spre
+  atom_conn_Spres
+  atoms_conn_Spres
+  Spost_conn_atom
+  Sposts_conn_atom
+  Spost_conn_return
+  Sposts_conn_return
+  Sposts_conn_atoms
+  Sposts_conn_returns
+  Spost_conn_Spre
+  Sposts_conn_Spres
+  add_exp_to_Spre
+  add_exp_to_Spres
+  add_exp_to_atom
+  add_exp_to_atoms
+  add_exp_to_ret_atom
+  add_exp_to_ret_atoms
+  add_P_to_Spre
+  add_P_to_atom
+  add_P_to_atom_ret
+  add_Q_to_Spost
+  add_Q_to_atom
+  add_Q_to_atoms
 
-Check Cgiven.
+  atom_conn_Cpre
+  atom_conn_Cpres
+  atoms_conn_Cpres
+  Cpost_conn_atom
+  Cposts_conn_atom
+  Cposts_conn_atoms
+  Cpost_conn_return
+  Cposts_conn_return
+  Cposts_conn_returns
+  Cpost_conn_Cpre_aux
+  Cpost_conn_Cpre
+  Cpost_conn_Cpres
+  Cposts_conn_Cpres
+  add_exp_to_Cpre
+  add_exp_to_Cpres
+  add_P_to_Cpre
+  add_P_to_Cpres
+  add_P_to_Catoms
+  add_P_to_Catom_rets
+  add_Q_to_Cpost
+  add_Q_to_Cposts
+  add_Q_to_Catoms
 
-Lemma Z_inhabited: inhabited Z.
-Proof.
-  constructor. apply 0.
-Qed.
+  add_exP_to_Cpre
+].
 
+Ltac unfold_split := cbv [
+  S_split_sequence
+  S_split_ifthenelse
+  S_split_loop
+  S_split_loop_refined
+  S_split_assert
+  S_split_skip
+  S_split_assign
+  S_split_call
+  S_split_set
+  S_split_break
+  S_split_continue
+  S_split_return
 
-Locate precise.
+  S_split
 
-Check mk_funspec.
-Search allp wand.
+  C_split_assert
+  C_split_sequence
+  C_split_skip
+  C_split_assign
+  C_split_call
+  C_split_set
+  C_split_break
+  C_split_continue
+  C_split_return
+  C_split_ifthenelse
+  C_split_loop
+  C_split_loop_refined
 
-Print predicates_sl.precise.
-(* 
-
-forall Q R, (P * (Q && R) = (P * Q) && (P * R))%pred.
-
-our precise:
-
-precise ([A] {P} op {Q}) :=
-
-forall R1, R2,
-EX (x1:A), P x1 * (Q x1 -* R1) /\
-EX (x2:A), P x2 * (Q x2 -* R2)
---------------
-EX (x :A), P x  * (Q x -* R1 /\ R2)
-
-
-without EX:
-
-    P * (Q -* R1) /\ P * (Q -* R2)
-=>  P * (Q -* R1 /\ Q -* R2)          (precise of P)
-=>  P * (Q -* R1 /\ R2)
-
-              R1 /\ R2 |-- R1 /\ R2
-           => Q * (Q -* R1) /\ Q * (Q -* R2) |-- R1 /\ R2
-           => Q * (Q -* R1 /\ Q -* R2) |-- R1 /\ R2       (precise of Q)
-           => Q -* R1 /\ Q -* R2 |-- Q -* R1 /\ R2 
-
-
-if (EX x, P x) is precise and (EX x, Q x) is precise
-
-EX x, (Q x -* R) * (EX x, Q x)
-|--  -* R)
-
-
-    EX (x1:A), P x1 * (Q x1 -* R1) /\  EX (x2:A), P x2 * (Q x2 -* R2)
-=>  (EX (x1:A), P x1) * (EX (x1:A), Q x1 -* R1) 
- /\ (EX (x2:A), P x2) * (EX (x2:A), Q x2 -* R2)
-=> (EX (x1:A), P x1) * ((EX (x1:A), Q x1 -* R1) /\ EX (x2:A), Q x2 -* R2)
-
-
-      =>   (ALL x:A, Q x1) * 
-            ((EX (x1:A), Q x1 -* R1) /\ ((EX (x2:A), Q x2 -* R2)
-      =>   (ALL x:A, Q x1) * ((EX (x1:A), Q x1 -* R1) 
-        /\ (ALL x:A, Q x1) * ((EX (x2:A), Q x2 -* R2)
-      => 
-      
-((EX (x1:A), Q x1 -* R1) /\ EX (x2:A), Q x2 -* R2) |-- 
-      => 
-
---------------
-EX (x2:A), P x2 * (Q x2 -* R1 /\ R2)
+  C_split
+].
 
 
-*)
+(* Ltac unfold_der := cbv [app map      
+  add_exp_to_Spres add_exp_to_Cpres
+  add_exp_to_atoms add_exp_to_ret_atoms
+
+
+  atoms_conn_atoms Sposts_conn_atoms Sposts_conn_returns
+  Sposts_conn_Spres Cposts_conn_atoms Cposts_conn_returns
+  Cposts_conn_Cpres Cposts_conn_return Capp Cmap
+  atoms_conn_Cpres
+  atoms_conn_Spres
+  atoms_conn_returns
+  atom_conn_returns
+  atom_conn_return
+  concat
+  add_exp_to_atom
+  atom_conn_atoms
+  atom_conn_Spres
+  atom_conn_Cpres
+  Sposts_conn_return
+  Cposts_conn_return
+  Cpost_conn_return
+  Spost_conn_return
+]. *)
+
+
+
 
 
 
 Definition sgn_C :=
-Cgiven Z Z_inhabited _
+Cexgiven Z (fun x => (PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _x  (Vint (Int.repr x))) SEP ())) _
 (fun x =>
-Csequence
-(Cassert (PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _x  (Vint (Int.repr x))) SEP ()))
+
 (Csequence
 (Cifthenelse 
     (Ebinop Ole (Etempvar _x tint) (Econst_int (Int.repr 0) tint) tint)
@@ -208,6 +174,190 @@ Csequence
 (Creturn (Some (Etempvar _ret tint))))
 ).
 
+
+Goal (C_split sgn_S sgn_C) = (C_split sgn_S sgn_C).
+unfold sgn_S. unfold sgn_C.
+unfold_split.
+unfold_der.
+cbv_conns.
+
+
 Compute (S_split sgn_S).
+
+
+
+
+
+Goal (C_split sgn_S sgn_C) = (C_split sgn_S sgn_C).
+unfold C_split. unfold S_split. unfold sgn_C. unfold sgn_S.
+cbv [C_split_set S_split_set S_split_ifthenelse C_split_ifthenelse S_split_sequence C_split_sequence
+S_split_return C_split_return
+].
+unfold_der.
+
+
+
+cbv [C_split_exgiven].
+cbv [add_exP_to_Cpre].
+cbv [C_result_proj_C_post_break C_result_proj_C_post_normal
+C_result_proj_C_path C_result_proj_C_post_continue
+C_result_proj_C_post_return
+].
+cbv [
+  flatten_partial_posts_binds
+  flatten_full_paths_binds
+  flatten_partial_post_rets_binds
+  flatten_binds
+].
+unfold_der.
+reflexivity.
+Qed.
+
+Ltac compute_split s_stm c_stm :=
+let res1 := eval cbv delta [C_split S_split s_stm c_stm] in (C_split s_stm c_stm) in
+let res2 := eval cbv [C_split_set S_split_set S_split_ifthenelse C_split_ifthenelse S_split_sequence C_split_sequence
+S_split_return C_split_return
+] in res1 in
+let res3 := eval cbv [app map add_exp_to_Spres add_exp_to_Cpres add_exp_to_atoms add_exp_to_ret_atoms
+atoms_conn_atoms Sposts_conn_atoms Sposts_conn_returns
+Sposts_conn_Spres Cposts_conn_atoms Cposts_conn_returns
+Cposts_conn_Cpres Cposts_conn_return Capp Cmap
+atoms_conn_Cpres
+atoms_conn_Spres
+atoms_conn_returns
+atom_conn_returns
+atom_conn_return
+concat
+add_exp_to_atom
+atom_conn_atoms
+atom_conn_Spres
+atom_conn_Cpres
+Sposts_conn_return
+Cposts_conn_return
+Cpost_conn_return
+Spost_conn_return
+] in res2 in
+exact res3.
+
+Definition res :=
+  ltac:(compute_split sgn_S sgn_C).
+
+Print res.
+  C_result_proj_C_pre
+].
+
+unfold C_split_exgiven.
+
+simpl.
+
+
 Compute (C_split sgn_S sgn_C).
 
+
+
+
+(* 
+All split functions:
+
+atom_conn_return
+atom_conn_returns
+atoms_conn_returns
+atom_conn_atom
+atom_conn_atoms
+atoms_conn_atoms
+atom_conn_Spre
+atom_conn_Spres
+atoms_conn_Spres
+Spost_conn_atom
+Sposts_conn_atom
+Spost_conn_return
+Sposts_conn_return
+Sposts_conn_atoms
+Sposts_conn_returns
+Spost_conn_Spre
+Sposts_conn_Spres
+add_exp_to_Spre
+add_exp_to_Spres
+add_exp_to_atom
+add_exp_to_atoms
+add_exp_to_ret_atom
+add_exp_to_ret_atoms
+add_P_to_Spre
+add_P_to_atom
+add_P_to_atom_ret
+add_Q_to_Spost
+add_Q_to_atom
+add_Q_to_atoms
+
+atom_conn_Cpre
+atom_conn_Cpres
+atoms_conn_Cpres
+Cpost_conn_atom
+Cposts_conn_atom
+Cposts_conn_atoms
+Cpost_conn_return
+Cposts_conn_return
+Cposts_conn_returns
+Cpost_conn_Cpre_aux
+Cpost_conn_Cpre
+Cpost_conn_Cpres
+Cposts_conn_Cpres
+add_exp_to_Cpre
+add_exp_to_Cpres
+add_P_to_Cpre
+add_P_to_Cpres
+add_P_to_Catoms
+add_P_to_Catom_rets
+add_Q_to_Cpost
+add_Q_to_Cposts
+add_Q_to_Catoms
+
+S_split_sequence
+S_split_ifthenelse
+S_split_loop
+S_split_loop_refined
+S_split_assert
+S_split_skip
+S_split_assign
+S_split_call
+S_split_set
+S_split_break
+S_split_continue
+S_split_return
+
+S_split
+
+hd_of
+tl_of
+flatten_binds
+hd_assert_of_pre
+flatten_partial_pres_binds
+flatten_partial_posts_binds
+flatten_partial_post_rets_binds
+flatten_full_paths_binds
+
+C_result_proj_C_pre
+C_result_proj_C_post_normal
+C_result_proj_C_post_break
+C_result_proj_C_post_continue
+C_result_proj_C_post_return
+C_result_proj_C_path
+
+C_split_assert
+C_split_sequence
+add_exP_to_Cpre
+C_split_exgiven
+C_split_skip
+C_split_assign
+C_split_call
+C_split_set
+C_split_break
+C_split_continue
+C_split_return
+C_split_ifthenelse
+C_split_loop
+C_split_loop_refined
+
+
+
+ *)
