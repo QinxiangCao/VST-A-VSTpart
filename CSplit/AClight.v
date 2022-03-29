@@ -253,6 +253,74 @@ Inductive C_partial_pre : S_partial_pre -> Type :=
       C_partial_pre s *)
 .
 
+
+
+(* 
+
+Lemma atom_conn_pre_to_semax_inv:
+forall P atom {s_pre} (c_pre: C_partial_pre s_pre),
+  pre_to_semax P (atom_conn_Cpre atom c_pre) ->
+  atom_to_semax P (EX Q, Q && !! pre_to_semax Q c_pre) atom.
+
+for binded case:
+IH: forall a, atom_to_semax P (EX Q, Q && !! pre_to_semax Q (c_pre' a)) atom.
+------------------
+Goal: atom_to_semax P (EX Q, Q && !! forall a, pre_to_semax Q (c_pre' a)) atom
+
+EX x. P(x)
+ExGiven P(x) x. .... Q(x) .... R(x)
+
+  the result of split given-body:
+   pre := fun x => .... P(x)
+   path := fun x => P(x)---Q(x)
+
+  the result of split given:
+   pre  := ----{ allp x => P(x) }
+   path := Binded x. { P(x) }---{ Q(x) }
+
+P
+...
+Given x.[
+.....
+Q(x)
+....
+R(x)
+....
+]
+
+Loop INV (cond)
+{ INV'
+
+
+
+}{
+
+
+}
+
+(EX a b, 
+P(a,b)
+....C
+Q(a,b) 
+...
+
+==aclightgen parse==>
+
+EXgiven A, 
+      (EX b, P(a,b)) (
+				EXgiven B, 
+         (P(a,b) ... C ...)
+            )  
+
+== split ==>
+(1) forall a, {EX b, P(a,b)} [] {EX b, P(a,b)} <--- dummy path
+(2) forall a b, {P(a,b)} ..split(C)... {Q(a',b')}
+
+
+
+
+*)
+
 Notation C_partial_pres := (@list_binded_of _ C_partial_pre).
 
 Inductive C_partial_post : S_partial_post -> Type :=
@@ -1233,7 +1301,7 @@ Fixpoint flatten_partial_pres_binds {A:Type}
      (* let c_pre := hd_of (mk_S_partial_pre path) s_pres' c_pres' in *)
      let c_pres := tl_of (mk_S_partial_pre path) s_pres' c_pres' in
      let c_pre_ass := hd_assert_of_pre c_pres' in
-     let new_c_pre := mk_C_partial_pre path (allp c_pre_ass) in
+     let new_c_pre := mk_C_partial_pre path (exp c_pre_ass) in
       list_binded_cons
         (mk_S_partial_pre path) new_c_pre
         s_pres' (flatten_partial_pres_binds HA s_pres' c_pres)

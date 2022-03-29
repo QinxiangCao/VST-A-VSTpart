@@ -52,16 +52,18 @@ forall b, CForall (@pre_to_semax CS Espec Delta P) (c_pres b).
 Proof.
   intros. revert c_pres H b. dependent induction s_pres;intros.
   - intros. rewrite lb_nil_inv . constructor.
-  - destruct a. destruct H.
+  - destruct a. 
+  
+    destruct H.
     destruct (C_partial_pres_inv (c_pres b)) as [r [cl E]].
     specialize (IHs_pres _ H0 b).
     unfold tl_of in IHs_pres. rewrite E in IHs_pres.
     rewrite E. constructor;auto.
     simpl.
     eapply semax_post'';[|apply H].
-    apply andp_left2. simpl. intro w.
+    apply andp_left2. rewrite normal_ret_assert_elim.
     eapply derives_trans.
-    { apply allp_instantiate' with (x:=b). }
+    { Intros y'. apply allp_instantiate' with (x:=b). }
     rewrite E. apply derives_refl.
 Qed.
 
