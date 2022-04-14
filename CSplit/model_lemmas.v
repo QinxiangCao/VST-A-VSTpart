@@ -15,40 +15,6 @@ Require Import VST.veric.mpred.
 Require Import VST.veric.mapsto_memory_block.
 
 
-(* match f with
-| mk_funspec fsig cc A P R _ _ =>
-forall bl Q1 Q2 ret,
-(snd fsig) = Tvoid -> ret = None ->
-tc_fn_return Delta ret (snd fsig) ->
-(EX ts1 x1, (lift.liftx (P ts1 x1 : environ -> mpred) ) (make_args' fsig bl) *
-oboxopt Delta ret (maybe_retval (R ts1 x1) (snd fsig) ret -* Q1)) &&
-(EX ts2 x2, ((lift.liftx (P ts2 x2: environ -> mpred)) (make_args' fsig bl) *
- oboxopt Delta ret (maybe_retval (R ts2 x2) (snd fsig) ret -* Q2)))
-|-- EX (ts : list Type)
-    (x : functors.MixVariantFunctor._functor
-           ((fix dtfr (T : rmaps.TypeTree) : functors.MixVariantFunctor.functor :=
-               match T with
-               | rmaps.ConstType A => functors.MixVariantFunctorGenerator.fconst A
-               | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-               | rmaps.DependentType n => functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
-               | rmaps.ProdType T1 T2 => functors.MixVariantFunctorGenerator.fpair (dtfr T1) (dtfr T2)
-               | rmaps.ArrowType T1 T2 => functors.MixVariantFunctorGenerator.ffunc (dtfr T1) (dtfr T2)
-               | rmaps.SigType I0 f => functors.MixVariantFunctorGenerator.fsig (fun i : I0 => dtfr (f i))
-               | rmaps.PiType I0 f => functors.MixVariantFunctorGenerator.fpi (fun i : I0 => dtfr (f i))
-               | rmaps.ListType T0 => functors.MixVariantFunctorGenerator.flist (dtfr T0)
-               end) A) mpred),
-    (lift.liftx (P ts x: environ -> mpred)) (make_args' fsig bl) *
-    oboxopt Delta ret (maybe_retval (R ts x) (snd fsig) ret -* Q1 && Q2)
-end. *)
-
-
-
-(* Definition all_precise_fun (Delta:seplog.tycontext) : Prop := 
-forall x phi, 
-(seplog.glob_specs Delta) ! x =  Some phi ->
-precise_funspec Delta phi. *)
-
-
 Lemma relation_power_level: forall n x y,
  relation_power n age x y -> ((level x) = n + (level y))%nat.
 Proof.
@@ -1146,14 +1112,14 @@ exists r_maps r_rem, join r_maps r_rem r /\
 nonlock_permission_bytes (Share.lub sh1 sh2) lbase (size_chunk m) r_maps. *)
 
 
-Lemma address_mapsto_join: forall sh1 sh2 r1_maps r1_rem r v1 r2_maps r2_rem v2 m b i,
+Lemma address_mapsto_join: forall sh1 sh2 r1_maps r1_rem r v1 r2_maps r2_rem v2 m loc,
 readable_share sh1 -> readable_share sh2 ->
 join r1_maps r1_rem r -> 
 join r2_maps r2_rem r -> 
-address_mapsto m v1 sh1 (b, Ptrofs.unsigned i) r1_maps ->
-address_mapsto m v2 sh2 (b, Ptrofs.unsigned i) r2_maps ->
+address_mapsto m v1 sh1 loc r1_maps ->
+address_mapsto m v2 sh2 loc r2_maps ->
 v1 = v2 /\ exists r_maps r_rem, join r_maps r_rem r /\
-address_mapsto m v1 (Share.lub sh1 sh2) (b, Ptrofs.unsigned i) r_maps.
+address_mapsto m v1 (Share.lub sh1 sh2) loc r_maps.
 Proof.
 intros.
 pose proof address_mapsto_join_value
@@ -1161,13 +1127,13 @@ pose proof address_mapsto_join_value
 subst v2.
 destruct H3 as [bm1 [[[E1a [E1b E1c]] E2] E3]].
 destruct H4 as [bm2 [[[E2a [E2b E2c]] E4] E5]].
-assert (cut_resource_rmap_exp sh1 (b, Ptrofs.unsigned i) (size_chunk m) bm1 r1_rem r).
+assert (cut_resource_rmap_exp sh1 loc (size_chunk m) bm1 r1_rem r).
 { apply cut_resource_exp_intro 
     with (bl:=bm1) (r_mapsto:=r1_maps);auto.
   { rewrite E1a. unfold size_chunk_nat. rewrite Z2Nat.id;auto. destruct m;simpl;omega. }
   { split;auto. }
 }
-assert (cut_resource_rmap_exp sh2 (b, Ptrofs.unsigned i) (size_chunk m) bm2 r2_rem r).
+assert (cut_resource_rmap_exp sh2 loc (size_chunk m) bm2 r2_rem r).
 { apply cut_resource_exp_intro 
     with (bl:=bm2) (r_mapsto:=r2_maps);auto.
   { rewrite E2a. unfold size_chunk_nat. rewrite Z2Nat.id;auto. destruct m;simpl;omega. }
@@ -1183,13 +1149,13 @@ hnf. exists bl. destruct H5. repeat split;auto.
   rewrite <- (Nat2Z.id (Datatypes.length bl)).
   rewrite Hl. reflexivity.
 + assert (address_mapsto m (decode_val m bl) 
-    (Share.lub sh1 sh2) (b, Ptrofs.unsigned i) r_mapsto).
+    (Share.lub sh1 sh2) loc r_mapsto).
   { exists bl. repeat split;auto.
     unfold size_chunk_nat.
     rewrite <- (Nat2Z.id (Datatypes.length bl)).
     rewrite Hl. reflexivity. }
   assert (address_mapsto m (decode_val m bm1) sh1
-     (b, Ptrofs.unsigned i) r1_maps).
+     loc r1_maps).
   { exists bm1. repeat split;auto. }
     pose proof address_mapsto_join_value
     _ _ _ _ _ _ _ _ _ _ _ H1 H7 H9 H8.
@@ -1224,7 +1190,7 @@ Proof.
   2:{ simpl in Eb2. tauto. }
   destruct Eb2 as [Eb2 Ec2].
   { pose proof address_mapsto_join
-        _ _ _ _ _ _ _ _ _ _ _ _ H1 H2 Ea1 Ea2 Ec1 Ec2.
+        _ _ _ _ _ _ _ _ _ _ _ H1 H2 Ea1 Ea2 Ec1 Ec2.
     destruct H3. subst v2.
     destruct H4 as [r_maps [r_rem [E1 E2]]].
     exists (Share.lub sh1 sh2).
@@ -1263,7 +1229,7 @@ Proof.
   2:{ simpl in Eb2. tauto. }
   destruct Eb2 as [Eb2 Ec2].
   { pose proof address_mapsto_join
-        _ _ _ _ _ _ _ _ _ _ _ _ H1 H2 Ea1 Ea2 Ec1 Ec2.
+        _ _ _ _ _ _ _ _ _ _ _ H1 H2 Ea1 Ea2 Ec1 Ec2.
     destruct H3. subst v2.
     destruct H4 as [r_maps [r_rem [E1 E2]]].
     if_tac.
@@ -1303,7 +1269,7 @@ Proof.
   { exfalso. destruct Eb2. apply tc_val_Vundef in H1. auto. }
   destruct Eb2 as [_ [v2 Ec2]].
   { pose proof address_mapsto_join
-        _ _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
+        _ _ _ _ _ _ _ _ _ _ _ H H0 Ea1 Ea2 Ec1 Ec2.
     destruct H1. subst v2.
     destruct H2 as [r_maps [r_rem [E1 E2]]].
     if_tac.
@@ -1321,6 +1287,8 @@ Qed.
 |-- (mapsto_ (Share.lub sh1 sh2) t p * TT). *)
 
 
+
+(* 
 Lemma mapsto_join_andp_write: forall sh1 sh2 t p P1 P2,
 (* tc_val t v2 -> can't be undefined *)
 writable_share sh1 -> writable_share sh2 ->
@@ -1416,7 +1384,327 @@ Proof.
           rewrite H5. reflexivity.
       }
   }
-Qed.
+Qed. *)
+
+Lemma address_mapsto_join_andp_write:
+  forall sh1 sh2 v1 v2 P1 P2 loc m,
+  writable_share sh1 ->
+  writable_share sh2 ->
+    (address_mapsto m v1 sh1 loc *
+      (ALL v', address_mapsto m v' sh1 loc -* P1)) &&
+    (address_mapsto m v2 sh2 loc *
+      (ALL v', address_mapsto m v' sh2 loc -* P2))
+  |-- (address_mapsto m v1 (Share.lub sh1 sh2) loc *
+      (ALL v', address_mapsto m v' (Share.lub sh1 sh2) loc -*
+        (P1 && P2))).
+Proof.
+  intros. intro r.
+  intros [[r1_mapsto [r1_rem [H1_join [H1_mapsto H1_frame]]]]
+          [r2_mapsto [r2_rem [H2_join [H2_mapsto H2_frame]]]]].
+  pose proof writable_readable_share H as Hr1.
+  pose proof writable_readable_share H0 as Hr2.
+  pose proof address_mapsto_join 
+    _ _ _ _ _ _ _ _ _ _ _ Hr1 Hr2
+    H1_join H2_join H1_mapsto H2_mapsto.
+  destruct H1. subst v2.
+  destruct H2 as [rj_mapsto [rj_rem [Hj_join Hj_mapsto]]].
+  exists rj_mapsto, rj_rem. split;[|split];auto.
+
+  intros v'. intros rj_rem'' rj_mapsto'' rj''.
+  intros Hj_necR Hj_join'' Hj_mapsto'.
+  pose proof sepalg_list.nec_join3 Hj_join'' Hj_necR.
+  destruct H1 as [rj_mapsto' [r' [Hj_join' [Hj_necR1 Hj_necR2]]]].
+  eapply pred_nec_hereditary; try eassumption.
+  apply (@address_mapsto_preserve_necR 
+    (Share.lub sh1 sh2) loc m v' _ _ Hj_necR1) in Hj_mapsto'.
+  clear dependent rj_rem''.
+  clear dependent rj_mapsto''. clear  dependent rj''.
+
+
+  split.
+  { 
+    assert (nsh2: ~ readable_share (Share.glb (Share.comp sh1) sh2)).
+    { intros C. eapply join_writable_readable.
+      2:{ apply H. } 2:{ apply C. }
+      apply two_share_join. }
+    
+    destruct Hj_mapsto as [bl Hj_mapsto].
+    destruct Hj_mapsto' as [bl' Hj_mapsto'].
+
+    set (squash (level rj_rem,(fun l =>
+      if (adr_range_dec loc (size_chunk m) l) 
+      then YES sh1 Hr1 (VAL (nth (Z.to_nat (snd l - snd loc)) bl' Undef)) NoneP
+      else (rj_mapsto' @ l)
+    ,ghost_of rj_mapsto'))) as r_maps1'.
+    (* set (squash (level rj_rem,(fun l =>
+      if (adr_range_dec loc (size_chunk m) l) 
+      then YES sh1 Hr1 (VAL (nth (Z.to_nat (snd l - snd loc)) bl Undef)) NoneP
+      else (rj_mapsto @ l)
+      ,ghost_of rj_mapsto))) as r_maps1. *)
+    set (squash (level rj_rem,(fun l =>
+      if (adr_range_dec loc (size_chunk m) l) 
+      then NO (Share.glb (Share.comp sh1) sh2) nsh2 
+      else identity_resource_of (rj_mapsto @ l)
+      (* else identity_resource_of (r1_mapsto @ l) *)
+      ,nil))) as r_rem2.
+
+    assert (E1: join r_rem2 r_maps1' rj_mapsto').
+    { apply join_unsquash. subst r_rem2 r_maps1'.
+      rewrite !unsquash_squash. split;[|split].
+      - simpl. apply join_level in Hj_join'.
+        rewrite rmap_level_eq in *.
+        constructor;omega.
+      - simpl. unfold join. unfold Join_pi. 
+        intros l. unfold compose. simpl.
+        destruct Hj_mapsto' as [[? ?] ?]. 
+        specialize (H2 l). simpl in H2.
+        if_tac.
+        { simpl. destruct H2. unfold resource_at in H2.
+          rewrite H2. constructor.
+          apply join_comm. apply two_share_join. }
+        { 
+          assert (level rj_rem = level rj_mapsto).
+          { apply join_level in Hj_join. omega. }
+          rewrite H5. 
+          rewrite identity_resource_at_approx.
+          assert (level rj_mapsto = level rj_mapsto').
+          { apply join_level in Hj_join.
+            apply join_level in Hj_join'. omega. }
+          rewrite H6. rewrite resource_at_approx.
+          unfold resource_at. clear H5 H6.
+          pose proof resource_at_join _ _ _ l Hj_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join' as Et2.
+          destruct Hj_mapsto as [[? ?] ?].
+          specialize (H6 l). simpl in H6.
+          if_tac in H6; try tauto.
+          pose proof H6 _ _ Et1. apply join_comm in Et2.
+          pose proof H2 _ _ Et2. rewrite H9 in *. rewrite H10 in *.
+          unfold resource_at in Et1, Et2. clear H9. clear H10.
+
+          destruct ((fst (snd (unsquash rj_mapsto)) l));simpl;
+          destruct ((fst (snd (unsquash rj_mapsto')) l));simpl;
+          try solve [inv Et1; inv Et2; congruence];
+           try constructor;try apply bot_join_eq.
+
+          inv Et1. inv Et2. rewrite H12. rewrite <- H13. constructor.
+          (* assert (level rj_rem = level r1_mapsto).
+          { apply join_level in H1_join.
+          apply join_level in Hj_join. omega. }
+          rewrite H5. 
+          rewrite identity_resource_at_approx.
+          assert (level r1_mapsto = level rj_mapsto').
+          { apply join_level in Hj_join.
+            apply join_level in Hj_join'. omega. }
+          rewrite H6. rewrite resource_at_approx.
+          unfold resource_at. clear H5 H6.
+          pose proof resource_at_join _ _ _ l H1_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join as Et2.
+          destruct H1_mapsto as [? [[? ?] ?]].
+          specialize (H6 l). simpl in H6.
+          if_tac in H6; try tauto.
+          pose proof H6 _ _ Et1. 
+          destruct Hj_mapsto as [[? ?] ?].
+          specialize (H11 l). simpl in H11.
+          if_tac in H11; try tauto.
+          pose proof H11 _ _ Et2. rewrite H9 in *. rewrite H14 in *.
+          unfold resource_at in Et1, Et2. clear H9. clear H14.
+
+          destruct ((fst (snd (unsquash r1_mapsto)) l));simpl;
+          destruct ((fst (snd (unsquash rj_mapsto)) l));simpl;
+          destruct ((fst (snd (unsquash rj_mapsto')) l));simpl;
+          try solve [inv Et1; inv Et2; congruence];
+           try constructor;try apply bot_join_eq.
+
+          inv Et1. inv Et2. rewrite H12. rewrite <- H13. constructor. *)
+        }
+      - simpl. assert (level rj_rem = level rj_mapsto').
+        { apply join_level in Hj_join'. omega. }
+        rewrite H1. rewrite ghost_of_approx. unfold ghost_of.
+        constructor.
+    }
+
+    (* assert (E2: join r_rem2 r1_mapsto rj_mapsto).
+    { apply join_unsquash. subst r_rem2.
+      rewrite !unsquash_squash. split;[|split].
+      - simpl. apply join_level in Hj_join.
+        apply join_level in H1_join.
+        rewrite rmap_level_eq in *.
+        constructor;omega.
+      - simpl. unfold join. unfold Join_pi. 
+        intros l. unfold compose. simpl.
+        destruct Hj_mapsto as [[? ?] ?].
+         specialize (H2 l). simpl in H2.
+        if_tac.
+        { simpl. destruct H2. unfold resource_at in H2.
+          rewrite H2. constructor. apply join_comm.
+          apply two_share_join. }
+        { assert (level rj_rem = level rj_mapsto).
+          { apply join_level in Hj_join. omega. }
+          rewrite H5. rewrite identity_resource_at_approx. clear H5.
+          rewrite resource_at_approx. apply join_comm.
+          apply identity_resource_of_sem. }
+      - simpl. assert (level rj_rem = level rj_mapsto).
+        { apply join_level in Hj_join. omega. }
+        rewrite H1. rewrite ghost_of_approx. unfold ghost_of.
+        constructor.
+    } *)
+
+    assert (E2: join r_rem2 r1_mapsto rj_mapsto).
+    { apply join_unsquash. subst r_rem2.
+      rewrite !unsquash_squash. split;[|split].
+      - simpl. apply join_level in Hj_join.
+        apply join_level in H1_join.
+        rewrite rmap_level_eq in *.
+        constructor;omega.
+      - simpl. unfold join. unfold Join_pi. 
+        intros l. unfold compose. simpl.
+        destruct H1_mapsto as [? [[? ?] ?]].
+         specialize (H2 l). simpl in H2.
+        if_tac.
+        { simpl. destruct H2. unfold resource_at in H2.
+          rewrite H2.
+          destruct Hj_mapsto as [[? ?] ?].
+          specialize (H6 l). simpl in H6.
+          if_tac in H6;try tauto.
+          destruct H6. unfold resource_at in H6. rewrite H6.
+          
+
+          pose proof resource_at_join _ _ _ l H1_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join as Et2.
+          unfold resource_at in Et1, Et2.
+          rewrite H6 in Et2. rewrite H2 in Et1.
+
+          assert ( nth (Z.to_nat (snd l - snd loc)) bl Undef
+           =  nth (Z.to_nat (snd l - snd loc)) x Undef).
+          { inv Et1; inv Et2; try congruence. }
+          rewrite H9. constructor.
+          apply join_comm.
+          apply two_share_join. }
+        { assert (level rj_rem = level rj_mapsto).
+          { apply join_level in Hj_join. omega. }
+          rewrite H5. rewrite identity_resource_at_approx. clear H5.
+          unfold resource_at.
+          pose proof resource_at_join _ _ _ l H1_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join as Et2.
+          destruct Hj_mapsto as [[? ?] ?].
+          specialize (H6 l). simpl in H6.
+          if_tac in H6; try tauto.
+          pose proof H2 _ _ Et1. 
+          pose proof H6 _ _ Et2. rewrite H9 in *. rewrite H10 in *.
+          unfold resource_at in Et1, Et2. clear H9. clear H10.
+
+          destruct ((fst (snd (unsquash rj_mapsto)) l));simpl;
+          destruct ((fst (snd (unsquash r1_mapsto)) l));simpl;  try solve [inv Et1; inv Et2; congruence].
+          { inv Et1; inv Et2; try congruence. 
+            + rewrite <- H11 in H12. inversion H12. subst. 
+              constructor.   assert (sh0 = sh).
+              { eapply join_canc. apply RJ. apply RJ0. }
+              subst. apply bot_join_eq.
+            + rewrite <- H11 in H12. inv H12. 
+              constructor.   assert (sh0 = sh).
+              { eapply join_canc. apply RJ. apply RJ0. }
+              subst. apply bot_join_eq.
+          }
+          { inv Et1; inv Et2; try congruence. 
+            + rewrite <- H13 in H11. inv H11.
+              assert (sh0 = sh).
+              { eapply join_canc. apply RJ. apply RJ0. }
+              subst. tauto.
+          }
+          { inv Et1; inv Et2; try congruence. 
+            + rewrite <- H14 in H11. inv H11.
+              assert (sh0 = sh).
+              { eapply join_canc. apply RJ. apply RJ0. }
+              subst. tauto.
+          }
+          { inv Et1; inv Et2; try congruence. 
+            + rewrite <- H13 in H14. inv H14.
+              assert (sh0 = sh).
+              { eapply join_canc. apply RJ. apply RJ0. }
+              subst. constructor. apply bot_join_eq. }
+          { inv Et1; inv Et2; try congruence.
+            rewrite <- H12 in H13. rewrite H13. constructor. }
+        }
+      - simpl. assert (level r1_mapsto = level rj_mapsto).
+        { apply join_level in Hj_join.
+          apply join_level in H1_join. omega. }
+
+        destruct H1_mapsto as [? [[? ?] ?]].
+        apply identity_core in H4. unfold ghost_of in H4.
+        rewrite ghost_core in H4. rewrite H4.
+        destruct Hj_mapsto as [[? ?] ?].
+        apply identity_core in H7. unfold ghost_of in H7.
+        rewrite ghost_core in H7. rewrite H7. constructor.
+    }
+
+    assert (E3: address_mapsto m v' sh1 loc r_maps1').
+    { subst r_maps1'. destruct Hj_mapsto' as [[? ?] ?].
+      exists bl'. split;[split|].
+      - simpl. simpl in H1. auto.
+      - intros l. simpl. if_tac.
+        { exists Hr1. unfold resource_at. rewrite unsquash_squash.
+          simpl. unfold compose. if_tac;try tauto. }
+        { unfold resource_at. rewrite unsquash_squash. simpl.
+          unfold compose. if_tac; try tauto.
+          assert (level rj_rem = level rj_mapsto').
+          { apply join_level in Hj_join'. omega. }
+          rewrite H6. replace (fst (snd (unsquash rj_mapsto')) l) with
+          (rj_mapsto' @ l) by reflexivity.
+          rewrite resource_at_approx.
+          specialize (H2 l). simpl in H2. if_tac in H2;try tauto. }
+      - simpl. unfold ghost_of. rewrite unsquash_squash.
+        simpl. 
+        assert (level rj_rem = level rj_mapsto').
+        { apply join_level in Hj_join'.
+          apply join_level in Hj_join. omega. }
+        rewrite H4. rewrite ghost_of_approx. auto.
+    }   
+(* 
+    assert (E4: join r1_rem r_maps1' r').
+    { apply join_unsquash. subst r_maps1'.
+      rewrite !unsquash_squash. split;[|split].
+      - simpl. apply join_level in Hj_join'.
+        apply join_level in Hj_join.
+        apply join_level in H1_join.
+        rewrite rmap_level_eq in *.
+        constructor;omega.
+      - simpl. unfold join. unfold Join_pi. 
+        intros l. unfold compose. simpl.
+        destruct H1_mapsto as [? [[? ?] ?]].
+        specialize (H2 l). simpl in H2.
+        if_tac.
+        { simpl. destruct H2. unfold resource_at in H2.
+          rewrite H2. constructor. apply join_comm.
+          apply two_share_join. }
+        { assert (level rj_rem = level rj_mapsto).
+          { apply join_level in Hj_join. omega. }
+          rewrite H5. rewrite identity_resource_at_approx. clear H5.
+          rewrite resource_at_approx. apply join_comm.
+          apply identity_resource_of_sem. }
+      - simpl. assert (level rj_rem = level rj_mapsto).
+        { apply join_level in Hj_join. omega. }
+        rewrite H1. rewrite ghost_of_approx. unfold ghost_of.
+        constructor.
+    } *)
+
+    assert (E4: join rj_rem r_rem2 r1_rem).
+    { admit.
+(* No E2, E4 needs to be proved from model *)
+    }
+
+    specialize (H1_frame v').
+    hnf in H1_frame. eapply H1_frame.
+    3:{ apply E3. }
+    { apply necR_refl. }
+
+    apply join_comm in Hj_join'. apply join_comm in E1.
+    destruct (join_assoc E1 Hj_join') as [r1_rem' [E5 E6]].
+    assert (r1_rem' = r1_rem).
+    { eapply join_eq. apply E5. apply join_comm. auto. }
+    subst r1_rem'. auto.
+  }
+
+Admitted.
 
 
 Lemma mapsto_join_andp_write_det: forall sh1 sh2 t p P1 P2 v',
@@ -1451,11 +1739,12 @@ Proof.
     destruct H2 as [r_maps [r_rem [E1 E2]]].
     assert (EP1: forall r', cut_resource_rejoin sh1 
                     (b, Ptrofs.unsigned i) m v' r r' -> P1 r').
-    { eapply cut_resource_sem.
+    { clear - Ec1 Ea1 Eb1 Htc.
+      eapply cut_resource_sem.
       exists r1_maps, r1_rem.
       split;auto. split;try eassumption.
       hnf. intros.
-      eapply Ec1. { apply H1. } { apply H2. }
+      eapply Ec1. { apply H. } { apply H0. }
       left. split;auto.
     }
     assert (EP2: forall r', cut_resource_rejoin sh2
