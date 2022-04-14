@@ -1549,7 +1549,7 @@ Proof.
         constructor.
     } *)
 
-    assert (E2: join r_rem2 r1_mapsto rj_mapsto).
+    assert (E4: join r_rem2 r1_mapsto rj_mapsto).
     { apply join_unsquash. subst r_rem2.
       rewrite !unsquash_squash. split;[|split].
       - simpl. apply join_level in Hj_join.
@@ -1687,9 +1687,74 @@ Proof.
         constructor.
     } *)
 
-    assert (E4: join rj_rem r_rem2 r1_rem).
-    { admit.
-(* No E2, E4 needs to be proved from model *)
+    assert (E2: join rj_rem r_rem2 r1_rem).
+    { 
+      apply join_unsquash. subst r_rem2.
+      rewrite !unsquash_squash. split;[|split].
+      - simpl. apply join_level in Hj_join.
+        apply join_level in H1_join.
+        rewrite rmap_level_eq in *.
+        constructor;omega.
+      - simpl. unfold join. unfold Join_pi. 
+        intros l. unfold compose. simpl.
+        destruct H1_mapsto as [bl1 [[? ?] ?]].
+        destruct Hj_mapsto as [[? ?] ?].
+        specialize (H2 l). simpl in H2.
+        specialize (H5 l). simpl in H5.
+        if_tac.
+        { simpl.
+          destruct H2. destruct H5.
+          pose proof resource_at_join _ _ _ l H1_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join as Et2.
+          rewrite H2 in Et1. rewrite H5 in Et2.
+          inv Et1; inv Et2.
+          { rewrite <- H13 in H15. inv H15.
+            unfold resource_at in H12, H14.
+            rewrite <- H12, <- H14.
+            constructor.
+            
+            (* sh3 = sh4 - sh1
+               sh5 = sh4 - (sh1 U sh2)
+               sh5 + (sh2 - sh1) = 
+               sh4 - sh1 = sh3 *)
+            admit.
+          }
+          { assert (writable_share (Share.lub sh1 sh2)).
+            { eapply join_writable1;[|apply H].
+              apply two_share_join. }
+            apply join_writable_readable in RJ0;auto. tauto. }
+          { apply join_writable_readable in RJ;auto. tauto. }
+          { apply join_writable_readable in RJ;auto. tauto. }
+        }
+        { assert (level rj_rem = level rj_mapsto).
+          { apply join_level in Hj_join. omega. }
+          rewrite H8. rewrite identity_resource_at_approx. clear H8.
+          unfold resource_at.
+          pose proof resource_at_join _ _ _ l H1_join as Et1.
+          pose proof resource_at_join _ _ _ l Hj_join as Et2.
+          pose proof H2 _ _ Et1. 
+          pose proof H5 _ _ Et2. 
+          unfold resource_at in *.
+          rewrite H9 in *. rewrite H8 in *.
+          clear H9. clear H8.
+
+          destruct ((fst (snd (unsquash rj_mapsto)) l));simpl;
+          destruct ((fst (snd (unsquash r1_mapsto)) l));simpl;  try solve [inv Et1; inv Et2; congruence].
+          { inv Et1; inv Et2; try constructor; try apply join_bot_eq. }
+          { inv Et1; inv Et2; try constructor; try apply join_bot_eq. }
+          { inv Et1; inv Et2; try constructor; try apply join_bot_eq. }
+          { inv Et1; inv Et2; try constructor; try apply join_bot_eq. }
+          { inv Et1; inv Et2; try constructor. rewrite <- H11 in H12.
+            rewrite H12. constructor. }
+        }
+      - simpl.
+        destruct H1_mapsto as [? [[? ?] ?]].
+        destruct Hj_mapsto as [[? ?] ?].
+        apply ghost_of_join in H1_join.
+        apply ghost_of_join in Hj_join.
+        apply H3 in H1_join.
+        apply H6 in Hj_join. unfold ghost_of in H1_join, Hj_join.
+        rewrite H1_join. rewrite Hj_join. constructor.
     }
 
     specialize (H1_frame v').
