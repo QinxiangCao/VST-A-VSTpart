@@ -937,11 +937,11 @@ Proof.
       {
         destruct s_atom_normal1;auto. right. 
         (* Search s_atom_normal1 c_post_normal2. *)
-        clear - S59 S61 S23 S15 Hpath.
+        clear - S57 S59 S23 S15 Hpath.
         destruct s_pre2,
         s_atom_break2, s_atom_continue2,s_atom_return2;
+        try (apply exclude_nil_cons in S57);
         try (apply exclude_nil_cons in S59);
-        try (apply exclude_nil_cons in S61);
         try (apply exclude_nil_cons in S23);
         try (apply exclude_nil_cons in S15);
         [exfalso; apply Hpath; repeat split;auto|..
@@ -975,13 +975,13 @@ Proof.
       {
         destruct s_atom_continue1;auto. right. 
         (* Search s_atom_continue1 c_post_normal2. *)
-        clear - S24 S16 S58 S60 Hpath.
+        clear - S24 S16 S56 S58 Hpath.
         destruct s_pre2,
         s_atom_break2, s_atom_continue2,s_atom_return2;
         try (apply exclude_nil_cons in S24);
         try (apply exclude_nil_cons in S16);
+        try (apply exclude_nil_cons in S56);
         try (apply exclude_nil_cons in S58);
-        try (apply exclude_nil_cons in S60);
         [exfalso; apply Hpath; repeat split;auto|..];combine_aux_post_auto.
       }
       clear - H H0 S29 S13 S20 Hpath'.
@@ -1092,7 +1092,7 @@ Proof.
       merge_Q1. apply prop_right. auto.
     *
       (* Search (CForall _ c_post_normal1). *)
-      clear - Hpath Hpath' S63 S36 S17 S25 S27 S11 S19.
+      clear - Hpath Hpath' S61 S36 S17 S25 S27 S11 S19.
 
 
       assert (CForall (@post_to_semax CS Espec Delta
@@ -1109,10 +1109,10 @@ Proof.
         [exfalso; apply Hpath'; repeat split;auto|..];
         try apply exclude_nil_cons in S25;
         try apply exclude_nil_cons in S17;
-        try apply exclude_nil_cons in S63;
+        try apply exclude_nil_cons in S61;
         combine_aux_post_auto.
       }
-      clear S25 S17 S63.
+      clear S25 S17 S61.
       (* Search (CForall _ c_post_normal1). *)
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
@@ -1124,7 +1124,7 @@ Proof.
       combine_aux_post_auto.
     *
       (* Search (CForall _ c_post_continue1). *)
-      clear - Hpath Hpath' S62 S37 S49 S14 S28 S12 S21.
+      clear - Hpath Hpath' S60 S37 S47 S14 S28 S12 S21.
 
 
       assert (CForall (@post_to_semax CS Espec Delta
@@ -1140,11 +1140,11 @@ Proof.
       { destruct s_pre1, s_atom_break1, s_atom_return1;
         [exfalso; apply Hpath'; repeat split;auto|..];
         try apply exclude_nil_cons in S14;
-        try apply exclude_nil_cons in S49;
-        try apply exclude_nil_cons in S62;
+        try apply exclude_nil_cons in S47;
+        try apply exclude_nil_cons in S60;
         combine_aux_post_auto.
       }
-      clear S14 S49 S62.
+      clear S14 S47 S60.
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
       try apply exclude_nil_cons in S28;
