@@ -854,27 +854,27 @@ Proof.
       (* Search (CForall _ c_post_normal1). *)
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S20;
+      try apply exclude_nil_cons in S19;
       try apply exclude_nil_cons in S11;
-      try apply exclude_nil_cons in S18;
-      try apply exclude_nil_cons in S28;
-      try apply exclude_nil_cons in S26;
       try apply exclude_nil_cons in S17;
-      try apply exclude_nil_cons in S64;
-      try apply exclude_nil_cons in S37;
+      try apply exclude_nil_cons in S27;
+      try apply exclude_nil_cons in S25;
+      try apply exclude_nil_cons in S16;
+      try apply exclude_nil_cons in S63;
+      try apply exclude_nil_cons in S36;
       [exfalso; apply Hpath; repeat split;auto|..];
       combine_aux_post_auto.
-    *
+    * 
       (* Search (CForall _ c_post_continue1). *)
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S22;
+      try apply exclude_nil_cons in S21;
       try apply exclude_nil_cons in S12;
-      try apply exclude_nil_cons in S29;
-      try apply exclude_nil_cons in S14;
-      try apply exclude_nil_cons in S50;
-      try apply exclude_nil_cons in S63;
-      try apply exclude_nil_cons in S38;
+      try apply exclude_nil_cons in S28;
+      try apply exclude_nil_cons in S13;
+      try apply exclude_nil_cons in S49;
+      try apply exclude_nil_cons in S62;
+      try apply exclude_nil_cons in S37;
       [exfalso; apply Hpath; repeat split;auto|..];
       combine_aux_post_auto.
     *
@@ -937,14 +937,15 @@ Proof.
       {
         destruct s_atom_normal1;auto. right. 
         (* Search s_atom_normal1 c_post_normal2. *)
-        clear - S60 S62 S24 S15 Hpath.
+        clear - S59 S61 S23 S15 Hpath.
         destruct s_pre2,
         s_atom_break2, s_atom_continue2,s_atom_return2;
-        try (apply exclude_nil_cons in S60);
-        try (apply exclude_nil_cons in S62);
-        try (apply exclude_nil_cons in S24);
+        try (apply exclude_nil_cons in S59);
+        try (apply exclude_nil_cons in S61);
+        try (apply exclude_nil_cons in S23);
         try (apply exclude_nil_cons in S15);
-        [exfalso; apply Hpath; repeat split;auto|..|
+        [exfalso; apply Hpath; repeat split;auto|..
+        (* |
           eapply post_to_semax_derives_group;
           [|eapply post_to_semax_conj_rule_group;
             [apply S60|
@@ -954,7 +955,7 @@ Proof.
               [apply S24|apply S15]]]];
               try (apply remove_entail);
               merge_Q4; apply prop_right;
-              repeat split;try solve [constructor];clean_nil;solve_split
+              repeat split;try solve [constructor];clean_nil;solve_split *)
         ];combine_aux_post_auto.
       }
 
@@ -974,23 +975,23 @@ Proof.
       {
         destruct s_atom_continue1;auto. right. 
         (* Search s_atom_continue1 c_post_normal2. *)
-        clear - S25 S16 S59 S61 Hpath.
+        clear - S24 S16 S58 S60 Hpath.
         destruct s_pre2,
         s_atom_break2, s_atom_continue2,s_atom_return2;
-        try (apply exclude_nil_cons in S25);
+        try (apply exclude_nil_cons in S24);
         try (apply exclude_nil_cons in S16);
-        try (apply exclude_nil_cons in S59);
-        try (apply exclude_nil_cons in S61);
+        try (apply exclude_nil_cons in S58);
+        try (apply exclude_nil_cons in S60);
         [exfalso; apply Hpath; repeat split;auto|..];combine_aux_post_auto.
       }
-      clear - H H0 S30 S13 S21 Hpath'.
+      clear - H H0 S29 S13 S20 Hpath'.
       destruct s_pre1, s_atom_normal1,
       s_atom_break1, s_atom_continue1, s_atom_return1;
         try (apply exclude_nil_cons in H);
         try (apply exclude_nil_cons in H0);
         try (apply exclude_nil_cons in S13);
-        try (apply exclude_nil_cons in S30);
-        try (apply exclude_nil_cons in S21);
+        try (apply exclude_nil_cons in S29);
+        try (apply exclude_nil_cons in S20);
         [exfalso; apply Hpath'; repeat split;auto|..];
       combine_aux_post_auto.
 
@@ -1091,7 +1092,7 @@ Proof.
       merge_Q1. apply prop_right. auto.
     *
       (* Search (CForall _ c_post_normal1). *)
-      clear - Hpath Hpath' S64 S37 S17 S26 S28 S11 S20.
+      clear - Hpath Hpath' S63 S36 S17 S25 S27 S11 S19.
 
 
       assert (CForall (@post_to_semax CS Espec Delta
@@ -1106,23 +1107,24 @@ Proof.
       ))) c_post_normal1).
       { destruct s_pre1, s_atom_break1, s_atom_return1;
         [exfalso; apply Hpath'; repeat split;auto|..];
-        try apply exclude_nil_cons in S26;
+        try apply exclude_nil_cons in S25;
         try apply exclude_nil_cons in S17;
-        try apply exclude_nil_cons in S64;
+        try apply exclude_nil_cons in S63;
         combine_aux_post_auto.
       }
-      clear S26 S17 S64.
+      clear S25 S17 S63.
+      (* Search (CForall _ c_post_normal1). *)
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S20;
+      try apply exclude_nil_cons in S19;
       try apply exclude_nil_cons in S11;
       try apply exclude_nil_cons in H;
-      try apply exclude_nil_cons in S28;
-      try apply exclude_nil_cons in S37;
+      try apply exclude_nil_cons in S27;
+      try apply exclude_nil_cons in S36;
       combine_aux_post_auto.
     *
       (* Search (CForall _ c_post_continue1). *)
-      clear - Hpath Hpath' S63 S38 S50 S14 S29 S12 S22.
+      clear - Hpath Hpath' S62 S37 S49 S14 S28 S12 S21.
 
 
       assert (CForall (@post_to_semax CS Espec Delta
@@ -1138,18 +1140,18 @@ Proof.
       { destruct s_pre1, s_atom_break1, s_atom_return1;
         [exfalso; apply Hpath'; repeat split;auto|..];
         try apply exclude_nil_cons in S14;
-        try apply exclude_nil_cons in S50;
-        try apply exclude_nil_cons in S63;
+        try apply exclude_nil_cons in S49;
+        try apply exclude_nil_cons in S62;
         combine_aux_post_auto.
       }
-      clear S14 S50 S63.
+      clear S14 S49 S62.
       destruct s_pre2,
       s_atom_break2,s_atom_continue2,s_atom_return2;
-      try apply exclude_nil_cons in S29;
-      try apply exclude_nil_cons in S38;
+      try apply exclude_nil_cons in S28;
+      try apply exclude_nil_cons in S37;
       try apply exclude_nil_cons in H;
       try apply exclude_nil_cons in S12;
-      try apply exclude_nil_cons in S22;
+      try apply exclude_nil_cons in S21;
       combine_aux_post_auto.
 
     *
@@ -1169,11 +1171,11 @@ Proof.
       merge_Q1. apply prop_right. auto.
     *
       (* Search (CForall _ c_post_normal2). *)
-      clear - Hpath' S13 S21 S30.
+      clear - Hpath' S13 S20 S29.
       destruct s_pre1, s_atom_break1, s_atom_return1;
         try (apply exclude_nil_cons in S13);
-        try (apply exclude_nil_cons in S30);
-        try (apply exclude_nil_cons in S21);
+        try (apply exclude_nil_cons in S20);
+        try (apply exclude_nil_cons in S29);
         [exfalso; apply Hpath'; repeat split;auto|..];
       combine_aux_post_auto.
 
