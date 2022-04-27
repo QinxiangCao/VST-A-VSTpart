@@ -2017,7 +2017,30 @@ Proof.
     clear - H. induction r'.
     { simpl in H. hnf.
       rename H into H1. simpl in H1.
-      eapply semax_seq_inv in H1.
+      eapply semax_seq_inv' in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc.
+        apply andp_derives;[|apply derives_refl].
+        rewrite andp_assoc. apply H1.
+      }
+      rewrite exp_andp2. rewrite exp_andp1. apply semax_extract_exists.
+      intros P1. rewrite !andp_assoc. apply semax_extract_prop. intros.
+      rewrite andp_comm. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      rewrite overridePost_normal in E1.
+      apply semax_skip_inv in E1. rewrite normal_ret_assert_elim in E1.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc.
+        apply andp_derives;[|apply derives_refl].
+        rewrite !andp_assoc. apply E1.
+      }
+      rewrite !exp_andp1. apply semax_extract_exists. intros R.
+      rewrite !andp_assoc. apply semax_extract_prop. intros.
+      eapply semax_pre'. 2:{ apply H0. }
+      solve_andp.
+    }
+      (* eapply semax_seq_inv in H1.
       destruct H1 as [Q [H1 H2]].
       rewrite overridePost_normal in H1.
       apply semax_ifthenelse_inv in H1.
@@ -2036,7 +2059,7 @@ Proof.
       { eapply derives_trans;[|apply H0]. solve_andp. }
       { eapply derives_trans;[|apply FF_left].
         eapply derives_trans;[|apply H3]. solve_andp. }
-    }
+    } *)
 Qed.
 
 Lemma pre_to_semax_if_false_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
