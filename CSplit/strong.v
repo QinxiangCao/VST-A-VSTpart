@@ -2267,8 +2267,32 @@ Proof.
     eapply semax_pre';[apply H0|].
     rewrite <- (FF_andp P).
       unfold FF. apply semax_extract_prop. intros. destruct H1.
-  - intros. apply semax_seq_inv in H0.
-    apply semax_seq_inv in H.
+  - intros. apply semax_seq_inv' in H0.
+    apply semax_seq_inv' in H.
+    pose proof IHc1 _ _ H0 _ H.
+    destruct Q1 as [Q1n Q1b Q1c Q1r],
+    Q2 as [Q2n Q2b Q2c Q2r];unfold ret_assert_andp in *;unfold_der.
+    eapply semax_seq with (Q:=
+      EX Q, Q && !! semax Delta Q c2 {|
+      RA_normal := Q1n && Q2n;
+      RA_break := Q1b && Q2b;
+      RA_continue := Q1c && Q2c;
+      RA_return := fun v : option val => Q1r v && Q2r v |}    
+    ).
+    { eapply semax_conseq;[..|apply H1];unfold_der;
+      intros;try solve_andp.
+      Intros Q1. Intros Q2. Exists (Q1 && Q2).
+      apply andp_right; try solve_andp.
+      apply prop_right.
+      apply semax_pre' with (P:= Q1 && Q2) in H2; try solve_andp.
+      apply semax_pre' with (P:= Q1 && Q2) in H3; try solve_andp.
+      pose proof IHc2 _ _ H3 _ H2. unfold_der.
+      apply H4.
+    }
+    apply semax_extract_exists. intros R.
+    rewrite andp_comm. apply semax_extract_prop.
+    intros. auto.
+(* 
     destruct H0 as [R1 [E1 E2]].
     destruct H as [R2 [E3 E4]].
     pose proof IHc1 _ _ E3 _ E1.
@@ -2280,7 +2304,7 @@ Proof.
     econstructor.
     { rewrite ret_assert_override_distr in H.
       rewrite ret_assert_symm. apply H. }
-    { auto. }
+    { auto. } *)
   - intros.
     apply semax_ifthenelse_inv in H0.
     apply semax_ifthenelse_inv in H.
