@@ -3,6 +3,31 @@ Require Export CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
+
+Definition normal_split_assert Q := {|
+RA_normal := Q;
+RA_break := seplog.TT; 
+RA_continue := seplog.TT; 
+RA_return := fun _ => TT;
+|}.
+
+Definition return_split_assert (Q: option val -> environ->mpred) : ret_assert :=
+  {| RA_normal := seplog.TT; 
+     RA_break := seplog.TT; 
+     RA_continue := seplog.TT; 
+     RA_return := Q |}.
+
+Lemma normal_split_assert_elim: forall P,
+  RA_normal (normal_split_assert P) = P.
+Proof.
+  intros. reflexivity.
+Qed.
+
+
+Lemma overridePost_normal_split: forall P Q,
+  overridePost P (normal_split_assert Q) = normal_split_assert P.
+Proof. intros. reflexivity. Qed.
+
 Fixpoint CForall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop ) {sl: list A}
 (cl : @list_binded_of A binder sl) : Prop :=
@@ -237,7 +262,7 @@ Fixpoint path_to_semax { s_path: S_full_path }
   match c_path with
   | mk_C_full_path pre path post =>
       @semax CS Espec Delta pre (path_to_statement path)
-      (normal_ret_assert post)
+      (normal_split_assert post)
   | bind_C_full_path A s_path' c_path' =>
       forall (a:A), path_to_semax (c_path' a)
   end.
@@ -247,7 +272,7 @@ Fixpoint post_to_semax post { s_post : S_partial_post }
   match c_post with
   | mk_C_partial_post pre path =>
       @semax CS Espec Delta pre (path_to_statement path)
-      (normal_ret_assert post)
+      (normal_split_assert post)
   | bind_C_partial_post A s_post' c_post' =>
       forall (a:A), post_to_semax post (c_post' a)
   end.
@@ -257,12 +282,10 @@ Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
   match c_pre with
   | mk_C_partial_pre path post =>
       @semax CS Espec Delta pre (path_to_statement path)
-      (normal_ret_assert post)
+      (normal_split_assert post)
   end.
 
 
-Definition return_ret_assert (Q: option val -> environ->mpred) : ret_assert :=
-  {| RA_normal := seplog.FF; RA_break := seplog.FF; RA_continue := seplog.FF; RA_return := Q |}.
 
 
 Fixpoint post_ret_to_semax post { s_post : S_partial_post_ret }
@@ -273,7 +296,7 @@ Fixpoint post_ret_to_semax post { s_post : S_partial_post_ret }
         (Clight.Ssequence 
           (path_to_statement path)
           (Clight.Sreturn retval))
-      (return_ret_assert post)
+      (return_split_assert post)
   | bind_C_partial_post_ret A s_post' c_post' =>
       forall (a:A), post_ret_to_semax post (c_post' a)
   end.
@@ -283,7 +306,7 @@ Definition atom_to_semax pre post atom :=
   | mk_atom path =>
       @semax CS Espec Delta pre 
         (path_to_statement path)
-        (normal_ret_assert post)
+        (normal_split_assert post)
   end.
 
 
@@ -293,7 +316,7 @@ Definition atom_ret_to_semax pre post atom :=
       @semax CS Espec Delta pre 
         (Clight.Ssequence (path_to_statement path) 
           (Clight.Sreturn retval))
-        (return_ret_assert (post))
+        (return_split_assert (post))
   end.
 
 
@@ -352,8 +375,8 @@ Lemma post_to_semax_derives: forall P Q s_post
 Proof.
   intros. induction c_post.
   + simpl in H0. simpl.
-    eapply semax_conseq with (P':=pre)(R':= normal_ret_assert Q);auto;
-    unfold normal_ret_assert, RA_normal, RA_break, RA_continue, RA_return;
+    eapply semax_conseq with (P':=pre)(R':= normal_split_assert Q);auto;
+    unfold normal_split_assert, RA_normal, RA_break, RA_continue, RA_return;
     intros;try solve_andp.
     { eapply derives_trans;[|apply H]. solve_andp. }
   + simpl in *. auto.
@@ -367,8 +390,8 @@ Lemma post_ret_to_semax_derives: forall P Q s_post
 Proof.
   intros. induction c_post.
   + simpl in H0. simpl.
-    eapply semax_conseq with (P':=pre)(R':= return_ret_assert Q);auto;
-    unfold return_ret_assert, RA_normal, RA_break, RA_continue, RA_return;
+    eapply semax_conseq with (P':=pre)(R':= return_split_assert Q);auto;
+    unfold return_split_assert, RA_normal, RA_break, RA_continue, RA_return;
     intros;try solve_andp.
     { eapply derives_trans;[|apply H]. solve_andp. }
   + simpl in *. auto.
@@ -381,8 +404,8 @@ Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
   atom_to_semax P2 Q2 a.
 Proof.
   intros. destruct a;simpl.
-  eapply semax_conseq with (P':=P1)(R':=normal_ret_assert Q1);auto;
-  unfold normal_ret_assert, RA_normal, RA_break, RA_continue, RA_return;
+  eapply semax_conseq with (P':=P1)(R':=normal_split_assert Q1);auto;
+  unfold normal_split_assert, RA_normal, RA_break, RA_continue, RA_return;
   intros;try solve_andp.
   - eapply derives_trans;[|apply H]. solve_andp. 
   - eapply derives_trans;[|apply H0]. solve_andp.
@@ -395,8 +418,8 @@ Lemma atom_return_to_semax_derives: forall P1 P2 Q1 Q2 a,
   atom_ret_to_semax P2 Q2 a.
 Proof.
   intros. destruct a as [p r].
-  eapply semax_conseq with (P':=P1)(R':=return_ret_assert Q1);
-  unfold return_ret_assert;auto;
+  eapply semax_conseq with (P':=P1)(R':=return_split_assert Q1);
+  unfold return_split_assert;auto;
   unfold RA_normal, RA_break, RA_continue, RA_return;
   intros;try solve_andp.
   - eapply derives_trans;[|apply H]. solve_andp.
@@ -635,8 +658,8 @@ Proof.
   - simpl in *.
     eapply semax_conseq.
     6: { eapply semax_conj_rule with 
-          (Q1:= normal_ret_assert Q1) 
-          (Q2:= normal_ret_assert Q2).
+          (Q1:= normal_split_assert Q1) 
+          (Q2:= normal_split_assert Q2).
         apply H. apply H0. }
     { solve_andp. }
     { solve_andp. }
@@ -655,8 +678,8 @@ Proof.
   intros. destruct atom. unfold atom_to_semax in *.
   eapply semax_conseq.
   6: { eapply semax_conj_rule with 
-  (Q1:= normal_ret_assert Q1) 
-  (Q2:= normal_ret_assert Q2).
+  (Q1:= normal_split_assert Q1) 
+  (Q2:= normal_split_assert Q2).
     apply H. apply H0. }
   { solve_andp. }
   { solve_andp. }
@@ -823,8 +846,8 @@ Proof.
   induction c_pre;intros.
   - simpl in H. apply path_to_statement_app in H.
     apply semax_seq_inv in H. destruct H as [Q [H1 H2]].
-    eapply semax_post'';[|apply H1].
-    rewrite normal_ret_assert_elim. Exists Q.
+    eapply semax_conseq;[..|apply H1];try solve [intros; solve_andp].
+    rewrite normal_split_assert_elim. Exists Q.
     apply andp_right;try solve_andp.
     apply prop_right;simpl;auto.
 Qed.
@@ -841,8 +864,11 @@ Proof.
   - destruct atom. simpl in H.
     apply path_to_statement_app in H.
     apply semax_seq_inv' in H.
-    eapply semax_post'';[..|apply H].
-    Intros Q0. rewrite normal_ret_assert_elim.
+    eapply semax_conseq;[..|apply H];try solve [intros; solve_andp].
+    rewrite !normal_split_assert_elim.
+    rewrite overridePost_normal_split.
+    rewrite !normal_split_assert_elim.
+    Intros Q0.
     Exists Q0. apply andp_right. solve_andp.
     apply prop_right. auto.
   - intros a. apply H0. simpl in H. destruct atom.
@@ -865,16 +891,16 @@ Proof.
 
   eapply semax_noreturn_inv
   with (Post':=
-  (normal_ret_assert ((EX Q0 : environ -> mpred,
+  (normal_split_assert ((EX Q0 : environ -> mpred,
   !! semax Delta Q0 (path_to_statement p)
-        (overridePost Qr (return_ret_assert R)) && Q0
+        (overridePost Qr (return_split_assert R)) && Q0
   ))))
   in H;
   try solve [unfold_der;reflexivity].
   2:{ apply noreturn_split_result. }
   
   eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
-  { rewrite !normal_ret_assert_elim.
+  { rewrite !normal_split_assert_elim.
     Intros Q. Exists Q. apply andp_right.
     solve_andp. apply prop_right.
     simpl. apply semax_seq with (Q0:=Qr);auto.
@@ -897,16 +923,16 @@ Proof.
 
     eapply semax_noreturn_inv
     with (Post':=
-    (normal_ret_assert ((EX Q0 : environ -> mpred,
+    (normal_split_assert ((EX Q0 : environ -> mpred,
     !! semax Delta Q0 (path_to_statement p)
-         (overridePost Qr (return_ret_assert Q)) && Q0
+         (overridePost Qr (return_split_assert Q)) && Q0
     ))))
     in H;
     try solve [unfold_der;reflexivity].
     2:{ apply noreturn_split_result. }
     
     eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
-    { rewrite !normal_ret_assert_elim.
+    { rewrite !normal_split_assert_elim.
       Intros R. Exists R. apply andp_right.
       solve_andp. apply prop_right.
       simpl. apply semax_seq with (Q0:=Qr);auto.
@@ -926,8 +952,9 @@ Proof.
   destruct s_atom2, s_atom1. unfold atom_to_semax.
   simpl in H. apply path_to_statement_app in H.
   apply semax_seq_inv' in H.
-  eapply semax_post'';[|apply H].
-  Intros Q. rewrite normal_ret_assert_elim.
+  eapply semax_conseq;[..|apply H];try solve [intros; solve_andp].
+  rewrite overridePost_normal_split. rewrite normal_split_assert_elim.
+  Intros Q.
   Exists Q. apply andp_right. solve_andp.
   apply prop_right;auto.
 Qed.
@@ -942,7 +969,9 @@ Proof.
   apply IHc_post in H0. split;auto.
   clear H0 IHc_post.
   induction r'.
-  - hnf. hnf in H. eapply semax_post'';[|apply H].
+  - hnf. hnf in H.
+    eapply semax_conseq;[..|apply H];try solve [intros; solve_andp].
+    rewrite normal_split_assert_elim.
     eapply derives_trans;[|apply FF_left].
     solve_andp.
   - simpl. intros a. apply H0.
@@ -2028,8 +2057,8 @@ Proof.
       intros P1. rewrite !andp_assoc. apply semax_extract_prop. intros.
       rewrite andp_comm. rewrite !andp_assoc.
       apply semax_extract_prop. intros [E1 E2].
-      rewrite overridePost_normal in E1.
-      apply semax_skip_inv in E1. rewrite normal_ret_assert_elim in E1.
+      rewrite overridePost_normal_split in E1.
+      apply semax_skip_inv in E1. rewrite normal_split_assert_elim in E1.
       eapply semax_pre'.
       { rewrite <- !andp_assoc.
         apply andp_derives;[|apply derives_refl].
@@ -2040,27 +2069,21 @@ Proof.
       eapply semax_pre'. 2:{ apply H0. }
       solve_andp.
     }
-      (* eapply semax_seq_inv in H1.
-      destruct H1 as [Q [H1 H2]].
-      rewrite overridePost_normal in H1.
-      apply semax_ifthenelse_inv in H1.
-      eapply semax_pre' with (P':= Q);auto.
-      rewrite <- !andp_assoc. rewrite <- andp_assoc in H1.
-      rewrite (add_andp _ _ H1).
-      Intros P'. apply semax_skip_inv in H0.
-      rewrite normal_ret_assert_elim in H0.
-      apply semax_break_inv in H3.
-      eapply derives_trans.
-      { apply andp_right.
-        { apply derives_refl. }
-        { eapply derives_trans;[|apply typed_true_or_typed_false' with (a:=e)];auto. solve_andp. }
-      }
-      rewrite distrib_orp_andp2. apply orp_left.
-      { eapply derives_trans;[|apply H0]. solve_andp. }
-      { eapply derives_trans;[|apply FF_left].
-        eapply derives_trans;[|apply H3]. solve_andp. }
-    } *)
 Qed.
+(* 
+Lemma bool_val_strict: forall t v b, 
+  tc_val t v -> bool_type t = true -> Cop2.bool_val t v = Some b ->
+  strict_bool_val v t = Some b.
+Proof.
+  intros.
+  assert (eqb_type t int_or_ptr_type = false) as Hf.
+  { destruct t; auto.
+    apply binop_lemmas3.negb_true; auto. }
+  destruct t, v; auto; try solve [destruct f; auto]; simpl in *; unfold bool_val in *;
+    simpl in *; rewrite ?Hf in *; auto; try discriminate; simpl in *; try contradiction.
+  destruct Archi.ptr64; inv H1.
+  rewrite ?Int.eq_true, ?Int64.eq_true; auto.
+Qed. *)
 
 Lemma pre_to_semax_if_false_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
 CForall (@pre_to_semax P) (add_exp_to_Cpres (semax_lemmas.Cnot e) c_pre) ->
@@ -2075,6 +2098,96 @@ Proof.
     clear - H. induction r'.
     { simpl in H. hnf.
       rename H into H1. simpl in H1.
+      eapply semax_seq_inv' in H1.
+      apply semax_ifthenelse_inv in H1.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc.
+        apply andp_derives;[|apply derives_refl].
+        rewrite andp_assoc. apply H1.
+      }
+      rewrite exp_andp2. rewrite exp_andp1. apply semax_extract_exists.
+      intros P1. rewrite !andp_assoc. apply semax_extract_prop. intros.
+      rewrite andp_comm. rewrite !andp_assoc.
+      apply semax_extract_prop. intros [E1 E2].
+      rewrite overridePost_normal_split in E1.
+      apply semax_skip_inv in E1. rewrite normal_split_assert_elim in E1.
+      eapply semax_pre'.
+      { rewrite <- !andp_assoc.
+        apply andp_derives;[|apply derives_refl].
+        rewrite !andp_assoc.
+        eapply derives_trans;[|apply E1].
+        apply andp_derives;[apply derives_refl|].
+        apply andp_derives;[apply derives_refl|].
+        apply andp_derives;[apply derives_refl|].
+        unfold_lift. unfold local.
+        unfold lift1. simpl. intro r.
+        apply prop_derives. intros.
+        unfold liftx. unfold_lift.
+        
+        hnf in H0. hnf.
+        unfold eval_unop.
+        unfold sem_unary_operation.
+        unfold force_val1.
+        Search force_val.
+
+        remember (eval_expr e r) as v.
+        remember (typeof e) as t.
+        destruct v, t;simpl; simpl in H0; inv H0.
+        { rewrite H3. simpl. reflexivity. }
+        { unfold force_val. unfold option_map. 
+          unfold Cop2.bool_val. simpl.
+          destruct (Int.eq i Int.zero) eqn:E'; inv H3.
+          destruct t; simpl; try rewrite E';auto.
+          destruct a. destruct attr_volatile;simpl;try rewrite E';auto.
+          destruct attr_alignas; simpl;try rewrite E';auto.
+          destruct n; simpl;try rewrite E';auto.
+          destruct p; simpl;try rewrite E';auto.
+          destruct p; simpl;try rewrite E';auto.
+          simpl in Heqt.
+
+          simpl.
+        simpl. Print typeof. Print type.
+          
+        
+        destruct e; simpl in Heqv, Heqt. rewrite H3. simpl. reflexivity. }
+
+unfold strict_bool_val in H0.
+
+        simpl.
+        
+        Search strict_bool_val.
+        
+        simpl.
+        unfold force_val.
+        unfold option_map.
+        Search Cop2.bool_val strict_bool_val.
+        Locate bool_val_strict.
+        Search Cop2.bool_val.
+
+        Search Onotbool.
+
+        Locate semax_lemmas.Cnot.
+        
+        Search strict_bool_val.
+        unfold strict_bool_val. simpl.
+        Search Onotbool.
+        Search typed_false typed_true.
+        simpl.
+        Search prop_derives. unfold_lift. liftx.
+        apply andp_derives.
+        
+        Search typed_false semax_lemmas.Cnot.
+        apply E1.
+      }
+      rewrite !exp_andp1. apply semax_extract_exists. intros R.
+      rewrite !andp_assoc. apply semax_extract_prop. intros.
+      eapply semax_pre'. 2:{ apply H0. }
+      solve_andp.
+    }
+    
+    
+    simpl in H. hnf.
+      rename H into H1. simpl in H1.
       eapply semax_seq_inv in H1.
       destruct H1 as [Q [H1 H2]].
       rewrite overridePost_normal in H1.
@@ -2084,7 +2197,7 @@ Proof.
       rewrite (add_andp _ _ H1).
       rewrite (andp_comm (local (tc_environ Delta) && allp_fun_id Delta && P)). rewrite !andp_assoc. apply derives_extract_prop. intros.
       Intros P'. apply semax_skip_inv in H0.
-      rewrite normal_ret_assert_elim in H0.
+      rewrite normal_split_assert_elim in H0.
       apply semax_break_inv in H3.
       eapply derives_trans.
       { apply andp_right.
@@ -2122,7 +2235,7 @@ Proof.
       rewrite (add_andp _ _ H1).
       rewrite (andp_comm (local (tc_environ Delta) && allp_fun_id Delta && P)). rewrite !andp_assoc. apply derives_extract_prop. intros.
       Intros P'. apply semax_skip_inv in H0.
-      rewrite normal_ret_assert_elim in H0.
+      rewrite normal_split_assert_elim in H0.
       apply semax_break_inv in H3.
       eapply derives_trans.
       { apply andp_right.
@@ -2160,7 +2273,7 @@ Proof.
       rewrite (add_andp _ _ H1).
       rewrite (andp_comm (local (tc_environ Delta) && allp_fun_id Delta && P)). rewrite !andp_assoc. apply derives_extract_prop. intros.
       Intros P'. apply semax_skip_inv in H0.
-      rewrite normal_ret_assert_elim in H0.
+      rewrite normal_split_assert_elim in H0.
       apply semax_break_inv in H3.
       eapply derives_trans.
       { apply andp_right.
