@@ -312,7 +312,7 @@ Proof.
   apply semax_skip_inv in H1.
   eapply semax_pre';[apply H|..].
   eapply semax_pre';[apply H1|..].
-  rewrite normal_ret_assert_elim.
+  rewrite normal_split_assert_elim.
   apply semax_skip_der.
 Qed.
 
@@ -1254,7 +1254,7 @@ Proof.
   split;[|split].
   + apply andp_right;try solve_andp.
     simpl in Hpath'.
-    eapply if_gen_tc with (Q0:=Q);[apply Hpath'|..];auto.
+    eapply if_gen_tc with (Q0:=Q) (b:=true);[apply Hpath'|..];auto.
     apply S1.
   + repeat split;auto.
     * apply pre_to_semax_if_true_inv_group;auto.
@@ -1281,7 +1281,7 @@ Proof.
   inversion S7;subst.
   simpl in H1.
   apply semax_skip_inv in H1.
-  rewrite normal_ret_assert_elim in H1.
+  rewrite normal_split_assert_elim in H1.
   eapply semax_pre';[apply H1|].
   destruct Q as [Qn Qb Qc Qr];unfold_der.
   eapply semax_noreturn_inv with (
@@ -1308,15 +1308,16 @@ Proof.
   simpl in H1.
   apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
   apply semax_skip_inv in H3.
-  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  destruct Q as [Qn Qb Qc Qr];unfold_der;
+  unfold normal_split_assert in *.
   eapply semax_noreturn_inv with (
-    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => TT)
   );auto.
   eapply semax_nocontinue_inv with (
-    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb TT (fun _ => TT)
   );auto.
   eapply semax_nobreak_inv with (
-    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+    Post:= Build_ret_assert Qn TT TT (fun _ => TT)
   );auto.
   eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
 Qed.
@@ -1334,15 +1335,16 @@ Proof.
   simpl in H1.
   apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
   apply semax_skip_inv in H3.
-  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  destruct Q as [Qn Qb Qc Qr];unfold_der;
+  unfold normal_split_assert in *.
   eapply semax_noreturn_inv with (
-    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => TT)
   );auto.
   eapply semax_nocontinue_inv with (
-    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb TT (fun _ => TT)
   );auto.
   eapply semax_nobreak_inv with (
-    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+    Post:= Build_ret_assert Qn TT TT (fun _ => TT)
   );auto.
   eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
 Qed.
@@ -1360,15 +1362,16 @@ Proof.
   simpl in H1.
   apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
   apply semax_skip_inv in H3.
-  destruct Q as [Qn Qb Qc Qr];unfold_der.
+  destruct Q as [Qn Qb Qc Qr];unfold_der;
+  unfold normal_split_assert in *.
   eapply semax_noreturn_inv with (
-    Post:= Build_ret_assert Qn Qb Qc (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb Qc (fun _ => TT)
   );auto.
   eapply semax_nocontinue_inv with (
-    Post:= Build_ret_assert Qn Qb FF (fun _ => FF)
+    Post:= Build_ret_assert Qn Qb TT (fun _ => TT)
   );auto.
   eapply semax_nobreak_inv with (
-    Post:= Build_ret_assert Qn FF FF (fun _ => FF)
+    Post:= Build_ret_assert Qn TT TT (fun _ => TT)
   );auto.
   eapply semax_conseq;[..|apply H1]; try solve [intros;solve_andp];auto.
 Qed.
@@ -1384,7 +1387,7 @@ Proof.
   inversion S8;subst.
   simpl in H1.
   apply semax_skip_inv in H1.
-  rewrite normal_ret_assert_elim in H1.
+  rewrite normal_split_assert_elim in H1.
   eapply semax_pre';[apply H1|].
   constructor.
 Qed.
@@ -1401,7 +1404,7 @@ Proof.
   inversion S9;subst.
   simpl in H1.
   apply semax_skip_inv in H1.
-  rewrite normal_ret_assert_elim in H1.
+  rewrite normal_split_assert_elim in H1.
   eapply semax_pre';[apply H1|].
   constructor.
 Qed.
@@ -1422,7 +1425,7 @@ Proof.
   apply semax_return_inv in H3.
   eapply semax_pre';[apply H1|].
   destruct Q.
-  unfold return_ret_assert in *.  unfold_der.
+  unfold return_split_assert in *.  unfold_der.
   eapply semax_pre';[|apply semax_return].
   auto.
 Qed.
