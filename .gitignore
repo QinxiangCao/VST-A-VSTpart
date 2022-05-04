@@ -1,5 +1,6 @@
 .DS_store
 aclightgen
+testprogs
 
 # Object files, in general
 *.vo
