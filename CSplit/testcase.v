@@ -1,4 +1,4 @@
-Require Import CSplit.AClightFunc.
+Require Import CSplit.AClight.
 
 (* 
 int sgn (int x) {
