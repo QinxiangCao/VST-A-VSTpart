@@ -28,6 +28,7 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
 Fixpoint count_break (s: statement) : Z :=
   match s with
   | Sgiven2 _ s => count_break s
+  | Sexgiven _ _ s => count_break s
   | Ssequence s1 s2 =>
       let cnt1 := count_break s1 in
       let cnt2 := count_break s2 in
@@ -109,6 +110,7 @@ Definition check_no_continue (s: statement) : res unit :=
 Fixpoint count_normal_exit (s: statement) : Z :=
   match s with
   | Sgiven2 _ s => count_normal_exit s
+  | Sexgiven _ _ s => count_normal_exit s
   | Ssequence s1 s2 =>
       let cnt1 := count_normal_exit s1 in
       match s2 with
@@ -125,6 +127,8 @@ Fixpoint count_normal_exit (s: statement) : Z :=
       cnt1 + cnt2
   | Sswitch _ ls => 2 (* This is not true, but currently we only case about 0/1/>1. *)
   | Sloop2 _ s1 s2 =>
+      count_break s1
+  | Sloop s1 s2 =>
       count_break s1
   | Slabel _ s => count_normal_exit s
   | Scontinue | Sbreak | Sreturn _ => 0
@@ -143,6 +147,7 @@ Fixpoint count_statement (s: statement) : nat :=
   | Sassert _ => 0
   | Sdummyassert _ => 0
   | Sgiven2 _ s => count_statement s
+  | Sexgiven _ _ s => count_statement s
   | Ssequence s1 s2 => count_statement s1 + count_statement s2
   | Slocal _ n _ _ => n
   | _ => 1
@@ -188,6 +193,7 @@ Fixpoint fold_cs_aux (cs_list: list (comment + statement)) (acc: statement) (sta
       | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
       | _, Sskip (* or followed by skip *)
           => fold_cs_aux cs_list (Ssequence s acc) stack
+      | Sloop _ _, _
       | Sloop2 _ _ _, _
       | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
           => (* do _ <- check_single_normal_exit s; *)

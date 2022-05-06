@@ -1,4 +1,4 @@
-Require Import CSplit.AClight.
+Require Import CSplit.AClightFunc.
 
 (* 
 int sgn (int x) {
@@ -361,6 +361,8 @@ Cexgiven Z (fun x => (PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _
     (Cset _ret (Econst_int (Int.repr 1) tint)))
 (Creturn (Some (Etempvar _ret tint))))
 ).
+
+Print sgn_C.
 
 
 

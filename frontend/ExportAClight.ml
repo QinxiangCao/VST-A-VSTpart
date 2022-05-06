@@ -353,6 +353,8 @@ let rec stmt p = function
     fprintf p "@[<hov 2>(Sassert %a)@]" assertion a
   | Sdummyassert a ->
     fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
+  | Sexgiven (b, a, s) ->
+    fprintf p "@[<hov 2>(EXGIVEN %s@ [[%a]] %a)@]" b assertion a stmt s
   | Sgiven2 (b, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
   | Slocal (l, cnt, s, g) ->
@@ -386,6 +388,9 @@ let rec stmt p = function
       fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
   | Sloop2 (inv, s1, s2) ->
       fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
+  | Sloop (s1, s2) ->
+      fprintf p "@[<hv 2>(Sloop@ %a@ %a)@]" 
+        stmt s1 stmt s2
   | Sbreak ->
       fprintf p "Sbreak"
   | Scontinue ->
@@ -538,6 +543,7 @@ let rec name_expr = function
 let rec name_stmt = function
   | Sassert _ -> ()
   | Sdummyassert _ -> ()
+  | Sexgiven (_, _, s) -> name_stmt s
   | Sgiven2 (_, s) -> name_stmt s
   | Slocal (_, _, s, _) -> name_stmt s
   | Sskip -> ()
@@ -549,6 +555,7 @@ let rec name_stmt = function
       name_opt_temporary optid; List.iter name_expr el
   | Ssequence(s1, s2) -> name_stmt s1; name_stmt s2
   | Sifthenelse(e, s1, s2) -> name_expr e; name_stmt s1; name_stmt s2
+  | Sloop(s1, s2) -> name_stmt s1; name_stmt s2
   | Sloop2(_, s1, s2) -> name_stmt s1; name_stmt s2
   | Sbreak -> ()
   | Scontinue -> ()

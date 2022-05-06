@@ -48,6 +48,7 @@ Inductive loop_invariant :=
 Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
+  | Sexgiven : binder -> assert -> statement -> statement         (* abstract given clause *)
   | Sgiven2 : binder -> statement -> statement         (* abstract given clause *)
   | Slocal : assert -> nat -> statement -> assert -> statement
   | Sskip : statement                   (**r do nothing *)
@@ -57,6 +58,7 @@ Inductive statement : Type :=
   | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
   | Ssequence : statement -> statement -> statement  (**r sequence *)
   | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
+  | Sloop: statement -> statement -> statement (**r infinite loop *)
   | Sloop2: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
