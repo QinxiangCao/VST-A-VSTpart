@@ -25,7 +25,7 @@ open ExportClight
 open AClight
 
 (* additional flags *)
-let option_V = ref []
+let option_V : string list ref = ref []
 
 (*(* Options, lists, pairs *)
 
@@ -628,9 +628,9 @@ let print_program p prog sourcefile normalized =
   Hashtbl.clear temp_names;
   name_program prog;
   fprintf p "@[<v 0>";
-  fprintf p "%s" prologue;
+  (* fprintf p "%s" prologue;
   List.iter (fprintf p "Require Import %s.@ ") !option_V;
-  print_clightgen_info p sourcefile normalized;
+  print_clightgen_info p sourcefile normalized; *)
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
-  print_Gprog p prog.Ctypes.prog_defs;
+  (* print_Gprog p prog.Ctypes.prog_defs; *)
   fprintf p "@]@."

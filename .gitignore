@@ -1,6 +1,9 @@
 .DS_store
 aclightgen
 testprogs
+.vscode
+_build
+.merlin
 
 # Object files, in general
 *.vo
