@@ -353,7 +353,7 @@ let rec stmt p = function
     fprintf p "@[<hov 2>(Sassert %a)@]" assertion a
   | Sdummyassert a ->
     fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
-  | Sgiven (b, s) ->
+  | Sgiven2 (b, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
   | Slocal (l, cnt, s, g) ->
     fprintf p "@[<hov 2>(Slocal %a@ (%d)%%nat %a@ %a)@]" assertion l cnt stmt s assertion g
@@ -380,11 +380,11 @@ let rec stmt p = function
       fprintf p "@[<hv 2>(Ssequence@ %a@ %a)@]" stmt s1 stmt s2
   | Sifthenelse(e, s1, s2) ->
       fprintf p "@[<hv 2>(Sifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
-  | Sloop ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
+  | Sloop2 ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
       fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
-  | Sloop ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
+  | Sloop2 ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
       fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
-  | Sloop (inv, s1, s2) ->
+  | Sloop2 (inv, s1, s2) ->
       fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
   | Sbreak ->
       fprintf p "Sbreak"
@@ -538,7 +538,7 @@ let rec name_expr = function
 let rec name_stmt = function
   | Sassert _ -> ()
   | Sdummyassert _ -> ()
-  | Sgiven (_, s) -> name_stmt s
+  | Sgiven2 (_, s) -> name_stmt s
   | Slocal (_, _, s, _) -> name_stmt s
   | Sskip -> ()
   | Sassign(e1, e2) -> name_expr e1; name_expr e2
@@ -549,7 +549,7 @@ let rec name_stmt = function
       name_opt_temporary optid; List.iter name_expr el
   | Ssequence(s1, s2) -> name_stmt s1; name_stmt s2
   | Sifthenelse(e, s1, s2) -> name_expr e; name_stmt s1; name_stmt s2
-  | Sloop(_, s1, s2) -> name_stmt s1; name_stmt s2
+  | Sloop2(_, s1, s2) -> name_stmt s1; name_stmt s2
   | Sbreak -> ()
   | Scontinue -> ()
   | Sswitch(e, cases) -> name_expr e; name_lblstmts cases

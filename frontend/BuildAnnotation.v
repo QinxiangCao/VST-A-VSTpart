@@ -19,7 +19,7 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
       | nil => s
       | _ =>
         let s := Ssequence (Sdummyassert dummy_assert) s in
-        fold_right Sgiven s binder_list
+        fold_right Sgiven2 s binder_list
       end
   end.
 
@@ -27,7 +27,7 @@ Definition add_binder_list (s: statement) (c: assert) : statement :=
 
 Fixpoint count_break (s: statement) : Z :=
   match s with
-  | Sgiven _ s => count_break s
+  | Sgiven2 _ s => count_break s
   | Ssequence s1 s2 =>
       let cnt1 := count_break s1 in
       let cnt2 := count_break s2 in
@@ -50,7 +50,7 @@ Definition check_single_break (s: statement) : res unit :=
 (*
 Fixpoint count_continue (s: statement) : Z :=
   match s with
-  | Sgiven _ s => count_continue s
+  | Sgiven2 _ s => count_continue s
   | Ssequence s1 s2 =>
       let cnt1 := count_continue s1 in
       let cnt2 := count_continue s2 in
@@ -108,7 +108,7 @@ Definition check_no_continue (s: statement) : res unit :=
 
 Fixpoint count_normal_exit (s: statement) : Z :=
   match s with
-  | Sgiven _ s => count_normal_exit s
+  | Sgiven2 _ s => count_normal_exit s
   | Ssequence s1 s2 =>
       let cnt1 := count_normal_exit s1 in
       match s2 with
@@ -124,7 +124,7 @@ Fixpoint count_normal_exit (s: statement) : Z :=
       let cnt2 := count_normal_exit s2 in
       cnt1 + cnt2
   | Sswitch _ ls => 2 (* This is not true, but currently we only case about 0/1/>1. *)
-  | Sloop _ s1 s2 =>
+  | Sloop2 _ s1 s2 =>
       count_break s1
   | Slabel _ s => count_normal_exit s
   | Scontinue | Sbreak | Sreturn _ => 0
@@ -142,7 +142,7 @@ Fixpoint count_statement (s: statement) : nat :=
   | Sskip => 0
   | Sassert _ => 0
   | Sdummyassert _ => 0
-  | Sgiven _ s => count_statement s
+  | Sgiven2 _ s => count_statement s
   | Ssequence s1 s2 => count_statement s1 + count_statement s2
   | Slocal _ n _ _ => n
   | _ => 1
@@ -188,7 +188,7 @@ Fixpoint fold_cs_aux (cs_list: list (comment + statement)) (acc: statement) (sta
       | _, Ssequence (Sassert _) _ (* If statement is followed by an assertion, use it as post condition. *)
       | _, Sskip (* or followed by skip *)
           => fold_cs_aux cs_list (Ssequence s acc) stack
-      | Sloop _ _ _, _
+      | Sloop2 _ _ _, _
       | Sifthenelse _ _ _, _ (* For other cases, statement must have at most one exit point. *)
           => (* do _ <- check_single_normal_exit s; *)
           fold_cs_aux cs_list (Ssequence s acc) stack
@@ -232,20 +232,20 @@ Fixpoint annotate_stmt (s: ClightC.statement) : res statement :=
           do cs_list2 <- annotate_stmt_list cs_list1 s2;
           do s' <- fold_cs cs_list2;
           let s'' := add_binder_list s' inv in
-          OK (Sloop (LISingle inv) s'' Sskip)
+          OK (Sloop2 (LISingle inv) s'' Sskip)
         else
           do cs_list1 <- annotate_stmt_list nil s1;
           do cs_list2 <- annotate_stmt_list nil s2;
           do s1' <- fold_cs cs_list1;
           let s1'' := add_binder_list s1' inv in
           do s2' <- fold_cs cs_list2;
-          OK (Sloop (LISingle inv) s1'' s2')
+          OK (Sloop2 (LISingle inv) s1'' s2')
       | LIDouble inv1 inv2 =>
         do s1' <- annotate_stmt s1;
         do s2' <- annotate_stmt s2;
         let s1'' := add_binder_list s1' inv1 in
         let s2'' := add_binder_list s2' inv2 in
-        OK (Sloop (LIDouble inv1 inv2) s1'' s2'')
+        OK (Sloop2 (LIDouble inv1 inv2) s1'' s2'')
       end
     in
     match s with
@@ -306,7 +306,7 @@ Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
       : option (binder * assert * assert) * statement :=
   match funcspec with (binder, pre, post) =>
     (Some funcspec,
-      Sgiven binder (
+      Sgiven2 binder (
         Ssequence (Sdummyassert pre) (
           Ssequence (Sdummyassert post)
             s)))

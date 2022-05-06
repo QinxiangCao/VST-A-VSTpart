@@ -48,7 +48,7 @@ Inductive loop_invariant :=
 Inductive statement : Type :=
   | Sassert : assert -> statement
   | Sdummyassert : assert -> statement
-  | Sgiven : binder -> statement -> statement         (* abstract given clause *)
+  | Sgiven2 : binder -> statement -> statement         (* abstract given clause *)
   | Slocal : assert -> nat -> statement -> assert -> statement
   | Sskip : statement                   (**r do nothing *)
   | Sassign : expr -> expr -> statement (**r assignment [lvalue = rvalue] *)
@@ -57,7 +57,7 @@ Inductive statement : Type :=
   | Sbuiltin: option ident -> external_function -> typelist -> list expr -> statement (**r builtin invocation *)
   | Ssequence : statement -> statement -> statement  (**r sequence *)
   | Sifthenelse : expr  -> statement -> statement -> statement (**r conditional *)
-  | Sloop: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
+  | Sloop2: loop_invariant -> statement -> statement -> statement (**r infinite loop *)
   | Sbreak : statement                      (**r [break] statement *)
   | Scontinue : statement                   (**r [continue] statement *)
   | Sreturn : option expr -> statement      (**r [return] statement *)
@@ -71,7 +71,7 @@ with labeled_statements : Type :=            (**r cases of a [switch] *)
                       (**r [None] is [default], [Some x] is [case x] *)
 
 Definition Swhile (Inv : assert) (e: expr) (s: statement):=
-  Sloop (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
+  Sloop2 (LISingle Inv) (Ssequence (Sifthenelse e Sskip Sbreak) s) Sskip.
 
 (** ** Functions *)
 
