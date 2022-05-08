@@ -462,6 +462,8 @@ Definition res :=
 
 Print res.
 
+(* Theorem res_verif: split_Semax *)
+
 End sgn_verif.
 
 
