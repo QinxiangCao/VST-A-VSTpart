@@ -4,6 +4,7 @@ testprogs
 .vscode
 _build
 .merlin
+CONFIGURE
 
 # Object files, in general
 *.vo

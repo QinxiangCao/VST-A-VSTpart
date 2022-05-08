@@ -1,9 +1,9 @@
 include Makefile.config
 
-include $(COMPCERTDIR)/Makefile.config
-include $(COMPCERTDIR)/Makefile.menhir
+include $(COMPCERTADIR)/Makefile.config
+include $(COMPCERTADIR)/Makefile.menhir
 
-ifeq ($(wildcard $(COMPCERTDIR)/$(ARCH)_$(BITSIZE)),)
+ifeq ($(wildcard $(COMPCERTADIR)/$(ARCH)_$(BITSIZE)),)
 ARCHDIRS=$(ARCH)
 else
 ARCHDIRS=$(ARCH)_$(BITSIZE) $(ARCH)
@@ -18,7 +18,7 @@ EXECUTABLES=aclightgen aclightgen.byte
 
 RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
 
-COQFLAGS=$(foreach d, $(RECDIRS), -R $(COMPCERTDIR)/$(d) compcert.$(d)) -R $(FRONTENDDIR) frontend
+COQFLAGS=$(foreach d, $(RECDIRS), -R $(COMPCERTADIR)/$(d) compcert.$(d)) -R $(FRONTENDDIR) frontend
 
 DEPFLAGS:=$(COQFLAGS)
 COQC=$(COQBIN)coqc
@@ -30,7 +30,7 @@ COQDOC=$(COQBIN)coqdoc -d doc/html -g  $(DEPFLAGS)
 # Ocaml compilation variables
 
 DIRS=\
-  $(patsubst %, $(COMPCERTDIR)/%, extraction \
+  $(patsubst %, $(COMPCERTADIR)/%, extraction \
   lib common $(ARCH) backend cfrontend cparser driver \
   exportclight debug)\
   $(FRONTENDDIR) $(EXTRACTIONDIR)
@@ -53,7 +53,7 @@ OCAMLC=ocamlc$(DOTOPT) $(COMPFLAGS)
 OCAMLOPT=ocamlopt$(DOTOPT) $(COMPFLAGS)
 OCAMLDEP=ocamldep$(DOTOPT) -slash $(INCLUDES)
 
-MODORDER=$(COMPCERTDIR)/tools/modorder .depend.extr
+MODORDER=$(COMPCERTADIR)/tools/modorder .depend.extr
 
 LIBS=str.cmxa unix.cmxa $(MENHIR_LIBS)
 LIBS_BYTE=$(patsubst %.cmxa,%.cma,$(patsubst %.cmx,%.cmo,$(LIBS)))
@@ -126,8 +126,8 @@ endif # if .depend.extr exists
 endif # if $(EXTRACTIONDIR)/STAMP exists
 endif # if .depend.frontend exists
 
-compcert.ini: $(COMPCERTDIR)/compcert.ini
-	@cp $(COMPCERTDIR)/compcert.ini compcert.ini
+compcert.ini: $(COMPCERTADIR)/compcert.ini
+	@cp $(COMPCERTADIR)/compcert.ini compcert.ini
 
 endif # if the goal is not clean
 
