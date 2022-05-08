@@ -362,7 +362,84 @@ Cexgiven Z (fun x => (PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _
 (Creturn (Some (Etempvar _ret tint))))
 ).
 
-Print sgn_C.
+
+Parameter sgn: Z -> Z.
+
+Parameter x : Z.
+Definition f_sgn_hint :=
+(
+  (
+    (
+      (Csequence
+        (Cassert (
+        (EX x',
+   PROP (Int.min_signed <= x' <= Int.max_signed /\ x = x')
+   LOCAL (temp _x  (Vint (Int.repr x'))) 
+   SEP ()
+   )%assert))
+        (EXGIVEN x'
+          [[((PROP (Int.min_signed <= x' <= Int.max_signed /\ x = x')
+   LOCAL (temp _x  (Vint (Int.repr x'))) 
+   SEP ()
+   )%assert)]] 
+          (Csequence
+            (Cifthenelse (Ebinop Ole (Etempvar _x tint)
+                           (Econst_int (Int.repr 0) tint) tint)
+              (Csequence
+                (Cifthenelse (Ebinop Oeq (Etempvar _x tint)
+                               (Econst_int (Int.repr 0) tint) tint)
+                  (Csequence
+                    (Cset _ret (Econst_int (Int.repr 0) tint))
+                    Cskip)
+                  (Csequence
+                    (Cset _ret
+                      (Eunop Oneg (Econst_int (Int.repr 1) tint) tint))
+                    Cskip))
+                Cskip)
+              (Csequence (Cset _ret (Econst_int (Int.repr 1) tint)) Cskip))
+            (Csequence
+              (Cassert (
+  ( EX r,
+    PROP (r = sgn x') LOCAL (temp _x  (Vint (Int.repr x'))) SEP ())))
+              (EXGIVEN r
+                [[((PROP (r = sgn x') LOCAL (temp _x  (Vint (Int.repr x'))) SEP ()))]] 
+                (Csequence
+                  (Creturn (Some (Etempvar _ret tint)))
+                  Cskip))))))))).
+
+
+Definition f_sgn_hint_S:=
+  (Ssequence Sassert
+  (Ssequence Sassert
+     (Ssequence
+        (Sifthenelse
+           (Ebinop Ole (Etempvar _x tint)
+              (Econst_int (Int.repr Z0) tint) tint)
+           (Ssequence
+              (Sifthenelse
+                 (Ebinop Oeq (Etempvar _x tint)
+                    (Econst_int (Int.repr Z0) tint) tint)
+                 (Ssequence
+                    (Sset _ret (Econst_int (Int.repr Z0) tint))
+                    Sskip)
+                 (Ssequence
+                    (Sset _ret
+                       (Eunop Oneg
+                          (Econst_int (Int.repr (Zpos xH)) tint)
+                          tint)) Sskip)) Sskip)
+           (Ssequence
+              (Sset _ret (Econst_int (Int.repr (Zpos xH)) tint))
+              Sskip))
+        (Ssequence Sassert
+           (Ssequence Sassert
+              (Ssequence (Sreturn (Some (Etempvar _ret tint)))
+                 Sskip)))))).
+
+
+Definition res' :=
+  ltac:(compute_split f_sgn_hint_S f_sgn_hint).
+
+Print res'.
 
 
 
@@ -596,6 +673,7 @@ Definition reverse_C :=
             SEP   (listrep sh (rev l) q)))
   ))))).
 
+
 Parameter foo : forall s_res,  (C_result s_res) ->  Prop.
 
 Goal foo _ (C_split reverse_S reverse_C).
@@ -614,6 +692,8 @@ Definition res :=
 Print res.
 
 End reverse_verif.
+
+
 
 (* 
 All split functions:
