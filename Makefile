@@ -21,7 +21,7 @@ CPROGSDIR=cprogs
 FRONTENDDIR=frontend
 CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlinklist
 
-CSPLIT_FILE_NAMES = vst_ext.v # model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
+CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 
@@ -58,7 +58,6 @@ ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHT
 
 .PHONY: depend
 depend .depend: cprogs
-	@$(COQDEP) $(patsubst %, %/*.v, $(DIRS)) > .depend
 	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
 
 
@@ -96,5 +95,8 @@ endif # if the goal is not clean
 
 .PHONY: clean
 clean:
+	@rm -f .depend
+	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
+	@rm -f _CoqProject
 	@$(MAKE) -f Makefile.frontend clean
 	@rm CSplit/*.vo CSplit/*.glob CSplit/*.aux

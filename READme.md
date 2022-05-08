@@ -6,28 +6,15 @@ using Coq 8.10
 
 2. CompCert-a dependency (not sure about version, see [https://jbox.sjtu.edu.cn/l/x1RXga])
 
-3. Configure `Makefile.config`:
+3. run `make`, an CONFIGURE file will be generated, fill in there
 
-    ```
-    VSTDIR= ...
-    COMPCERTDIR= ...  (compcert-a dir)
-    COQBIN= ...
-    RAMIFYCOQDIR= ... (optional)
-    ```
+4. run `make` again, the following will be built
+   - frontend, `aclightgen`
+   - the parsed results of test progs in `cprogs/`
+   - the split function and its soundness proof in `CSplit/`
+   - the proof automation tactics in `floyd-seq/`
+  
 
-4. Make VST-A, `make` in the main directory (`make` may stop at RamifyCoq which is fine for this project)
-   
-5. Add `-Q ./vst-a/Split Split` to `_CoqProject`
-
-6. `cd Split`,  Configure `CONFIGURE`
-
-    ```
-    VSTDIR= 
-    COMPCERTDIR= (compcert in VST)
-    COQBIN= 
-    ```
-
-7. in `Split`, `make`
 
 
 ## Key Definitions & Lemmas of the stronger program logic
