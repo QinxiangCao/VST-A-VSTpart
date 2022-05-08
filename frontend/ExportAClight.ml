@@ -350,7 +350,7 @@ let loop_invariant p = function
 (* Statements *)
 let rec stmt p = function
   | Sassert a ->
-    fprintf p "@[<hov 2>(Sassert %a)@]" assertion a
+    fprintf p "@[<hov 2>(Cassert %a)@]" assertion a
   | Sdummyassert a ->
     fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
   | Sexgiven (b, a, s) ->
@@ -358,15 +358,15 @@ let rec stmt p = function
   | Sgiven2 (b, s) ->
     fprintf p "@[<hov 2>(GIVEN %s@ %a)@]" b stmt s
   | Slocal (l, cnt, s, g) ->
-    fprintf p "@[<hov 2>(Slocal %a@ (%d)%%nat %a@ %a)@]" assertion l cnt stmt s assertion g
+    fprintf p "@[<hov 2>(Clocal %a@ (%d)%%nat %a@ %a)@]" assertion l cnt stmt s assertion g
   | Sskip ->
-      fprintf p "Sskip"
+      fprintf p "Cskip"
   | Sassign(e1, e2) ->
-      fprintf p "@[<hov 2>(Sassign@ %a@ %a)@]" expr e1 expr e2
+      fprintf p "@[<hov 2>(Cassign@ %a@ %a)@]" expr e1 expr e2
   | Sset(id, e2) ->
-      fprintf p "@[<hov 2>(Sset %a@ %a)@]" ident id expr e2
+      fprintf p "@[<hov 2>(Cset %a@ %a)@]" ident id expr e2
   | Scall(optid, e1, el) ->
-      fprintf p "@[<hov 2>(Scall %a@ %a@ %a)@]"
+      fprintf p "@[<hov 2>(Ccall %a@ %a@ %a)@]"
         (print_option ident) optid expr e1 (print_list expr) el
   | Sbuiltin(optid, ef, tyl, el) ->
       fprintf p "@[<hov 2>(Sbuiltin %a@ %a@ %a@ %a)@]"
@@ -379,9 +379,9 @@ let rec stmt p = function
   | Ssequence(s1, Sskip) ->
       stmt p s1 *)
   | Ssequence(s1, s2) ->
-      fprintf p "@[<hv 2>(Ssequence@ %a@ %a)@]" stmt s1 stmt s2
+      fprintf p "@[<hv 2>(Csequence@ %a@ %a)@]" stmt s1 stmt s2
   | Sifthenelse(e, s1, s2) ->
-      fprintf p "@[<hv 2>(Sifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
+      fprintf p "@[<hv 2>(Cifthenelse %a@ %a@ %a)@]" expr e stmt s1 stmt s2
   | Sloop2 ((LISingle inv), Ssequence (Sifthenelse(e, Sskip, Sbreak), s), Sskip) ->
       fprintf p "@[<hv 2>(Swhile@ %a@ %a@ %a)@]" assertion inv expr e stmt s
   | Sloop2 ((LISingle inv), Ssequence (Ssequence(Sskip, Sifthenelse(e, Sskip, Sbreak)), s), Sskip) ->
@@ -389,16 +389,16 @@ let rec stmt p = function
   | Sloop2 (inv, s1, s2) ->
       fprintf p "@[<hv 2>(Sloop@ %a@ %a@ %a)@]" loop_invariant inv stmt s1 stmt s2
   | Sloop (s1, s2) ->
-      fprintf p "@[<hv 2>(Sloop@ %a@ %a)@]" 
+      fprintf p "@[<hv 2>(Cloop@ %a@ %a)@]" 
         stmt s1 stmt s2
   | Sbreak ->
-      fprintf p "Sbreak"
+      fprintf p "Cbreak"
   | Scontinue ->
-      fprintf p "Scontinue"
+      fprintf p "Ccontinue"
   | Sswitch(e, cases) ->
       fprintf p "@[<hv 2>(Sswitch %a@ %a)@]" expr e lblstmts cases
   | Sreturn e ->
-      fprintf p "@[<hv 2>(Sreturn %a)@]" (print_option expr) e
+      fprintf p "@[<hv 2>(Creturn %a)@]" (print_option expr) e
   | Slabel(lbl, s1) ->
       fprintf p "@[<hv 2>(Slabel %a@ %a)@]" ident lbl stmt s1
   | Sgoto lbl ->
