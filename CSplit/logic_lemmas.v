@@ -1,6 +1,6 @@
 Require Import VST.veric.mpred.
 Require Import VST.veric.compcert_rmaps.
-Require Import Split.model_lemmas.
+Require Import CSplit.model_lemmas.
 Require Import VST.veric.seplog.
 Require Import VST.msl.seplog.
 (* Require Import VST.floyd.proofauto. *)

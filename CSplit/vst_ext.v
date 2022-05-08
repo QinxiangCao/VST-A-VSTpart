@@ -1,4 +1,4 @@
-Require Import AClight.AClight.
+(* Require Import AClight.AClight. *)
 Require Export VST.veric.base.
 Require Export VST.veric.SeparationLogic.
 Require Export VST.msl.Extensionality.

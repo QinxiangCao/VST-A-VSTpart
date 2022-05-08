@@ -1,4 +1,3 @@
-Require Import AClight.AClight.
 Require Export VST.veric.base.
 Require Export VST.veric.SeparationLogic.
 Require Export VST.msl.Extensionality.
@@ -18,9 +17,9 @@ Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_Sound.DeepEmbedded.
 Require Import VST.floyd.proofauto.
 Import Ctypes LiftNotation.
 Local Open Scope logic.
-Require Import Split.vst_ext.
-Require Import Split.model_lemmas.
-Require Import Split.logic_lemmas.
+Require Import CSplit.vst_ext.
+Require Import CSplit.model_lemmas.
+Require Import CSplit.logic_lemmas.
 
 
 Definition numeric_type (t: type) : bool :=
@@ -1224,17 +1223,6 @@ Proof.
   apply two_share_join.
 Qed.
 
-Lemma mapsto_join_andp_write_logic: forall sh1 sh2 t p P1 P2,
-(* tc_val t v2 -> can't be undefined *)
-writable_share sh1 -> writable_share sh2 ->
-(mapsto_ sh1 t p * (ALL v', mapsto sh1 t p v' -* P1)) && 
-(mapsto_ sh2 t p * (ALL v', mapsto sh2 t p v' -* P2))
-|-- EX (sh':share), 
-(mapsto_ sh' t p * (ALL v', mapsto sh' t p v' -* (P1 && P2))).
-Proof.
-  intros.
-  apply mapsto_join_andp_write;auto.
-Qed.
 
 Lemma mapsto_join_andp_write_det_logic: forall sh1 sh2 t p P1 P2 v',
 tc_val t v' -> 
