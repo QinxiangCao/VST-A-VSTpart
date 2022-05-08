@@ -8,18 +8,20 @@ Open Scope error_monad_scope.
 Open Scope string_scope.
 Open Scope list_scope.
 
-Parameter get_binder_list : assert -> list binder * assert.
+Parameter get_binder_list : assert ->  list (binder * assert).
 
 Definition add_binder_list (s: statement) (c: assert) : statement :=
   match s with
   | Sskip => Sskip
   | _ =>
-      let (binder_list, dummy_assert) := get_binder_list c in
+      let binder_list := get_binder_list c in
       match binder_list with
       | nil => s
       | _ =>
-        let s := Ssequence (Sdummyassert dummy_assert) s in
-        fold_right Sgiven2 s binder_list
+        (* let s := Ssequence (Sdummyassert dummy_assert) s in *)
+        fold_right (fun binder_ass s => 
+           Sexgiven (fst binder_ass) (snd binder_ass) s
+        ) s binder_list
       end
   end.
 
