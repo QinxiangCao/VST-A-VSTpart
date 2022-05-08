@@ -1,44 +1,46 @@
-ifeq (, $(wildcard ./Makefile.config))
+ifeq (, $(wildcard ./CONFIGURE))
 _:=$(shell (\
   echo "VSTDIR= \# /path/to/VST";\
-  echo "COMPCERTDIR= \# /path/to/CompCert"\
-) > ./Makefile.config)
-$(error FAILURE: Please fill paths to VST and CompCert in Makefile.config)
+  echo "COMPCERTDIR= \# /path/to/CompCert";\
+  echo "COQBIN= \# /path/to/Coq";\
+  echo "RAMIFYCOQDIR= \# /path/to/RamifyCoq";\
+  echo "COMPCERTADIR= \# /path/to/CompCertA";\
+) > ./CONFIGURE)
+$(error FAILURE: Please fill paths to VST and CompCert in CONFIGURE)
 endif
 
-include Makefile.config
-VSTDIRS=msl sepcomp veric floyd
-VSTCOMPCERT=$(VSTDIR)/compcert
+CURRENT_DIR = "./"
+-include CONFIGURE
 
-ACLIGHTDIR=AClight
+COQC=$(COQBIN)coqc
+COQDEP=$(COQBIN)coqdep
+
+VST_DIRS = msl sepcomp veric floyd
+VSTCOMPCERT=$(VSTDIR)/compcert
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
-DIRS=$(ACLIGHTDIR) $(CPROGSDIR) vfa wand_demo
-
 CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlinklist
 
+CSPLIT_FILE_NAMES = vst_ext.v # model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
+CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
-COQFLAGS=$(foreach d, $(VSTDIRS), -Q $(VSTDIR)/$(d) VST.$(d))\
- -R $(VSTCOMPCERT) compcert -Q $(CPROGSDIR) cprogs -Q $(ACLIGHTDIR) AClight $(EXTFLAGS)\
- -Q vfa VFA -Q wand_demo WandDemo
-#  -Q Split Split
-#  -Q CSplit CSplit
+
+INCLUDE_ACLIGHT = -Q CSplit CSplit
+INCLUDE_COMPCERT = -R $(COMPCERTDIR) compcert
+INCLUDE_VST = $(foreach d, $(VST_DIRS), -Q $(VSTDIR)/$(d) VST.$(d))
+NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)
+
 
 ifneq (, $(RAMIFYCOQDIR))
- COQFLAGS += -Q $(RAMIFYCOQDIR) RamifyCoq
+ NORMAL_FLAG += -Q $(RAMIFYCOQDIR) RamifyCoq
 endif
 
-DEPFLAGS:=$(COQFLAGS)
-COQC=$(COQBIN)coqc
-COQTOP=$(COQBIN)coqtop
-COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
-COQDOC=$(COQBIN)coqdoc -d doc/html -g $(DEPFLAGS)
 
 all: _CoqProject frontend
-	$(MAKE) $(addprefix $(CPROGSDIR)/, $(CPROGS:=_verif.vo))
+# $(MAKE) $(addprefix $(CPROGSDIR)/, $(CPROGS:=_verif.vo))
 
 _CoqProject: Makefile
-	@echo '$(COQFLAGS)' > _CoqProject
+	@echo '$(NORMAL_FLAG)' > _CoqProject
 
 ifneq ($(MAKECMDGOALS),clean) # only if the goal is not clean, include actual make rules
 
@@ -57,6 +59,8 @@ ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHT
 .PHONY: depend
 depend .depend: cprogs
 	@$(COQDEP) $(patsubst %, %/*.v, $(DIRS)) > .depend
+	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
+
 
 $(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
 	@$(ACLIGHTGEN) -normalize -o $@ $<
@@ -74,17 +78,23 @@ ifneq (, $(wildcard .depend)) # the following rules are only applicable when .de
 	@echo COQC $<
 	@$(COQC) $(COQFLAGS) $<
 
+$(CSPLIT_FILES:%.v=%.vo): %.vo: %.v
+	@echo COQC $*.v
+	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
+
+
+all: frontend \
+  $(CSPLIT_FILES:%.v=%.vo) 
+
+
 endif # if .depend exists
 endif # if $(ACLIGHTGEN) exists
 endif # if the goal is not frontend
 endif # if the goal is not clean
 
+
+
 .PHONY: clean
 clean:
-	@rm -f $(patsubst %, %/*.vo, $(DIRS))
-	@rm -f $(patsubst %, %/*.glob, $(DIRS))
-	@rm -f $(patsubst %, %/.*.aux, $(DIRS))
-	@rm -f .depend
-	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
-	@rm -f _CoqProject
 	@$(MAKE) -f Makefile.frontend clean
+	@rm CSplit/*.vo CSplit/*.glob CSplit/*.aux
