@@ -19,16 +19,22 @@ VST_DIRS = msl sepcomp veric floyd
 VSTCOMPCERT=$(VSTDIR)/compcert
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
-CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlinklist
+CPROGS=append mytest #sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlinklist
 
 CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
-FLOYD_FILE_NAMES = forward.v
+FLOYD_FILE_NAMES = forward.v AClight.v
 FLOYD_FILES = $(addprefix floyd-seq/, $(FLOYD_FILE_NAMES))
 
+CPROG_FILE_NAMES = $(addsuffix _prog.v, $(CPROGS))
+CPROG_FILES = $(addprefix cprogs/, $(CPROG_FILE_NAMES))
 
-INCLUDE_ACLIGHT = -Q CSplit CSplit -Q floyd-seq FloydSeq
+CDEF_FILE_NAMES = $(addsuffix _def.v, $(CPROGS))
+CDEF_FILES = $(addprefix cprogs/, $(CDEF_FILE_NAMES))
+
+
+INCLUDE_ACLIGHT = -Q CSplit CSplit -Q floyd-seq FloydSeq -Q cprogs cprogs
 INCLUDE_COMPCERT = -R $(COMPCERTDIR) compcert
 INCLUDE_VST = $(foreach d, $(VST_DIRS), -Q $(VSTDIR)/$(d) VST.$(d))
 NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)
@@ -88,10 +94,19 @@ $(FLOYD_FILES:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
 	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
 
+$(CPROG_FILES:%.v=%.vo): %.vo: %.v
+	@echo COQC $*.v
+	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
+
+$(CDEF_FILES:%.v=%.vo): %.vo: %.v
+	@echo COQC $*.v
+	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
 
 all: frontend \
   $(CSPLIT_FILES:%.v=%.vo) \
-  $(FLOYD_FILES:%.v=%.vo)
+  $(FLOYD_FILES:%.v=%.vo) \
+  $(CPROG_FILES:%.v=%.vo) \
+  $(CDEF_FILES:%.v=%.vo)
 
 
 endif # if .depend exists
@@ -106,6 +121,9 @@ clean:
 	@rm -f .depend
 	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
+	@rm floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
+	@rm $(CPROGDIR)/*.vo $(CPROGDIR)/*.glob $(CPROGDIR)/*.aux
+
+cleanall: clean \
 	@$(MAKE) -f Makefile.frontend clean
 	@rm CSplit/*.vo CSplit/*.glob CSplit/*.aux
-	@rm floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
