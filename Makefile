@@ -24,8 +24,11 @@ CPROGS=append sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlink
 CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
+FLOYD_FILE_NAMES = forward.v
+FLOYD_FILES = $(addprefix floyd-seq/, $(FLOYD_FILE_NAMES))
 
-INCLUDE_ACLIGHT = -Q CSplit CSplit
+
+INCLUDE_ACLIGHT = -Q CSplit CSplit -Q floyd-seq FloydSeq
 INCLUDE_COMPCERT = -R $(COMPCERTDIR) compcert
 INCLUDE_VST = $(foreach d, $(VST_DIRS), -Q $(VSTDIR)/$(d) VST.$(d))
 NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)
@@ -81,9 +84,14 @@ $(CSPLIT_FILES:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
 	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
 
+$(FLOYD_FILES:%.v=%.vo): %.vo: %.v
+	@echo COQC $*.v
+	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
+
 
 all: frontend \
-  $(CSPLIT_FILES:%.v=%.vo) 
+  $(CSPLIT_FILES:%.v=%.vo) \
+  $(FLOYD_FILES:%.v=%.vo)
 
 
 endif # if .depend exists
@@ -100,3 +108,4 @@ clean:
 	@rm -f _CoqProject
 	@$(MAKE) -f Makefile.frontend clean
 	@rm CSplit/*.vo CSplit/*.glob CSplit/*.aux
+	@rm floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
