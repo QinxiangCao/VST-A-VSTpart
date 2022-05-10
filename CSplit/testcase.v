@@ -159,10 +159,11 @@ C_result_proj_C_post_return
 C_result_proj_C_path
 ].
 
+Arguments C_split {_} _.
 
-Ltac compute_split s_stm c_stm :=
-let res0a := eval unfold s_stm in (C_split s_stm c_stm) in
-let res0b := eval unfold c_stm in res0a in
+Ltac compute_split c_stm :=
+(* let res0a := eval unfold s_stm in  in *)
+let res0b := eval unfold c_stm in (C_split c_stm) in
 let res1 := eval cbv [
   S_split_sequence
   S_split_ifthenelse
@@ -436,8 +437,9 @@ Definition f_sgn_hint_S:=
                  Sskip)))))).
 
 
+
 Definition res' :=
-  ltac:(compute_split f_sgn_hint_S f_sgn_hint).
+  ltac:(compute_split f_sgn_hint).
 
 Print res'.
 
@@ -445,7 +447,7 @@ Print res'.
 
 (* Debug use:
 *)
-Goal (C_split sgn_S sgn_C) = (C_split sgn_S sgn_C).
+Goal (C_split sgn_C) = (C_split sgn_C).
 unfold sgn_S. unfold sgn_C.
 (* repeat (unfold_split;
       cbv_conns;
@@ -458,7 +460,7 @@ Admitted.
 
 
 Definition res :=
-  ltac:(compute_split sgn_S sgn_C).
+  ltac:(compute_split sgn_C).
 
 Print res.
 
@@ -482,18 +484,18 @@ Definition dummy_S :=
 
 Parameter foo : forall s_res,  (C_result s_res) ->  Prop.
 
-Goal foo _ (C_split _ dummy_C).
+(* Goal foo _ (C_split dummy_C).
   unfold dummy_C.
   unfold_split.
   cbv_conns.
   unfold_ex.
   cbv_conns.
   simpl.
-Admitted.
+Admitted. *)
 
 
 Definition res :=
-  ltac:(compute_split dummy_S dummy_C).
+  ltac:(compute_split dummy_C).
 
 Print res.
 
@@ -678,7 +680,7 @@ Definition reverse_C :=
 
 Parameter foo : forall s_res,  (C_result s_res) ->  Prop.
 
-Goal foo _ (C_split reverse_S reverse_C).
+Goal foo _ (C_split reverse_C).
   unfold reverse_S. unfold reverse_C.
 
 unfold_split.
@@ -689,116 +691,8 @@ Admitted.
 
 
 Definition res :=
-  ltac:(compute_split reverse_S reverse_C).
+  ltac:(compute_split reverse_C).
 
 Print res.
 
 End reverse_verif.
-
-
-
-(* 
-All split functions:
-
-atom_conn_return
-atom_conn_returns
-atoms_conn_returns
-atom_conn_atom
-atom_conn_atoms
-atoms_conn_atoms
-atom_conn_Spre
-atom_conn_Spres
-atoms_conn_Spres
-Spost_conn_atom
-Sposts_conn_atom
-Spost_conn_return
-Sposts_conn_return
-Sposts_conn_atoms
-Sposts_conn_returns
-Spost_conn_Spre
-Sposts_conn_Spres
-add_exp_to_Spre
-add_exp_to_Spres
-add_exp_to_atom
-add_exp_to_atoms
-add_exp_to_ret_atom
-add_exp_to_ret_atoms
-add_P_to_Spre
-add_P_to_atom
-add_P_to_atom_ret
-add_Q_to_Spost
-add_Q_to_atom
-add_Q_to_atoms
-
-atom_conn_Cpre
-atom_conn_Cpres
-atoms_conn_Cpres
-Cpost_conn_atom
-Cposts_conn_atom
-Cposts_conn_atoms
-Cpost_conn_return
-Cposts_conn_return
-Cposts_conn_returns
-Cpost_conn_Cpre_aux
-Cpost_conn_Cpre
-Cpost_conn_Cpres
-Cposts_conn_Cpres
-add_exp_to_Cpre
-add_exp_to_Cpres
-add_P_to_Cpre
-add_P_to_Cpres
-add_P_to_Catoms
-add_P_to_Catom_rets
-add_Q_to_Cpost
-add_Q_to_Cposts
-add_Q_to_Catoms
-
-S_split_sequence
-S_split_ifthenelse
-S_split_loop
-S_split_loop_refined
-S_split_assert
-S_split_skip
-S_split_assign
-S_split_call
-S_split_set
-S_split_break
-S_split_continue
-S_split_return
-
-S_split
-
-hd_of
-tl_of
-flatten_binds
-hd_assert_of_pre
-flatten_partial_pres_binds
-flatten_partial_posts_binds
-flatten_partial_post_rets_binds
-flatten_full_paths_binds
-
-C_result_proj_C_pre
-C_result_proj_C_post_normal
-C_result_proj_C_post_break
-C_result_proj_C_post_continue
-C_result_proj_C_post_return
-C_result_proj_C_path
-
-C_split_assert
-C_split_sequence
-add_exP_to_Cpre
-C_split_exgiven
-C_split_skip
-C_split_assign
-C_split_call
-C_split_set
-C_split_break
-C_split_continue
-C_split_return
-C_split_ifthenelse
-C_split_loop
-C_split_loop_refined
-
-
-
- *)
