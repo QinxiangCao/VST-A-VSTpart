@@ -135,6 +135,15 @@ Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ
      (* @semax CS Espec Delta (!! (is_int_type (typeof a) = true) && Q)  *)
      @semax CS Espec Delta FF (Clight.Sswitch a sl) R.
 
+Inductive semax2 {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ -> mpred) -> Clight.statement -> ret_assert -> Prop :=
+| semax_conseq2: forall P' (R': ret_assert) P c (R: ret_assert) ,
+(local (tc_environ Delta) && (allp_fun_id Delta && P) |-- P') ->
+local (tc_environ Delta) && ((allp_fun_id Delta) && RA_normal R') |-- |==> |> FF || RA_normal R ->
+    local (tc_environ Delta) && ((allp_fun_id Delta) && RA_break R') |-- |==> |> FF || RA_break R ->
+    local (tc_environ Delta) && ((allp_fun_id Delta) && RA_continue R') |-- |==> |> FF || RA_continue R ->
+    (forall vl, local (tc_environ Delta) && ((allp_fun_id Delta) && RA_return R' vl) |-- |==> |> FF || RA_return R vl) ->
+    @semax CS Espec Delta P' c R' -> @semax2 CS Espec Delta P c R.
+
 
 Lemma semax_skip_inv: forall CS Espec Delta P R,
   @semax CS Espec Delta P (Clight.Sskip) R ->
@@ -659,6 +668,33 @@ Proof.
     solve_andp.
 Qed.
 
+(* Lemma semax2_seq_inv: forall CS Espec Delta c1 c2 P R,
+  @semax2  CS Espec Delta P ( Clight.Ssequence c1 c2) R ->
+  exists Q, @semax CS Espec Delta P c1 (overridePost Q R) /\
+  @semax2 CS Espec Delta Q c2 R. *)
+
+Lemma semax2_seq_inv: forall CS Espec Delta c1 c2 P R,
+  @semax2  CS Espec Delta P ( Clight.Ssequence c1 c2) R ->
+  exists Q, @semax CS Espec Delta P c1 Q /\
+  @semax2 CS Espec Delta (RA_normal Q) c2 R.
+Proof.
+  intros. inv H.
+  apply semax_seq_inv in H5.
+  destruct H5 as [Q [? ?]].
+  destruct R as [Rn Rb Rc Rr].
+  destruct R' as [Rn' Rb' Rc' Rr'].
+  exists {|
+    RA_normal := Q;
+    RA_break := |==> |> FF || Rb;
+    RA_continue := |==> |> FF || Rc;
+    RA_return := |==> |> FF || Rr;
+  |}.
+  split;unfold_der.
+  + eapply semax_conseq;[..|apply H]; unfold_der; auto.
+    solve_andp.
+  + eapply semax_conseq2;[..|apply H5]; unfold_der; auto.
+    solve_andp.
+Qed.
 
 Lemma allp_ENTAILL: forall Delta B (P Q: B -> environ -> mpred),
   (forall x: B, local (tc_environ Delta) && (allp_fun_id Delta && P x) |-- Q x) ->
