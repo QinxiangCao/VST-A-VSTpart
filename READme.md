@@ -51,3 +51,9 @@ using Coq 8.10
 ## Dependent typed function based split algorithm
 
 TBD
+
+## AClightgen frontend:
+
+```
+make -f Makefile.frontend ; ./aclightgen testprogs/sgn.c -normalize -A -V cprogs.sgn_def -V cprogs.sgn_prog -o testprogs/sgn_annot2.v
+```
