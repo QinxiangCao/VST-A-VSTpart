@@ -39,6 +39,7 @@ Global Opaque denote_tc_test_eq.
 
 Require Import CSplit.strong.
 
+
 Hint Rewrite @sem_add_pi_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
 Hint Rewrite @sem_add_pl_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
 
