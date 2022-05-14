@@ -518,7 +518,8 @@ let print_globdef p (id, gd) =
 let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
-Require Import AClight.AClight.\n\
+Require Import CSplit.AClightFunc.\n\
+Require Import FloydSeq.AClight.\n\
 Local Open Scope Z_scope.\n\
 Import AClightNotations.\n"
 
@@ -629,6 +630,19 @@ let print_Gprog p prog_defs =
   ) prog_defs;
   fprintf p "@]]).@ @ "
 
+
+let print_split_tac p (id, gd) =
+  let print_fun_split_tac p (id, f) =
+    match f.fn_spec with
+    | Some ((binder, pre), post) ->
+      fprintf p "Definition f_%s_hint_split :=@ " (extern_atom id);
+      fprintf p "  ltac:(compute_split f_%s_hint).@ @ " (extern_atom id)
+    | None -> () in
+  match gd with
+  | Gfun(Ctypes.Internal f) -> print_fun_split_tac p (id, f)
+  | _ -> ()
+
+
 (* All together *)
 
 let print_program p prog sourcefile normalized =
@@ -640,4 +654,5 @@ let print_program p prog sourcefile normalized =
   print_clightgen_info p sourcefile normalized;
   List.iter (print_globdef_annotation p) prog.Ctypes.prog_defs;
   print_Gprog p prog.Ctypes.prog_defs;
+  List.iter (print_split_tac p) prog.Ctypes.prog_defs;
   fprintf p "@]@."

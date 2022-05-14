@@ -154,7 +154,8 @@ let get_binder_list (s : string) : (string * string) list =
       acc
       (* (List.rev acc, make cnt '(' ^ sub s (!i-1) (l-(!i-1))) *)
   in
-  let res = loop [] 0 in
+  let res = List.rev (loop [] 0) in
+  (* List.iter (fun (binder, ass) -> print_endline @@ binder ^ " " ^ ass) res; *)
   List.map (fun (binder, ass) -> (trim binder, trim ass)) res
   
 

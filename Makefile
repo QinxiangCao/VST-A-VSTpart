@@ -19,7 +19,7 @@ VST_DIRS = msl sepcomp veric floyd
 VSTCOMPCERT=$(VSTDIR)/compcert
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
-CPROGS=append mytest #sumarray2 reverse min sgn leap_year bst linkedlist unionfind dlinklist
+CPROGS=append mytest sgn # reverse #sumarray2  min  leap_year bst linkedlist unionfind dlinklist
 
 CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
@@ -52,6 +52,7 @@ _CoqProject: Makefile
 	@echo '$(NORMAL_FLAG)' > _CoqProject
 
 ifneq ($(MAKECMDGOALS),clean) # only if the goal is not clean, include actual make rules
+ifneq ($(MAKECMDGOALS),cleanall) # only if the goal is not cleanall, include actual make rules 
 
 .PHONY: frontend
 frontend frontend/STAMP:
@@ -66,8 +67,8 @@ ACLIGHTGEN=$(wildcard ./aclightgen*)
 ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHTGEN) exists
 
 .PHONY: depend
-depend .depend: cprogs
-	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
+# depend .depend: cprogs
+# 	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
 
 
 $(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
@@ -113,17 +114,21 @@ endif # if .depend exists
 endif # if $(ACLIGHTGEN) exists
 endif # if the goal is not frontend
 endif # if the goal is not clean
+endif # if the goal is not cleanall
 
 
 
 .PHONY: clean
+
+
+cleanall: 
+	@make -f Makefile.frontend clean
+	@rm -f CSplit/*.vo CSplit/*.glob CSplit/*.aux
+
+
 clean:
 	@rm -f .depend
 	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
-	@rm floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
-	@rm $(CPROGDIR)/*.vo $(CPROGDIR)/*.glob $(CPROGDIR)/*.aux
-
-cleanall: clean \
-	@$(MAKE) -f Makefile.frontend clean
-	@rm CSplit/*.vo CSplit/*.glob CSplit/*.aux
+	@rm -f floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
+	@rm -f $(CPROGDIR)/*.vo $(CPROGDIR)/*.glob $(CPROGDIR)/*.aux
