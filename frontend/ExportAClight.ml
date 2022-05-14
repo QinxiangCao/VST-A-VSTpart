@@ -352,7 +352,8 @@ let rec stmt p = function
   | Sassert a ->
     fprintf p "@[<hov 2>(Cassert %a)@]" assertion a
   | Sdummyassert a ->
-    fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a
+    (* fprintf p "@[<hov 2>(Sdummyassert %a)@]" assertion a *)
+    fprintf p "Cskip"
   | Sexgiven (b, a, s) ->
     fprintf p "@[<hov 2>(EXGIVEN %s@ [[%a]] %a)@]" b assertion a stmt s
   | Sgiven2 (b, s) ->
