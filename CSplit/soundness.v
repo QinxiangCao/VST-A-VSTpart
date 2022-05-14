@@ -5,6 +5,7 @@ Require Import CSplit.strong.
 Require Import CSplit.semantics.
 Require Import Coq.Program.Equality.
 
+Open Scope aclight_scope.
 
 Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
   match s with

@@ -696,6 +696,26 @@ Proof.
     solve_andp.
 Qed.
 
+Locate bupd.
+
+Print AuxDefs.semax_conseq.
+
+
+(* 
+Theorem semax2_complete: forall CS Espec Delta c P R,
+@SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c R -> @semax2 CS Espec Delta P c R.
+Proof.
+  intros. induction H.
+  - admit.
+  - eapply semax_conseq2.
+  
+  inv IHsemax1. inv IHsemax2.
+   eapply semax_conseq2.
+    inv IH
+    6:{ apply semax_ifthenelse. apply IHsemax1.  }
+  
+  ;[..|apply H]; unfold_der; auto. *)
+
 Lemma allp_ENTAILL: forall Delta B (P Q: B -> environ -> mpred),
   (forall x: B, local (tc_environ Delta) && (allp_fun_id Delta && P x) |-- Q x) ->
   local (tc_environ Delta) && (allp_fun_id Delta && allp P) |-- allp Q.
@@ -2510,3 +2530,6 @@ split;intro.
   try (intros; solve_andp).
   auto.
 Qed.
+
+Search predicates_sl.precise.
+Locate address_mapsto_precise.

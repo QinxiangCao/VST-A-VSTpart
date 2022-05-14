@@ -162,7 +162,7 @@ Inductive atom_statement : Type :=
 | Acall: option ident -> expr 
           -> list expr -> atom_statement   (**r function call *).
 
-Definition path:= list (expr + atom_statement) .
+Definition path:= list (bool * expr + atom_statement) .
 
 Inductive atom : Type :=
 | mk_atom : path -> atom.
@@ -329,10 +329,10 @@ Definition atom_conn_return atom1 atom2 :=
   end.
 
 Definition atom_conn_returns atom1 atoms2 :=
-  Smap (atom_conn_return atom1) atoms2.
+  map (atom_conn_return atom1) atoms2.
 
 Definition atoms_conn_returns atoms1 atoms2 :=
-  Sconcat (Smap (fun atom1 => atom_conn_returns atom1 atoms2) atoms1).
+  concat (map (fun atom1 => atom_conn_returns atom1 atoms2) atoms1).
 
 Definition atom_conn_atom atom1 atom2 :=
   match atom1, atom2 with
@@ -341,10 +341,10 @@ Definition atom_conn_atom atom1 atom2 :=
   end.
 
 Definition atom_conn_atoms atom1 atoms2 :=
-  Smap (atom_conn_atom atom1) atoms2.
+  map (atom_conn_atom atom1) atoms2.
 
 Definition atoms_conn_atoms atoms1 atoms2 :=
-  Sconcat (Smap (fun atom1 => atom_conn_atoms atom1 atoms2) atoms1).
+  concat (map (fun atom1 => atom_conn_atoms atom1 atoms2) atoms1).
 
 Definition atom_conn_Spre atom1 s_pre2 :=
   match atom1, s_pre2 with
@@ -354,7 +354,7 @@ Definition atom_conn_Spre atom1 s_pre2 :=
 
 
 Definition atom_conn_Spres atom1 s_pres2 :=
-    Smap (atom_conn_Spre atom1) s_pres2.
+    map (atom_conn_Spre atom1) s_pres2.
 
 
 Fixpoint atoms_conn_Spres atoms1 s_pres2 :=
@@ -374,7 +374,7 @@ Definition Spost_conn_atom s_post1 atom2 :=
   end.
 
 Definition Sposts_conn_atom s_posts1 atom2 :=
-  Smap (fun s_post1 => Spost_conn_atom s_post1 atom2) s_posts1.
+  map (fun s_post1 => Spost_conn_atom s_post1 atom2) s_posts1.
 
 
 Definition Spost_conn_return s_post1 atom2 :=
@@ -388,7 +388,7 @@ Definition Spost_conn_return s_post1 atom2 :=
 
   
 Definition Sposts_conn_return s_posts1 atom2 :=
-  Smap (fun s_post1 => Spost_conn_return s_post1 atom2) s_posts1.
+  map (fun s_post1 => Spost_conn_return s_post1 atom2) s_posts1.
 
 
 Fixpoint Sposts_conn_atoms s_posts1 atoms2 :=
@@ -419,7 +419,7 @@ match s_post1 with
 end.
 
 Notation Spost_conn_Spres s_post1 s_pres2 :=
-(Smap (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2) s_pres2).
+(map (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2) s_pres2).
 
 Fixpoint Sposts_conn_Spres 
   (s_posts1: S_partial_posts)
@@ -431,34 +431,34 @@ Fixpoint Sposts_conn_Spres
     Sposts_conn_Spres s_posts1' s_pres2
   end.
 
-Definition add_exp_to_Spre e 
+Definition add_exp_to_Spre b e 
 ( s_pre : S_partial_pre ) :=
 match s_pre with
 | mk_S_partial_pre path =>
-    mk_S_partial_pre ((inl e)::path)
+    mk_S_partial_pre ((inl (b, e))::path)
 end.
 
-Definition add_exp_to_Spres e s_pres :=
-Smap (add_exp_to_Spre e) s_pres.
+Definition add_exp_to_Spres b e s_pres :=
+map (add_exp_to_Spre b e) s_pres.
 
-Definition add_exp_to_atom e (atom: atom) :=
+Definition add_exp_to_atom b e (atom: atom) :=
 match atom with
 | mk_atom path =>
-   mk_atom ((inl e)::path)
+   mk_atom ((inl (b, e))::path)
 end.
 
-Definition add_exp_to_atoms e atoms :=
-Smap (add_exp_to_atom e) atoms.
+Definition add_exp_to_atoms b e atoms :=
+map (add_exp_to_atom b e) atoms.
 
 
-Definition add_exp_to_ret_atom e (atom: atom_ret) :=
+Definition add_exp_to_ret_atom b e (atom: atom_ret) :=
 match atom with
 | mk_atom_ret path retval =>
-    mk_atom_ret ((inl e)::path) retval
+    mk_atom_ret ((inl (b, e))::path) retval
 end.
 
-Definition add_exp_to_ret_atoms e atoms :=
-Smap (add_exp_to_ret_atom e) atoms.
+Definition add_exp_to_ret_atoms b e atoms :=
+map (add_exp_to_ret_atom b e) atoms.
 
 Definition add_P_to_Spre s_pre :=
 match s_pre with
@@ -466,7 +466,7 @@ match s_pre with
     mk_S_full_path path
 end.
 
-Notation add_P_to_Spres := (Smap add_P_to_Spre).
+Notation add_P_to_Spres := (map add_P_to_Spre).
 
 Definition add_P_to_atom s_atom :=
 match s_atom with
@@ -474,7 +474,7 @@ match s_atom with
     mk_S_partial_post path
 end.
 
-Notation add_P_to_atoms := (Smap add_P_to_atom).
+Notation add_P_to_atoms := (map add_P_to_atom).
 
 Definition add_P_to_atom_ret s_atom :=
 match s_atom with
@@ -482,7 +482,7 @@ match s_atom with
     mk_S_partial_post_ret path retval
 end.
 
-Notation add_P_to_atom_rets := (Smap add_P_to_atom_ret).
+Notation add_P_to_atom_rets := (map add_P_to_atom_ret).
 
 Definition add_Q_to_Spost s_post :=
 match s_post with
@@ -490,7 +490,7 @@ match s_post with
     mk_S_full_path path
 end.
 
-Notation add_Q_to_Sposts := (Smap add_Q_to_Spost).
+Notation add_Q_to_Sposts := (map add_Q_to_Spost).
 
 Definition add_Q_to_atom s_atom :=
 match s_atom with
@@ -675,26 +675,26 @@ Fixpoint Cposts_conn_Cpres
            (Cposts_conn_Cpres c_posts' c_pres2)
   end.
 
-Definition add_exp_to_Cpre e 
+Definition add_exp_to_Cpre b e 
   { s_pre : S_partial_pre }
   ( c_pre : C_partial_pre s_pre) := 
 match s_pre with
 | mk_S_partial_pre path =>
   match c_pre in C_partial_pre s_pre0
-  return C_partial_pre (add_exp_to_Spre e s_pre0) with
+  return C_partial_pre (add_exp_to_Spre b e s_pre0) with
   | mk_C_partial_pre path  post =>
-      mk_C_partial_pre (inl e :: path) post
+      mk_C_partial_pre (inl (b, e) :: path) post
   (* | bind_C_partial_pre A HA s_pre c_pre' =>
       bind_C_partial_pre A HA (add_exp_to_Spre e s_pre) 
         (fun a => add_exp_to_Cpre e (c_pre' a)) *)
   end
 end.
 
-Definition add_exp_to_Cpres e 
+Definition add_exp_to_Cpres b e 
   { s_pres : S_partial_pres }
   ( c_pres : C_partial_pres s_pres) := 
-  Cmap (add_exp_to_Spre e)
-    (fun s_pre c_pre => @add_exp_to_Cpre e s_pre c_pre) c_pres.
+  Cmap (add_exp_to_Spre b e)
+    (fun s_pre c_pre => @add_exp_to_Cpre b e s_pre c_pre) c_pres.
 
 Fixpoint add_P_to_Cpre P { s_pre } 
   (c_pre: C_partial_pre s_pre) : C_full_path (add_P_to_Spre s_pre) :=
@@ -832,7 +832,7 @@ Definition S_split_ifthenelse (e: expr) res1 res2 :=
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) =>
       Some (mk_S_result_rec 
       (* S_pre *)
-        (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres (semax_lemmas.Cnot e) s_pre2)
+        (add_exp_to_Spres true e s_pre1 ++ add_exp_to_Spres false e s_pre2)
       (* S_path *)
         (s_path1 ++ s_path2)
       (* S_post_normal *)
@@ -844,17 +844,17 @@ Definition S_split_ifthenelse (e: expr) res1 res2 :=
       (* S_post_return *)
         (s_post_return1 ++ s_post_return2)
       (* S_atom_normal *)
-        (add_exp_to_atoms e s_atom_normal1 ++
-          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_normal2)
+        (add_exp_to_atoms true e s_atom_normal1 ++
+          add_exp_to_atoms false e s_atom_normal2)
       (* S_atom_break *)
-        (add_exp_to_atoms e s_atom_break1 ++
-          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_break2)     
+        (add_exp_to_atoms true e s_atom_break1 ++
+          add_exp_to_atoms false e s_atom_break2)     
       (* S_atom_continue *)
-        (add_exp_to_atoms e s_atom_continue1 ++
-          add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_continue2)
+        (add_exp_to_atoms true e s_atom_continue1 ++
+          add_exp_to_atoms false e s_atom_continue2)
       (* S_atom_return *)
-        (add_exp_to_ret_atoms e s_atom_return1 ++
-        add_exp_to_ret_atoms (semax_lemmas.Cnot e) s_atom_return2))
+        (add_exp_to_ret_atoms true e s_atom_return1 ++
+        add_exp_to_ret_atoms false e s_atom_return2))
     | None => None
     end
   | None => None
@@ -905,7 +905,7 @@ Definition S_split_loop res1 res2 :=
             (add_Q_to_atoms s_atom_continue2) ++
           add_Q_to_Sposts s_post_continue2)
       (* S_post_normal *)
-        (s_post_break1 ++ s_post_break2 ++ s_post_normal2 ++
+        (s_post_break1 ++ s_post_break2 ++ 
           Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
           Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
           Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
@@ -939,15 +939,13 @@ Definition S_split_loop res1 res2 :=
       (* S_atom_normal *)
         (s_atom_break1 ++
           atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
-          atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
-          atoms_conn_atoms s_atom_normal2 s_atom_break1)
+          atoms_conn_atoms s_atom_continue1 s_atom_break2)
       (* S_atom_break *)    []
       (* S_atom_continue *) []
       (* S_atom_return *)
         (s_atom_return1 ++
           atoms_conn_returns s_atom_normal1 s_atom_return2 ++
-          atoms_conn_returns s_atom_continue1 s_atom_return2 ++
-          atoms_conn_returns s_atom_normal2 s_atom_return1))
+          atoms_conn_returns s_atom_continue1 s_atom_return2 ))
       (* ) else None *)
       (* end *)
     | None => None
@@ -1683,7 +1681,7 @@ match res1, res2 with
       c_post_break2 c_post_continue2 c_post_return2 =>
     mk_C_result_rec
     (* S_pre *)
-      (add_exp_to_Spres e s_pre1 ++ add_exp_to_Spres (semax_lemmas.Cnot e) s_pre2)
+      (add_exp_to_Spres true e s_pre1 ++ add_exp_to_Spres false e s_pre2)
     (* S_path *)
       (s_path1 ++ s_path2)
     (* S_post_normal *)
@@ -1695,19 +1693,19 @@ match res1, res2 with
     (* S_post_return *)
       (s_post_return1 ++ s_post_return2)
     (* S_atom_normal *)
-      (add_exp_to_atoms e s_atom_normal1 ++
-        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_normal2)
+      (add_exp_to_atoms true e s_atom_normal1 ++
+        add_exp_to_atoms false e s_atom_normal2)
     (* S_atom_break *)
-      (add_exp_to_atoms e s_atom_break1 ++
-        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_break2)     
+      (add_exp_to_atoms true e s_atom_break1 ++
+        add_exp_to_atoms false e s_atom_break2)     
     (* S_atom_continue *)
-      (add_exp_to_atoms e s_atom_continue1 ++
-        add_exp_to_atoms (semax_lemmas.Cnot e) s_atom_continue2)
+      (add_exp_to_atoms true e s_atom_continue1 ++
+        add_exp_to_atoms false e s_atom_continue2)
     (* S_atom_return *)
-      (add_exp_to_ret_atoms e s_atom_return1 ++
-      add_exp_to_ret_atoms (semax_lemmas.Cnot e) s_atom_return2)
+      (add_exp_to_ret_atoms true e s_atom_return1 ++
+      add_exp_to_ret_atoms false e s_atom_return2)
     (* C_pre *)
-      (add_exp_to_Cpres e c_pre1 +++ add_exp_to_Cpres (semax_lemmas.Cnot e) c_pre2)
+      (add_exp_to_Cpres true e c_pre1 +++ add_exp_to_Cpres false e c_pre2)
     (* C_path *)
       (c_path1 +++ c_path2)
     (* C_post_normal *)
@@ -1775,7 +1773,7 @@ match res1, res2 with
           (add_Q_to_atoms s_atom_continue2) ++
         add_Q_to_Sposts s_post_continue2)
     (* S_post_normal *)
-      (s_post_break1 ++ s_post_break2 ++ s_post_normal2 ++
+      (s_post_break1 ++ s_post_break2 ++
         Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
         Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
         Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
@@ -1809,15 +1807,13 @@ match res1, res2 with
     (* S_atom_normal *)
       (s_atom_break1 ++
         atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_continue1 s_atom_break2 ++
-        atoms_conn_atoms s_atom_normal2 s_atom_break1)
+        atoms_conn_atoms s_atom_continue1 s_atom_break2)
     (* S_atom_break *)    []
     (* S_atom_continue *) []
     (* S_atom_return *)
       (s_atom_return1 ++
         atoms_conn_returns s_atom_normal1 s_atom_return2 ++
-        atoms_conn_returns s_atom_continue1 s_atom_return2 ++
-        atoms_conn_returns s_atom_normal2 s_atom_return1)
+        atoms_conn_returns s_atom_continue1 s_atom_return2 )
     (* C_pre *)
       (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
         atoms_conn_Cpres s_atom_continue1 c_pre2 +++
@@ -1852,7 +1848,7 @@ match res1, res2 with
           (add_Q_to_Catoms seplog.FF s_atom_continue2) +++
         add_Q_to_Cposts seplog.FF c_post_continue2)
     (* C_post_normal *)
-      (c_post_break1 +++ c_post_break2 +++ c_post_normal2 +++
+      (c_post_break1 +++ c_post_break2 +++
         Cposts_conn_atoms c_post_normal1 s_atom_break2 +++
         Cposts_conn_atoms c_post_normal2 s_atom_break1 +++
         Cposts_conn_atoms c_post_continue1 s_atom_break2 +++
@@ -1962,5 +1958,6 @@ with
 | Creturn e =>
     C_split_return e
 end.
+
 
 Close Scope aclight_scope.

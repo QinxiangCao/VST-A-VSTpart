@@ -3,6 +3,7 @@ Require Export CSplit.AClight.
 Require Import VST.floyd.proofauto.
 Require Import CSplit.strong.
 
+Open Scope aclight_scope.
 
 Definition normal_split_assert Q := {|
 RA_normal := Q;

@@ -1,5 +1,6 @@
 Require Export VST.floyd.proofauto.
 Require Import FloydSeq.forward.
+Require Import CSplit.AClightFunc.
 (** ** Functions *)
 
 (** A function definition is composed of its return type ([fn_return]),
@@ -114,8 +115,356 @@ Ltac make_funcspec name funsig spec :=
   | _ => fail 0 spec "is not in valid form of funcspec"
   end.
 
+
+Global Arguments Cifthenelse _ {_ _} _ _.
+Global Arguments Csequence {_ _ } _ _.
+Global Arguments Cloop {_ _} _ _.
+Global Arguments list_binded_cons {_ _ _} _ {_} _.
+Global Arguments bind_C_partial_post_ret {_ _} _.
+Global Arguments bind_C_partial_post {_ _} _.
+Global Arguments bind_C_full_path {_ _} _.
+
+Global Arguments C_split {_} _.
+
 Module AClightNotations.
+
 Notation "'ANNOTATION_WITH' x .. y , c " :=
   (fun x => .. (fun y => c) .. ) (at level 65, x binder, y binder).
+
+
+
+(* Infix "++" := app (right associativity, at level 60).
+Infix "+++" := Capp (right associativity, at level 60) : aclight_scope. *)
+
+Notation "'GIVEN' x .. y , c " :=
+  (bind_C_partial_post (fun x => .. (bind_C_partial_post (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+
+Notation "'GIVEN' x .. y , c " :=
+  (bind_C_full_path (fun x => .. (bind_C_full_path (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+
+Notation "'GIVEN' x .. y , c " :=
+  (bind_C_partial_post_ret (fun x => .. (bind_C_partial_post_ret (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
+
+Notation "'EXGIVEN' x  '[[' ass ']]'  c " :=
+  (Cexgiven _ (fun x => ass) _ (fun x => c)) (at level 65) : logic.
+
+Notation "!!"  := semax_lemmas.Cnot.
+
+Notation "{ x ; y ; .. ; z }" := (list_binded_cons x (list_binded_cons y .. (list_binded_cons z list_binded_nil) ..)) : list_scope.
 End AClightNotations.
 
+(* 
+int sgn (int x) {
+  //@ With x:Z,
+  //@ Require PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _x  (Vint (Int.repr x))) SEP ()
+  //@ Ensure PROP () LOCAL (temp ret_temp  (Vint (Int.repr (sgn x)))) SEP ()
+  int ret;
+  if (x <= 0) {
+    if(x == 0)
+      ret = 0;
+    else
+      ret = -1;
+  }
+  else
+    ret = 1;
+  return ret;
+} 
+*)
+
+(* Require Import CSplit.AClightFunc.
+
+
+Ltac cbv_conns := cbv [
+  atom_conn_return
+  atom_conn_returns
+  atoms_conn_returns
+  atom_conn_atom
+  atom_conn_atoms
+  atoms_conn_atoms
+  atom_conn_Spre
+  atom_conn_Spres
+  atoms_conn_Spres
+  Spost_conn_atom
+  Sposts_conn_atom
+  Spost_conn_return
+  Sposts_conn_return
+  Sposts_conn_atoms
+  Sposts_conn_returns
+  Spost_conn_Spre
+  Sposts_conn_Spres
+  add_exp_to_Spre
+  add_exp_to_Spres
+  add_exp_to_atom
+  add_exp_to_atoms
+  add_exp_to_ret_atom
+  add_exp_to_ret_atoms
+  add_P_to_Spre
+  add_P_to_atom
+  add_P_to_atom_ret
+  add_Q_to_Spost
+  add_Q_to_atom
+  add_Q_to_atoms
+
+  atom_conn_Cpre
+  atom_conn_Cpres
+  atoms_conn_Cpres
+  Cpost_conn_atom
+  Cposts_conn_atom
+  Cposts_conn_atoms
+  Cpost_conn_return
+  Cposts_conn_return
+  Cposts_conn_returns
+  Cpost_conn_Cpre_aux
+  Cpost_conn_Cpre
+  Cpost_conn_Cpres
+  Cposts_conn_Cpres
+  add_exp_to_Cpre
+  add_exp_to_Cpres
+  add_P_to_Cpre
+  add_P_to_Cpres
+  add_P_to_Catoms
+  add_P_to_Catom_rets
+  add_Q_to_Cpost
+  add_Q_to_Cposts
+  add_Q_to_Catoms
+
+  Smap Sconcat Sapp Capp Cmap
+].
+
+Ltac unfold_split := cbv [
+  S_split_sequence
+  S_split_ifthenelse
+  S_split_loop
+  S_split_loop_refined
+  S_split_assert
+  S_split_skip
+  S_split_assign
+  S_split_call
+  S_split_set
+  S_split_break
+  S_split_continue
+  S_split_return
+
+  S_split
+
+  C_split_assert
+  C_split_sequence
+  C_split_skip
+  C_split_assign
+  C_split_call
+  C_split_set
+  C_split_break
+  C_split_continue
+  C_split_return
+  C_split_ifthenelse
+  C_split_loop
+  C_split_loop_refined
+
+  C_split
+].
+
+Ltac unfold_ex := cbv [
+  hd_of
+  tl_of
+  flatten_binds
+  hd_assert_of_pre
+  flatten_partial_pres_binds
+  flatten_partial_posts_binds
+  flatten_partial_post_rets_binds
+  flatten_full_paths_binds
+  C_split_exgiven
+  add_exP_to_Cpre
+
+  
+  
+C_result_proj_C_pre
+C_result_proj_C_post_normal
+C_result_proj_C_post_break
+C_result_proj_C_post_continue
+C_result_proj_C_post_return
+C_result_proj_C_path
+].
+
+Arguments C_split {_} _.
+*)
+Ltac compute_split c_stm :=
+(* let res0a := eval unfold s_stm in  in *)
+let res0b := eval unfold c_stm in (C_split c_stm) in
+let res1 := eval cbv [
+  S_split_sequence
+  S_split_ifthenelse
+  S_split_loop
+  S_split_loop_refined
+  S_split_assert
+  S_split_skip
+  S_split_assign
+  S_split_call
+  S_split_set
+  S_split_break
+  S_split_continue
+  S_split_return
+
+  S_split
+
+  C_split_assert
+  C_split_sequence
+  C_split_skip
+  C_split_assign
+  C_split_call
+  C_split_set
+  C_split_break
+  C_split_continue
+  C_split_return
+  C_split_ifthenelse
+  C_split_loop
+  C_split_loop_refined
+
+  C_split
+] in res0b in
+let res2 := eval cbv [
+  atom_conn_return
+  atom_conn_returns
+  atoms_conn_returns
+  atom_conn_atom
+  atom_conn_atoms
+  atoms_conn_atoms
+  atom_conn_Spre
+  atom_conn_Spres
+  atoms_conn_Spres
+  Spost_conn_atom
+  Sposts_conn_atom
+  Spost_conn_return
+  Sposts_conn_return
+  Sposts_conn_atoms
+  Sposts_conn_returns
+  Spost_conn_Spre
+  Sposts_conn_Spres
+  add_exp_to_Spre
+  add_exp_to_Spres
+  add_exp_to_atom
+  add_exp_to_atoms
+  add_exp_to_ret_atom
+  add_exp_to_ret_atoms
+  add_P_to_Spre
+  add_P_to_atom
+  add_P_to_atom_ret
+  add_Q_to_Spost
+  add_Q_to_atom
+  add_Q_to_atoms
+
+  atom_conn_Cpre
+  atom_conn_Cpres
+  atoms_conn_Cpres
+  Cpost_conn_atom
+  Cposts_conn_atom
+  Cposts_conn_atoms
+  Cpost_conn_return
+  Cposts_conn_return
+  Cposts_conn_returns
+  Cpost_conn_Cpre_aux
+  Cpost_conn_Cpre
+  Cpost_conn_Cpres
+  Cposts_conn_Cpres
+  add_exp_to_Cpre
+  add_exp_to_Cpres
+  add_P_to_Cpre
+  add_P_to_Cpres
+  add_P_to_Catoms
+  add_P_to_Catom_rets
+  add_Q_to_Cpost
+  add_Q_to_Cposts
+  add_Q_to_Catoms
+
+  Smap Sconcat Sapp Capp Cmap
+] in res1 in
+let res3 := eval cbv [
+  hd_of
+  tl_of
+  flatten_binds
+  hd_assert_of_pre
+  flatten_partial_pres_binds
+  flatten_partial_posts_binds
+  flatten_partial_post_rets_binds
+  flatten_full_paths_binds
+  C_split_exgiven
+  add_exP_to_Cpre
+
+C_result_proj_C_pre
+C_result_proj_C_post_normal
+C_result_proj_C_post_break
+C_result_proj_C_post_continue
+C_result_proj_C_post_return
+C_result_proj_C_path
+  
+] in res2 in
+let res4 :=  eval cbv [
+  atom_conn_return
+  atom_conn_returns
+  atoms_conn_returns
+  atom_conn_atom
+  atom_conn_atoms
+  atoms_conn_atoms
+  atom_conn_Spre
+  atom_conn_Spres
+  atoms_conn_Spres
+  Spost_conn_atom
+  Sposts_conn_atom
+  Spost_conn_return
+  Sposts_conn_return
+  Sposts_conn_atoms
+  Sposts_conn_returns
+  Spost_conn_Spre
+  Sposts_conn_Spres
+  add_exp_to_Spre
+  add_exp_to_Spres
+  add_exp_to_atom
+  add_exp_to_atoms
+  add_exp_to_ret_atom
+  add_exp_to_ret_atoms
+  add_P_to_Spre
+  add_P_to_atom
+  add_P_to_atom_ret
+  add_Q_to_Spost
+  add_Q_to_atom
+  add_Q_to_atoms
+
+  atom_conn_Cpre
+  atom_conn_Cpres
+  atoms_conn_Cpres
+  Cpost_conn_atom
+  Cposts_conn_atom
+  Cposts_conn_atoms
+  Cpost_conn_return
+  Cposts_conn_return
+  Cposts_conn_returns
+  Cpost_conn_Cpre_aux
+  Cpost_conn_Cpre
+  Cpost_conn_Cpres
+  Cposts_conn_Cpres
+  add_exp_to_Cpre
+  add_exp_to_Cpres
+  add_P_to_Cpre
+  add_P_to_Cpres
+  add_P_to_Catoms
+  add_P_to_Catom_rets
+  add_Q_to_Cpost
+  add_Q_to_Cposts
+  add_Q_to_Catoms
+
+  Smap Sconcat Sapp Capp Cmap
+] in res3 in
+let res5 := eval simpl in res4 in    
+    exact res5.
+
+
+
+(* Goal C_split f_append_hint = C_split f_append_hint.
+unfold f_append_hint.
+cbv_conns.
+cbv [C_split].
+unfold_split.
+
+Definition res :=
+  ltac:(cbv_conns f_append_hint).
+
+Print res. *)

@@ -1,4 +1,4 @@
-Require Import AClight.proofauto.
+Require Import VST.floyd.proofauto.
 Require Import cprogs.reverse_prog.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.

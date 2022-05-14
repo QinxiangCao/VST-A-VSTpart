@@ -57,7 +57,16 @@ return list_binded_of (map f sl') with
 end.
 
 
-Infix "+++" := Capp (right associativity, at level 60).
+Declare Scope aclight_scope.
+
+Infix "++" := app (right associativity, at level 60) : aclight_scope.
+Infix "+++" := Capp (right associativity, at level 60) : aclight_scope.
+
+Open Scope aclight_scope.
+
+
+
+(* Infix "+++" := Capp (right associativity, at level 60). *)
 
 
 
@@ -2265,3 +2274,6 @@ Proof.
       analyze_nils.
       tauto.
 Qed.
+
+
+Close Scope aclight_scope.
