@@ -2,17 +2,21 @@
 
 using Coq 8.10
 
-1. Install VST (`split` branch) from [https://github.com/ltzone/VST/tree/split], which is VST 2.5 with DeepEmbedded module opened (see commit 8de39a0).
+1. Install VST (`split` branch) from [https://github.com/ltzone/VST/tree/split], which is VST 2.5 with DeepEmbedded module opened (see commit 8de39a0). can be installed with `make -j`
 
-2. CompCert-a dependency (not sure about version, see [https://jbox.sjtu.edu.cn/l/x1RXga])
+2. Install CompCert-a dependency from [https://bitbucket.org/qinxiang-SJTU/compcert-clightgen-comment/src/nop_cmt/], first `./configure` and then `make`
 
-3. run `make`, an CONFIGURE file will be generated, fill in there
+3. run `make`, an CONFIGURE file will be generated, fill in there 
+   - `RamifyCoq` can be left as empty, we do not depend on it for now
+   - `VSTDIR` is the path to (1)
+   - `COMPCERTDIR` is the path to (1)/compcert
+   - `COMPCERTADIR` is the path to (2)
 
 4. run `make` again, the following will be built
    - frontend, `aclightgen`
    - the parsed results of test progs in `cprogs/`
    - the split function and its soundness proof in `CSplit/`
-   - the proof automation tactics in `floyd-seq/`
+   - the proof automation tactics in `floyd-seq/` (still working)
   
 
 
