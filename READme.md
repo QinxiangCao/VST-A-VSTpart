@@ -19,8 +19,6 @@ using Coq 8.10
    - the proof automation tactics in `floyd-seq/` (still working)
   
 
-
-
 ## Key Definitions & Lemmas of the stronger program logic
 
 - `model_lemmas.v`: 
@@ -49,15 +47,20 @@ using Coq 8.10
 ## Rule based split algorithm
 
 - `defs.v` `rule.v` `semantics.v`: definition of rules and semantics
-- `soundness.v`: soundness w.r.t. `semax_aux` program logic defined in `strong.v`
+- `soundness.v`: soundness w.r.t. `semax` program logic defined in `strong.v`
 
 
-## Dependent typed function based split algorithm
-
-TBD
 
 ## AClightgen frontend:
 
+Can make frontend alone
 ```
-make -f Makefile.frontend ; ./aclightgen testprogs/sgn.c -normalize -A -V cprogs.sgn_def -V cprogs.sgn_prog -o testprogs/sgn_annot2.v
+make -f Makefile.frontend 
 ```
+
+Usage:
+```
+./aclightgen cprogs/sgn.c -normalize -A -V cprogs.sgn_def -V cprogs.sgn_prog -o cprogs/sgn_annot.v
+```
+
+> Still working on the frontend, so the current split result is not ideal.
