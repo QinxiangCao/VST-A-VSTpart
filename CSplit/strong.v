@@ -2557,16 +2557,33 @@ Proof.
       rewrite andp_comm. rewrite exp_andp1.
       apply exp_left. intros old.
       rewrite substopt_oboxopt.
-      admit.
-    }
+
+      destruct ret.
+      2:{ intros rho. unfold oboxopt.
+          simpl. apply andp_left1.
+          apply wand_frame_elim''. }
+      intros rho. unfold oboxopt.
+      unfold obox. hnf in H3.
+      destruct (temp_types Delta) ! i eqn:E; inv H3.
+      unfold local. unfold lift1. simpl.
+      rewrite andp_comm. rewrite andp_assoc.
+      apply derives_extract_prop. 
+      intros. apply andp_left2. eapply derives_trans.
+      { apply sepcon_derives.
+        2: { apply derives_refl. }
+        apply allp_instantiate' with (x:= eval_id i rho). }
+      unfold subst. unfold liftx. unfold_lift.
+      rewrite !env_set_eval_id with (Delta:=Delta) (t:=t);auto.
+      rewrite log_normalize.prop_imp.
+      2:{ apply tc_eval'_id_i with (Delta:=Delta);auto. }
+      apply wand_frame_elim''. }
     { apply derives_full_refl. }
     { apply derives_full_refl. }  
     { intros. apply derives_full_refl. }
   - apply CSHL_MinimumLogic.semax_Slabel. auto.
   - apply semax_ff.
   - apply semax_ff.
-Admitted.
-
+Qed.
 
 Lemma semax_seq_skip:
    forall CS Espec (Delta : tycontext) (P : environ -> mpred)
