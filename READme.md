@@ -41,12 +41,12 @@ using Coq 8.10
   
 - `strong.v`
   - definition of precise function specification in logic scope (identical to `model_lemmas.v`)
-  - `semax_aux`: our stronger program logic
+  - `semax`: our stronger program logic
   - inversion lemmas
-  - `semax_aux_noXXX_inv`: noreturn/nocontinue/nobreak lemmas
-  - `semax_aux_conj_rule`: conjunction rule
+  - `semax_noXXX_inv`: noreturn/nocontinue/nobreak lemmas
+  - `semax_conj_rule`: conjunction rule
   - `aux_semax_extract_exists`
-  - `semax_aux_derives`: soundness w.r.t. VST's program logic
+  - `semax_derives`: soundness w.r.t. VST's program logic
 
 ## AClightgen frontend:
 
