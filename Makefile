@@ -21,7 +21,8 @@ CPROGSDIR=cprogs
 FRONTENDDIR=frontend
 CPROGS=append mytest sgn # reverse #sumarray2  min  leap_year bst linkedlist unionfind dlinklist
 
-CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
+# CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
+CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 FLOYD_FILE_NAMES = forward.v AClight.v
@@ -66,7 +67,7 @@ ACLIGHTGEN=$(wildcard ./aclightgen*)
 
 ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHTGEN) exists
 
-.PHONY: depend
+# .PHONY: depend
 # depend .depend: cprogs
 # 	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
 
@@ -79,9 +80,9 @@ $(CPROGSDIR)/%_annot.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c)_prog.v $(CPROGSDIR)/$(c)_annot.v)
 
-include .depend
+# include .depend
 
-ifneq (, $(wildcard .depend)) # the following rules are only applicable when .depend exists
+#ifneq (, $(wildcard .depend)) # the following rules are only applicable when .depend exists
 
 %.vo: %.v
 	@echo COQC $<
@@ -110,7 +111,7 @@ all: frontend \
   $(CDEF_FILES:%.v=%.vo)
 
 
-endif # if .depend exists
+# endif # if .depend exists
 endif # if $(ACLIGHTGEN) exists
 endif # if the goal is not frontend
 endif # if the goal is not clean

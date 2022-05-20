@@ -2,7 +2,11 @@
 
 using Coq 8.10
 
-1. Install VST (`split` branch) from [https://github.com/ltzone/VST/tree/split], which is VST 2.5 with DeepEmbedded module opened (see commit 8de39a0). can be installed with `make -j`
+1. Install VST (tag 2.5)[https://github.com/PrincetonUniversity/VST/releases/tag/v2.5]. can be installed with `make -j`
+
+   > Our modification of VST has two parts
+   > - we prove some model level lemmas on preciseness of load/store (required to derive the conjunction rule)
+   > - we define a stronger `semax` for VST-A, that removes bupd and restricts function specification being called to be precise
 
 2. Install CompCert-a dependency from [https://bitbucket.org/qinxiang-SJTU/compcert-clightgen-comment/src/nop_cmt/], first `./configure` and then `make`
 

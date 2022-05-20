@@ -12,7 +12,6 @@ Require Export VST.floyd.val_lemmas.
 Require Export VST.floyd.assert_lemmas.
 Require Import VST.veric.semax_lemmas.
 Require VST.floyd.SeparationLogicAsLogicSoundness.
-Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_Sound.DeepEmbedded.
 Require Import VST.floyd.proofauto.
 
 
