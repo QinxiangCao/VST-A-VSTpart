@@ -48,13 +48,6 @@ using Coq 8.10
   - `aux_semax_extract_exists`
   - `semax_aux_derives`: soundness w.r.t. VST's program logic
 
-## Rule based split algorithm
-
-- `defs.v` `rule.v` `semantics.v`: definition of rules and semantics
-- `soundness.v`: soundness w.r.t. `semax` program logic defined in `strong.v`
-
-
-
 ## AClightgen frontend:
 
 Can make frontend alone
