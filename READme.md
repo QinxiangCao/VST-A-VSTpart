@@ -8,7 +8,7 @@ using Coq 8.10
    > - we prove some model level lemmas on preciseness of load/store (required to derive the conjunction rule)
    > - we define a stronger `semax` for VST-A, that removes bupd and restricts function specification being called to be precise
 
-2. Install CompCert-a dependency from [https://bitbucket.org/qinxiang-SJTU/compcert-clightgen-comment/src/nop_cmt/], first `./configure` and then `make`
+2. Install CompCert-A dependency from [https://github.com/QinxiangCao/VST-A-CompCertPart.git] commit [c7c2ed6] , first `./configure` and then `make`
 
 3. run `make`, an CONFIGURE file will be generated, fill in there 
    - `RamifyCoq` can be left as empty, we do not depend on it for now
