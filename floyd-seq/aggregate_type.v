@@ -1,7 +1,7 @@
 Require Import FloydSeq.base2.
-Require Import FloydSeq.assert_lemmas.
+Require Import VST.floyd.assert_lemmas.
 Require Import FloydSeq.type_induction.
-Require Import FloydSeq.jmeq_lemmas.
+Require Import VST.floyd.jmeq_lemmas.
 Require Export FloydSeq.fieldlist.
 Require Export FloydSeq.compact_prod_sum.
 Require Export FloydSeq.sublist.

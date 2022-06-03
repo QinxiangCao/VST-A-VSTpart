@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List.
 Require Import compcert.lib.Coqlib.
 Require Import VST.msl.Coqlib2 FloydSeq.coqlib3.
-Require Import FloydSeq.jmeq_lemmas.
+Require Import VST.floyd.jmeq_lemmas.
 
 Fixpoint compact_prod (T: list Type): Type :=
   match T with

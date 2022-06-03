@@ -1,5 +1,5 @@
 Require Import FloydSeq.base.
-Require Import FloydSeq.val_lemmas.
+Require Import VST.floyd.val_lemmas.
 Require Import FloydSeq.typecheck_lemmas.
 Require Import compcert.cfrontend.Ctypes.
 
@@ -132,7 +132,9 @@ Fixpoint const_only_eval_expr {cs: compspecs} (e: Clight.expr): option val :=
     else None
   end.
 
-Lemma const_only_isUnOpResultType_spec: forall {cs: compspecs} rho u e t P,
+
+(* Admitted : only use case is semax_for typecheck? *)
+(* Lemma const_only_isUnOpResultType_spec: forall {cs: compspecs} rho u e t P,
   const_only_isUnOpResultType u (typeof e) (eval_expr e rho) t = true ->
   P |-- denote_tc_assert (isUnOpResultType u e t) rho.
 Proof.
@@ -206,7 +208,7 @@ Proof.
       change (Int64.signed Int64.zero) with 0.
       rep_omega.
   + destruct (Cop.classify_neg (typeof e)); try solve [inv H | rewrite H; exact (@prop_right mpred _ True _ I)].
-Qed.
+Qed. *)
 
 Lemma const_only_isBinOpResultType_spec: forall {cs: compspecs} rho b e1 e2 t P,
   const_only_isBinOpResultType b (typeof e1) (eval_expr e1 rho) (typeof e2) (eval_expr e2 rho) t = true ->
@@ -334,6 +336,10 @@ Proof.
     auto.
 Qed.
 
+(* 
+Admitted
+because use const_only_isUnOpResultType_spec
+
 Lemma const_only_eval_expr_tc: forall {cs: compspecs} Delta e v P,
   const_only_eval_expr e = Some v ->
   P |-- tc_expr Delta e.
@@ -410,4 +416,4 @@ Proof.
     unfold tuint in HH; destruct HH.
     rewrite H, H0.
     exact (@prop_right mpred _ True _ I).
-Qed.
+Qed. *)

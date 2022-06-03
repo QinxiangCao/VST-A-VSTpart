@@ -4,11 +4,11 @@ Require Export VST.veric.SeparationLogic.
 Require Export VST.msl.Extensionality.
 Require Export compcert.lib.Coqlib.
 Require Export VST.msl.Coqlib2 VST.veric.coqlib4 FloydSeq.coqlib3.
-Require Export FloydSeq.jmeq_lemmas.
-Require Export FloydSeq.find_nth_tactic.
+Require Export VST.floyd.jmeq_lemmas.
+Require Export VST.floyd.find_nth_tactic.
 Require Export VST.veric.juicy_extspec.
 Require Import VST.veric.NullExtension.
-Require Import FloydSeq.assert_lemmas.
+Require Import VST.floyd.assert_lemmas.
 Require Import FloydSeq.SeparationLogicFacts.
 Import Ctypes LiftNotation.
 Local Open Scope logic.

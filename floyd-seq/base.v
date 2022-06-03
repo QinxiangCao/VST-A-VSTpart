@@ -6,25 +6,29 @@ Require Export compcert.lib.Coqlib.
 Require Export VST.msl.Coqlib2 VST.veric.coqlib4 FloydSeq.coqlib3.
 Require Export VST.veric.juicy_extspec.
 Require Import VST.veric.NullExtension.
-Require Export FloydSeq.jmeq_lemmas.
-Require Export FloydSeq.find_nth_tactic.
-Require Export FloydSeq.val_lemmas.
-Require Export FloydSeq.assert_lemmas.
-Require FloydSeq.SeparationLogicAsLogicSoundness.
+Require Export VST.floyd.jmeq_lemmas.
+Require Export VST.floyd.find_nth_tactic.
+Require Export VST.floyd.val_lemmas.
+Require Export VST.floyd.assert_lemmas.
+Require CSplit.strong.
+
+(* Require FloydSeq.SeparationLogicAsLogicSoundness.
 Export SeparationLogicAsLogicSoundness.MainTheorem.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Def.
-Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Defs.
+Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Defs. *)
 
 Local Open Scope logic.
+
+(* Locate semax. *)
 
 Definition extract_exists_pre:
   forall {CS: compspecs} {Espec: OracleKind},
   forall (A : Type) (P : A -> environ->mpred) c (Delta: tycontext) (R: ret_assert),
-  (forall x, @semax CS Espec Delta (P x) c R) ->
-   @semax CS Espec Delta (EX x:A, P x) c R
-  := @semax_extract_exists.
+  (forall x, @strong.semax CS Espec Delta (P x) c R) ->
+   @strong.semax CS Espec Delta (EX x:A, P x) c R
+  := @strong.semax_extract_exists.
 
 Arguments alignof_two_p {env} t.
 
