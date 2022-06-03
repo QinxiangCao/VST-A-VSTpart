@@ -19,10 +19,10 @@ VST_DIRS = msl sepcomp veric floyd
 VSTCOMPCERT=$(VSTDIR)/compcert
 CPROGSDIR=cprogs
 FRONTENDDIR=frontend
-CPROGS=append mytest sgn # reverse #sumarray2  min  leap_year bst linkedlist unionfind dlinklist
+CPROGS=append mytest sgn reverse # reverse #sumarray2  min  leap_year bst linkedlist unionfind dlinklist
 
 # CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
-CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
+CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v AClightNotations.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 FLOYD_FILE_NAMES = coqlib3.v jmeq_lemmas.v \

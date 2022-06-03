@@ -1,5 +1,5 @@
-Require Export VST.floyd.proofauto.
-Require Import FloydSeq.forward.
+(* Require Export VST.floyd.proofauto. *)
+(* Require Import FloydSeq.forward. *)
 Require Import CSplit.AClightFunc.
 (** ** Functions *)
 
@@ -287,6 +287,8 @@ C_result_proj_C_path
 
 Arguments C_split {_} _.
 *)
+
+
 Ltac compute_split c_stm :=
 (* let res0a := eval unfold s_stm in  in *)
 let res0b := eval unfold c_stm in (C_split c_stm) in

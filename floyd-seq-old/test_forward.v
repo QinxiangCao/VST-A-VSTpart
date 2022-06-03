@@ -1,8 +1,8 @@
 
-Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 Require Import cprogs.append_prog.
 Require Import cprogs.append_def.
-Require Import FloydSeq.AClight.
+Require Import CSplit.AClightNotations.
 Import AClightNotations.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined. 
@@ -33,9 +33,9 @@ Definition append_spec :=
 
 Definition Gprog : funspecs :=
   ltac:(with_library prog [append_spec]).
-
+(* 
 Locate start_function.
-Locate forward_if_tac.
+Locate forward_if_tac. *)
 
 (* 
 Tactic Notation "forward_if" constr(post) :=
@@ -96,9 +96,12 @@ Tactic Notation "forward_if" constr(post) :=
   | _ => forward_if_tac post
   end. *)
 
+
+
 Lemma append_verif: 
   semax_body Vprog Gprog f_append append_spec.
 Proof.
+  start_function. Locate semax.
   leaf_function.
   floyd.forward.start_function.
   forward_if.
