@@ -1,5 +1,5 @@
 
-Require Import VST.floyd.base.
+Require Import FloydSeq.base.
 
 Local Open Scope logic.
 

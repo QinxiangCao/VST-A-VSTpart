@@ -1,4 +1,4 @@
-Require Import VST.floyd.base.
+Require Import FloydSeq.base.
 
 Ltac simpl_PTree_get :=
   repeat match goal with

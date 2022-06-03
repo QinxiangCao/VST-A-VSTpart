@@ -1,4 +1,4 @@
-Require Import VST.floyd.base2.
+Require Import FloydSeq.base2.
 Import ListNotations.
 
 Module PosOrder <: Orders.TotalLeBool.

@@ -1,9 +1,9 @@
-Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 
 (* Tactics for cleaning up proof goals for use as examples
   to send to an SMT solver or some other decision procedure.
 
-  USAGE:   Require Import VST.floyd.extract_smt.
+  USAGE:   Require Import FloydSeq.extract_smt.
   When you are faced with an entailment,
   instead of calling [entailer], call [extract_smt] instead.
 

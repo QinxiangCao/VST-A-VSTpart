@@ -24,8 +24,8 @@ Require Import VST.veric.semax_switch.
 Require Import VST.veric.semax_prog.
 Require Import VST.veric.semax_ext.
 Require Import VST.veric.SeparationLogic.
-Require Import VST.floyd.SeparationLogicFacts.
-Require Import VST.floyd.SeparationLogicAsLogic.
+Require Import FloydSeq.SeparationLogicFacts.
+Require Import FloydSeq.SeparationLogicAsLogic.
 Require Import VST.veric.SeparationLogicSoundness.
 Local Open Scope logic.
 Require Import VST.veric.ghost_PCM.

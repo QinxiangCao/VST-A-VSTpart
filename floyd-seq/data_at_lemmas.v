@@ -1,25 +1,25 @@
 From compcert Require Import common.AST cfrontend.Ctypes cfrontend.Clight.
 Import Cop.
-Require Import VST.floyd.base2.
-Require Import VST.floyd.functional_base.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.compare_lemmas.
-Require Import VST.floyd.nested_pred_lemmas.
-Require Import VST.floyd.nested_field_lemmas.
-Require Import VST.floyd.efield_lemmas.
-Require Import VST.floyd.mapsto_memory_block.
-Require Import VST.floyd.aggregate_type.
-Require VST.floyd.aggregate_pred. Import floyd.aggregate_pred.aggregate_pred.
-Require Import VST.floyd.reptype_lemmas.
-Require Import VST.floyd.simpl_reptype.
-Require Import VST.floyd.data_at_rec_lemmas.
-Require Import VST.floyd.field_at.
-Require Import VST.floyd.field_at_wand.
-Require Import VST.floyd.field_compat.
-Require Import VST.floyd.stronger.
-Require Import VST.floyd.proj_reptype_lemmas.
-Require Import VST.floyd.replace_refill_reptype_lemmas.
-Require Import VST.floyd.unfold_data_at.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.functional_base.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.compare_lemmas.
+Require Import FloydSeq.nested_pred_lemmas.
+Require Import FloydSeq.nested_field_lemmas.
+Require Import FloydSeq.efield_lemmas.
+Require Import FloydSeq.mapsto_memory_block.
+Require Import FloydSeq.aggregate_type.
+Require FloydSeq.aggregate_pred. Import FloydSeq.aggregate_pred.aggregate_pred.
+Require Import FloydSeq.reptype_lemmas.
+Require Import FloydSeq.simpl_reptype.
+Require Import FloydSeq.data_at_rec_lemmas.
+Require Import FloydSeq.field_at.
+Require Import FloydSeq.field_at_wand.
+Require Import FloydSeq.field_compat.
+Require Import FloydSeq.stronger.
+Require Import FloydSeq.proj_reptype_lemmas.
+Require Import FloydSeq.replace_refill_reptype_lemmas.
+Require Import FloydSeq.unfold_data_at.
 
 Lemma 
   sbyte_ubyte_convert:

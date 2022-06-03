@@ -1,5 +1,5 @@
-Require Import VST.floyd.base.
-Require Import VST.floyd.val_lemmas.
+Require Import FloydSeq.base.
+Require Import FloydSeq.val_lemmas.
 Local Open Scope logic.
 
 Hint Rewrite <- prop_and : gather_prop.

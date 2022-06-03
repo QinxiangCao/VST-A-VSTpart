@@ -1,10 +1,10 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.assert_lemmas.
-Require Import VST.floyd.type_induction.
-Require Import VST.floyd.jmeq_lemmas.
-Require Export VST.floyd.fieldlist.
-Require Export VST.floyd.compact_prod_sum.
-Require Export VST.floyd.sublist.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.assert_lemmas.
+Require Import FloydSeq.type_induction.
+Require Import FloydSeq.jmeq_lemmas.
+Require Export FloydSeq.fieldlist.
+Require Export FloydSeq.compact_prod_sum.
+Require Export FloydSeq.sublist.
 
 Definition proj_struct (i : ident) (m : members) {A: ident * type -> Type} (v: compact_prod (map A m)) (d: A (i, field_type i m)): A (i, field_type i m) :=
   proj_compact_prod (i, field_type i m) m v d member_dec.

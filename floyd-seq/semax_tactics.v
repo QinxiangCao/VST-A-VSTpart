@@ -1,5 +1,5 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
 
 (* Bug: abbreviate replaces _ALL_ instances, when sometimes
   we only want just one. *)

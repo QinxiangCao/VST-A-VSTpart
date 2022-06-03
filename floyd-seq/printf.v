@@ -1,5 +1,5 @@
-Require Import VST.floyd.proofauto.
-Require Export VST.floyd.io_events.
+Require Import FloydSeq.proofauto.
+Require Export FloydSeq.io_events.
 Require Export ITree.ITree.
 
 

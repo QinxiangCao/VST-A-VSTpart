@@ -1,16 +1,16 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.type_induction.
-(*Require Import VST.floyd.fieldlist.*)
-Require Import VST.floyd.compact_prod_sum.
-(*Require Import VST.floyd.aggregate_type.*)
-Require Import VST.floyd.mapsto_memory_block.
-Require Import VST.floyd.nested_pred_lemmas.
-Require Import VST.floyd.jmeq_lemmas.
-Require Import VST.floyd.sublist.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.type_induction.
+(*Require Import FloydSeq.fieldlist.*)
+Require Import FloydSeq.compact_prod_sum.
+(*Require Import FloydSeq.aggregate_type.*)
+Require Import FloydSeq.mapsto_memory_block.
+Require Import FloydSeq.nested_pred_lemmas.
+Require Import FloydSeq.jmeq_lemmas.
+Require Import FloydSeq.sublist.
 
-Require Export VST.floyd.fieldlist.
-Require Export VST.floyd.aggregate_type.
+Require Export FloydSeq.fieldlist.
+Require Export FloydSeq.aggregate_type.
 
 Open Scope Z.
 Open Scope logic.
@@ -1532,7 +1532,7 @@ Definition union_pred_local_facts: forall m {A} (P: forall it, A it -> val -> mp
 
 End aggregate_pred.
 
-Require Import VST.floyd.reptype_lemmas.
+Require Import FloydSeq.reptype_lemmas.
 
 (******************************************
 

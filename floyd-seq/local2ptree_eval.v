@@ -1,7 +1,7 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.closed_lemmas.
-Require Import VST.floyd.local2ptree_denote.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.closed_lemmas.
+Require Import FloydSeq.local2ptree_denote.
 Import LiftNotation.
 
 Local Open Scope logic.

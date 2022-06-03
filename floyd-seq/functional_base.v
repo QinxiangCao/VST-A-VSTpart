@@ -6,8 +6,8 @@ Require Export compcert.lib.Floats.
 Require Export compcert.common.Values.
 Require Export VST.msl.eq_dec.
 Require Export VST.msl.Coqlib2.
-Require Export VST.floyd.coqlib3.
-Require Export VST.floyd.sublist.
+Require Export FloydSeq.coqlib3.
+Require Export FloydSeq.sublist.
 
 Require Import VST.veric.val_lemmas.
 
@@ -713,8 +713,8 @@ Lemma opaque_constant {A: Type} (N: A) : {x: A | x=N}.
 Proof. exists N. reflexivity. Qed.
 
 Ltac hint := idtac "Hints are only available when verifying C programs,
-that is, when VST.floyd.proofauto has been imported.  But you have
-imported only VST.floyd.functional_base, without separation logic.
+that is, when FloydSeq.proofauto has been imported.  But you have
+imported only FloydSeq.functional_base, without separation logic.
 
-In VST.floyd.functional_base the following VST tactics are available:
+In FloydSeq.functional_base the following VST tactics are available:
 rep_omega, list_solve, if_tac, autorewrite with sublist, computable, ...".

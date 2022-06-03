@@ -1,8 +1,8 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.nested_pred_lemmas.
-Require Import VST.floyd.nested_field_lemmas.
-Require Import VST.floyd.fieldlist.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.nested_pred_lemmas.
+Require Import FloydSeq.nested_field_lemmas.
+Require Import FloydSeq.fieldlist.
 Import LiftNotation.
 Local Open Scope logic.
 

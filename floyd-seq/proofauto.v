@@ -1,53 +1,53 @@
 From compcert Require Export common.AST cfrontend.Ctypes cfrontend.Clight.
 Export Cop.
-Require Export VST.floyd.base2.
-Require Export VST.floyd.functional_base.
-Require Export VST.floyd.client_lemmas.
-Require Export VST.floyd.go_lower.
-Require Export VST.floyd.closed_lemmas.
-Require Export VST.floyd.compare_lemmas.
-Require Export VST.floyd.semax_tactics.
-Require Export VST.floyd.entailer.
-Require Export VST.floyd.forward. (* must come after entailer because of Ltac override *)
-Require Export VST.floyd.subsume_funspec.
-Require Export VST.floyd.call_lemmas.
-Require Export VST.floyd.forward_lemmas.
-Require Export VST.floyd.for_lemmas.
-Require Export VST.floyd.nested_pred_lemmas.
-Require Export VST.floyd.nested_field_lemmas.
-Require Export VST.floyd.efield_lemmas.
-Require Export VST.floyd.mapsto_memory_block.
-Require Export VST.floyd.aggregate_type.
-Require VST.floyd.aggregate_pred. Export floyd.aggregate_pred.aggregate_pred.
-Require Export VST.floyd.reptype_lemmas.
-Require Export VST.floyd.simpl_reptype.
-Require Export VST.floyd.data_at_rec_lemmas.
-Require Export VST.floyd.field_at.
-Require Export VST.floyd.field_at_wand.
-Require Export VST.floyd.field_compat.
-Require Export VST.floyd.stronger.
-Require Export VST.floyd.loadstore_mapsto.
-Require Export VST.floyd.loadstore_field_at.
-Require Export VST.floyd.nested_loadstore.
-Require Export VST.floyd.local2ptree_denote.
-Require Export VST.floyd.local2ptree_eval.
-Require Export VST.floyd.local2ptree_typecheck.
-Require Export VST.floyd.proj_reptype_lemmas.
-Require Export VST.floyd.replace_refill_reptype_lemmas.
-Require Export VST.floyd.sc_set_load_store.
-Require Export VST.floyd.unfold_data_at.
-Require Export VST.floyd.globals_lemmas.
-Require Export VST.floyd.diagnosis.
-Require Export VST.floyd.freezer.
-Require Export VST.floyd.deadvars.
-Require Export VST.floyd.hints.
-Require Export VST.floyd.Clightnotations.
-Require Export VST.floyd.list_solver.
-Require Export VST.floyd.data_at_lemmas.
+Require Export FloydSeq.base2.
+Require Export FloydSeq.functional_base.
+Require Export FloydSeq.client_lemmas.
+Require Export FloydSeq.go_lower.
+Require Export FloydSeq.closed_lemmas.
+Require Export FloydSeq.compare_lemmas.
+Require Export FloydSeq.semax_tactics.
+Require Export FloydSeq.entailer.
+Require Export FloydSeq.forward. (* must come after entailer because of Ltac override *)
+Require Export FloydSeq.subsume_funspec.
+Require Export FloydSeq.call_lemmas.
+Require Export FloydSeq.forward_lemmas.
+Require Export FloydSeq.for_lemmas.
+Require Export FloydSeq.nested_pred_lemmas.
+Require Export FloydSeq.nested_field_lemmas.
+Require Export FloydSeq.efield_lemmas.
+Require Export FloydSeq.mapsto_memory_block.
+Require Export FloydSeq.aggregate_type.
+Require FloydSeq.aggregate_pred. Export FloydSeq.aggregate_pred.aggregate_pred.
+Require Export FloydSeq.reptype_lemmas.
+Require Export FloydSeq.simpl_reptype.
+Require Export FloydSeq.data_at_rec_lemmas.
+Require Export FloydSeq.field_at.
+Require Export FloydSeq.field_at_wand.
+Require Export FloydSeq.field_compat.
+Require Export FloydSeq.stronger.
+Require Export FloydSeq.loadstore_mapsto.
+Require Export FloydSeq.loadstore_field_at.
+Require Export FloydSeq.nested_loadstore.
+Require Export FloydSeq.local2ptree_denote.
+Require Export FloydSeq.local2ptree_eval.
+Require Export FloydSeq.local2ptree_typecheck.
+Require Export FloydSeq.proj_reptype_lemmas.
+Require Export FloydSeq.replace_refill_reptype_lemmas.
+Require Export FloydSeq.sc_set_load_store.
+Require Export FloydSeq.unfold_data_at.
+Require Export FloydSeq.globals_lemmas.
+Require Export FloydSeq.diagnosis.
+Require Export FloydSeq.freezer.
+Require Export FloydSeq.deadvars.
+Require Export FloydSeq.hints.
+Require Export FloydSeq.Clightnotations.
+Require Export FloydSeq.list_solver.
+Require Export FloydSeq.data_at_lemmas.
 Require VST.msl.iter_sepcon.
 Require VST.msl.wand_frame.
 Require VST.msl.wandQ_frame.
-Require VST.floyd.linking.
+Require FloydSeq.linking.
 
 Arguments semax {CS} {Espec} Delta Pre%assert cmd%C Post%assert.
 Export ListNotations.

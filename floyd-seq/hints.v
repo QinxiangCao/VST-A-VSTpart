@@ -1,28 +1,28 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.go_lower.
-Require Import VST.floyd.closed_lemmas.
-Require Import VST.floyd.forward_lemmas VST.floyd.call_lemmas.
-Require Import VST.floyd.extcall_lemmas.
-Require Import VST.floyd.nested_field_lemmas.
-Require Import VST.floyd.efield_lemmas.
-Require Import VST.floyd.type_induction.
-Require Import VST.floyd.mapsto_memory_block.
-Require Import VST.floyd.data_at_rec_lemmas.
-Require Import VST.floyd.field_at.
-Require Import VST.floyd.loadstore_mapsto.
-Require Import VST.floyd.loadstore_field_at.
-Require Import VST.floyd.stronger.
-Require Import VST.floyd.local2ptree_denote.
-Require Import VST.floyd.local2ptree_eval.
-Require Import VST.floyd.reptype_lemmas.
-Require Import VST.floyd.proj_reptype_lemmas.
-Require Import VST.floyd.replace_refill_reptype_lemmas.
-Require Import VST.floyd.aggregate_type.
-Require Import VST.floyd.functional_base.
-Require Import VST.floyd.entailer.
-Require Import VST.floyd.globals_lemmas.
-Require Import VST.floyd.deadvars.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.go_lower.
+Require Import FloydSeq.closed_lemmas.
+Require Import FloydSeq.forward_lemmas FloydSeq.call_lemmas.
+Require Import FloydSeq.extcall_lemmas.
+Require Import FloydSeq.nested_field_lemmas.
+Require Import FloydSeq.efield_lemmas.
+Require Import FloydSeq.type_induction.
+Require Import FloydSeq.mapsto_memory_block.
+Require Import FloydSeq.data_at_rec_lemmas.
+Require Import FloydSeq.field_at.
+Require Import FloydSeq.loadstore_mapsto.
+Require Import FloydSeq.loadstore_field_at.
+Require Import FloydSeq.stronger.
+Require Import FloydSeq.local2ptree_denote.
+Require Import FloydSeq.local2ptree_eval.
+Require Import FloydSeq.reptype_lemmas.
+Require Import FloydSeq.proj_reptype_lemmas.
+Require Import FloydSeq.replace_refill_reptype_lemmas.
+Require Import FloydSeq.aggregate_type.
+Require Import FloydSeq.functional_base.
+Require Import FloydSeq.entailer.
+Require Import FloydSeq.globals_lemmas.
+Require Import FloydSeq.deadvars.
 Import Cop.
 Import Cop2.
 

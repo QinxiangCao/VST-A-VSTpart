@@ -1,5 +1,5 @@
-Require Import VST.floyd.base2.
-Require Export VST.floyd.canon.
+Require Import FloydSeq.base2.
+Require Export FloydSeq.canon.
 Import LiftNotation.
 Local Open Scope logic.
 

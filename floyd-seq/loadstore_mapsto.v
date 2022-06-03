@@ -1,6 +1,6 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.mapsto_memory_block.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.mapsto_memory_block.
 Import LiftNotation.
 
 Local Open Scope logic.

@@ -1,9 +1,9 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.canon.
-Require Import VST.floyd.entailer.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.canon.
+Require Import FloydSeq.entailer.
 Require Import Coq.Lists.List.
 Export ListNotations.
-Require Import VST.floyd.client_lemmas.
+Require Import FloydSeq.client_lemmas.
 
 Local Open Scope logic.
 

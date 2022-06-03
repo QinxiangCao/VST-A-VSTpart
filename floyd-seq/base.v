@@ -3,14 +3,14 @@ Require Export VST.veric.base.
 Require Export VST.veric.SeparationLogic.
 Require Export VST.msl.Extensionality.
 Require Export compcert.lib.Coqlib.
-Require Export VST.msl.Coqlib2 VST.veric.coqlib4 VST.floyd.coqlib3.
+Require Export VST.msl.Coqlib2 VST.veric.coqlib4 FloydSeq.coqlib3.
 Require Export VST.veric.juicy_extspec.
 Require Import VST.veric.NullExtension.
-Require Export VST.floyd.jmeq_lemmas.
-Require Export VST.floyd.find_nth_tactic.
-Require Export VST.floyd.val_lemmas.
-Require Export VST.floyd.assert_lemmas.
-Require VST.floyd.SeparationLogicAsLogicSoundness.
+Require Export FloydSeq.jmeq_lemmas.
+Require Export FloydSeq.find_nth_tactic.
+Require Export FloydSeq.val_lemmas.
+Require Export FloydSeq.assert_lemmas.
+Require FloydSeq.SeparationLogicAsLogicSoundness.
 Export SeparationLogicAsLogicSoundness.MainTheorem.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.
 Export SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.

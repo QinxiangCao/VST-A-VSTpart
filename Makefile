@@ -25,25 +25,46 @@ CPROGS=append mytest sgn # reverse #sumarray2  min  leap_year bst linkedlist uni
 CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
-FLOYD_FILE_NAMES = coqlib3.v base.v seplog_tactics.v typecheck_lemmas.v val_lemmas.v assert_lemmas.v find_nth_tactic.v const_only_eval.v \
-   base2.v functional_base.v go_lower.v \
-   library.v proofauto.v computable_theorems.v computable_functions.v \
-   type_induction.v align_compatible_dec.v reptype_lemmas.v aggregate_type.v aggregate_pred.v \
-   nested_pred_lemmas.v compact_prod_sum.v \
-   sublist.v extract_smt.v \
-   client_lemmas.v canon.v canonicalize.v closed_lemmas.v jmeq_lemmas.v \
-   compare_lemmas.v sc_set_load_store.v \
-   loadstore_mapsto.v loadstore_field_at.v field_compat.v nested_loadstore.v \
-   call_lemmas.v extcall_lemmas.v forward_lemmas.v forward.v \
-   entailer.v globals_lemmas.v \
+FLOYD_FILE_NAMES = coqlib3.v jmeq_lemmas.v \
+   find_nth_tactic.v  sublist.v functional_base.v  val_lemmas.v \
+   assert_lemmas.v  \
+   SeparationLogicFacts.v SeparationLogicAsLogic.v SeparationLogicAsLogicSoundness.v \
+   base.v seplog_tactics.v typecheck_lemmas.v const_only_eval.v \
+   computable_theorems.v computable_functions.v \
+   base2.v \
+   canon.v client_lemmas.v closed_lemmas.v canonicalize.v  \
+   fieldlist.v \
+   type_induction.v \
+   nested_pred_lemmas.v \
+   align_compatible_dec.v compact_prod_sum.v \
+   reptype_lemmas.v aggregate_type.v mapsto_memory_block.v aggregate_pred.v \
+   nested_field_lemmas.v \
+   efield_lemmas.v proj_reptype_lemmas.v \
+   data_at_rec_lemmas.v field_at.v \
    local2ptree_denote.v local2ptree_eval.v local2ptree_typecheck.v \
-   fieldlist.v mapsto_memory_block.v\
-   nested_field_lemmas.v efield_lemmas.v proj_reptype_lemmas.v replace_refill_reptype_lemmas.v \
-   data_at_rec_lemmas.v field_at.v field_at_wand.v stronger.v \
-   for_lemmas.v semax_tactics.v diagnosis.v simple_reify.v simpl_reptype.v \
-   freezer.v deadvars.v Clightnotations.v unfold_data_at.v hints.v reassoc_seq.v \
-   SeparationLogicAsLogicSoundness.v SeparationLogicAsLogic.v SeparationLogicFacts.v \
-   subsume_funspec.v linking.v list_solver.v data_at_lemmas.v
+   semax_tactics.v \
+   go_lower.v \
+   entailer.v \
+   loadstore_mapsto.v loadstore_field_at.v field_compat.v \
+   globals_lemmas.v \
+   stronger.v \
+   replace_refill_reptype_lemmas.v \
+   nested_loadstore.v \
+   field_at_wand.v \
+   compare_lemmas.v \
+   simple_reify.v \
+   simpl_reptype.v \
+   sc_set_load_store.v \
+   forward_lemmas.v \
+   for_lemmas.v \
+   subsume_funspec.v call_lemmas.v extcall_lemmas.v \
+   diagnosis.v \
+   freezer.v forward.v \
+   library.v \
+   deadvars.v Clightnotations.v unfold_data_at.v hints.v reassoc_seq.v \
+   linking.v list_solver.v data_at_lemmas.v \
+   proofauto.v \
+   extract_smt.v
 FLOYD_FILES = $(addprefix floyd-seq/, $(FLOYD_FILE_NAMES))
 
 CPROG_FILE_NAMES = $(addsuffix _prog.v, $(CPROGS))

@@ -1,10 +1,10 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.nested_field_lemmas.
-Require Import VST.floyd.type_induction.
-Require Import VST.floyd.reptype_lemmas.
-Require Import VST.floyd.aggregate_type.
-Require Import VST.floyd.sublist.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.nested_field_lemmas.
+Require Import FloydSeq.type_induction.
+Require Import FloydSeq.reptype_lemmas.
+Require Import FloydSeq.aggregate_type.
+Require Import FloydSeq.sublist.
 
 Section PROJ_REPTYPE.
 

@@ -1,6 +1,6 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.reptype_lemmas.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.reptype_lemmas.
 
 Local Open Scope logic.
 

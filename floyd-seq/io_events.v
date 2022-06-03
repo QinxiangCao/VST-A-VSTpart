@@ -1,4 +1,4 @@
-Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 Require Import ITree.ITree.
 Require Import ITree.Eq.Eq.
 Require Import ITree.Eq.SimUpToTaus.

@@ -2,8 +2,8 @@ From compcert Require Export Clightdefs.
 Require Export VST.veric.SeparationLogic.
 Require Export VST.msl.Extensionality.
 Require Export compcert.lib.Coqlib.
-Require Export VST.msl.Coqlib2 VST.veric.coqlib4 VST.floyd.coqlib3.
-Require Import VST.floyd.val_lemmas.
+Require Export VST.msl.Coqlib2 VST.veric.coqlib4 FloydSeq.coqlib3.
+Require Import FloydSeq.val_lemmas.
 Local Open Scope logic.
 Import LiftNotation.
 

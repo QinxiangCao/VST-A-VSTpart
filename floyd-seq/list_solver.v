@@ -1,8 +1,8 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.reptype_lemmas.
-Require Import VST.floyd.field_at.
-Require Import VST.floyd.entailer.
-Require Import VST.floyd.field_compat.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.reptype_lemmas.
+Require Import FloydSeq.field_at.
+Require Import FloydSeq.entailer.
+Require Import FloydSeq.field_compat.
 Import ListNotations.
 
 

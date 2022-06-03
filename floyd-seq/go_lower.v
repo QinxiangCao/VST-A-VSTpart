@@ -1,10 +1,10 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.efield_lemmas.
-Require Import VST.floyd.local2ptree_denote.
-Require Import VST.floyd.local2ptree_eval.
-Require Import VST.floyd.local2ptree_typecheck.
-Require Import VST.floyd.semax_tactics.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.efield_lemmas.
+Require Import FloydSeq.local2ptree_denote.
+Require Import FloydSeq.local2ptree_eval.
+Require Import FloydSeq.local2ptree_typecheck.
+Require Import FloydSeq.semax_tactics.
 Import LiftNotation.
 
 Local Open Scope logic.

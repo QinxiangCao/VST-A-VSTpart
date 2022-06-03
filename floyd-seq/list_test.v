@@ -1,4 +1,4 @@
-Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 Require Import Coq.Program.Tactics.
 
 Example strcat_preloop2_new : forall {cs : compspecs} n ld,
