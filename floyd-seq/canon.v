@@ -2,6 +2,8 @@ Require Export Coq.Sorting.Permutation.
 Require Import VST.veric.seplog.
 Require Import FloydSeq.base2.
 Import LiftNotation.
+Require Import CSplit.strong.
+
 
 Local Open Scope logic.
 
@@ -313,6 +315,7 @@ Notation "'EX' x .. y , P " :=
 Notation " 'ENTAIL' d ',' P '|--' Q " :=
   (@derives (environ->mpred) _ (andp (local (tc_environ d)) P%assert) Q%assert) (at level 80, P at level 79, Q at level 79).
 
+  
 Arguments semax {CS} {Espec} Delta Pre%assert cmd Post%assert.
 
 Lemma insert_prop : forall (P: Prop) PP QR, prop P && (PROPx PP QR) = PROPx (P::PP) QR.
@@ -331,10 +334,10 @@ Proof.
 intros. extensionality rho.
 unfold PROPx, LOCALx, local; super_unfold_lift. simpl.
 apply pred_ext; autorewrite with gather_prop; normalize.
-repeat apply andp_right; auto.
+(* repeat apply andp_right; auto.
 apply prop_right; repeat split; auto.
 apply andp_right; auto.
-apply prop_right; repeat split; auto.
+apply prop_right; repeat split; auto. *)
 Qed.
 
 Lemma insert_local: forall Q1 P Q R,
@@ -659,6 +662,10 @@ Module ConseqFacts :=
     (SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Def)
     (Conseq).
 
+(* 
+[litao]
+Admitted: seems not provable
+
 Lemma extract_exists_pre_later {CS: compspecs} {Espec: OracleKind}:
   forall  (A : Type) (Q: assert) (P : A -> assert) c Delta (R: ret_assert),
   (forall x, semax Delta (Q && |> P x) c R) ->
@@ -668,10 +675,13 @@ Proof.
   apply extract_exists_pre in H.
   eapply semax_conseq; [.. | exact H].
   + reduceL.
-    eapply derives_trans; [| apply bupd_intro].
+    (* eapply derives_trans; [| apply bupd_intro]. *)
     rewrite andp_comm.
     apply imp_andp_adjoint.
-    eapply derives_trans; [apply later_exp'' |].
+    Search later exp.
+    Check later_exp''.
+    Search 
+    eapply derives_trans; [apply later_exp' |].
     apply orp_left.
     - apply imp_andp_adjoint.
       rewrite andp_comm.
@@ -684,7 +694,7 @@ Proof.
   + reduce2derives; apply derives_refl.
   + reduce2derives; apply derives_refl.
   + intros; reduce2derives; apply derives_refl.
-Qed.
+Qed. *)
     
 Lemma semax_pre_post_bupd:
   forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),

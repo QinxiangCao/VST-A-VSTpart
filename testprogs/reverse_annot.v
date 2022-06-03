@@ -372,8 +372,8 @@ Definition reverse_delta :=
 Proof.
   start_function.
   unfold Delta. unfold abbreviate.
-  Check Delta_specs.
-  Print Delta_specs. *)
+  Check Delta_specs0.
+  Print Delta_specs0. *)
 
 
   Global Arguments Cifthenelse _ {_ _} _ _.
@@ -418,6 +418,8 @@ mk_C_full_path
 Parameter CS: compspecs.
 Parameter Espec : OracleKind.
 
+Require Import FloydSeq.proofauto.
+
 Goal @path_to_semax CS Espec reverse_delta _
 (GIVEN (a a0 : val) (a1 a2 : list val) (a3 a4 : val)
           (a5 : list val),
@@ -445,4 +447,6 @@ Goal @path_to_semax CS Espec reverse_delta _
 Proof.
   repeat (hnf;intros).
   unfold path_to_statement. simpl.
+  unfold reverse_delta.
+  
   forward.
