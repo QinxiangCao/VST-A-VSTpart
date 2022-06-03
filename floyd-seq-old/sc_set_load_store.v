@@ -19,6 +19,8 @@ Require Import VST.floyd.local2ptree_eval.
 Require Import VST.floyd.simpl_reptype.
 Import LiftNotation.
 
+Require Import CSplit.strong.
+
 Local Open Scope logic.
 
 Section SEMAX_SC.
@@ -33,7 +35,7 @@ Lemma semax_SC_set:
       ENTAIL Delta, PROPx P (LOCALx Q (SEPx R)) |-- local (`(eq v) (eval_expr e2)) ->
       ENTAIL Delta, PROPx P (LOCALx Q (SEPx R)) |--
          (tc_expr Delta e2) ->
-      semax Delta (|>PROPx P (LOCALx Q (SEPx R)))
+      semax Delta (PROPx P (LOCALx Q (SEPx R)))
         (Sset id e2)
           (normal_ret_assert
             (PROPx P

@@ -37,6 +37,9 @@ Import LiftNotation.
 
 Global Opaque denote_tc_test_eq.
 
+Require Import CSplit.strong.
+
+
 Hint Rewrite @sem_add_pi_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
 Hint Rewrite @sem_add_pl_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
 
@@ -140,7 +143,7 @@ apply Coq.Init.Logic.I.
 split; auto.
 rewrite memory_block_isptr; normalize.
 rewrite memory_block_isptr; normalize.
-apply extract_exists_pre.  apply H3.
+apply semax_extract_exists. apply H3.
 Qed.
 
 Lemma var_block_lvar0
@@ -1508,6 +1511,31 @@ end.
 
 Tactic Notation "forward_call"  := new_fwd_call.
 
+
+Theorem seq_assoc:
+  forall {CS: compspecs} {Espec: OracleKind},
+   forall Delta P s1 s2 s3 R,
+        @semax CS Espec Delta P (Ssequence s1 (Ssequence s2 s3)) R <->
+        @semax CS Espec Delta P (Ssequence (Ssequence s1 s2) s3) R.
+Proof.
+  intros.
+  split; intros.
+  + apply semax_seq_inv in H.
+    destruct H as [? [? ?]].
+    apply semax_seq_inv in H0.
+    destruct H0 as [? [? ?]].
+    eapply semax_seq; eauto.
+    eapply semax_seq; eauto.
+    destruct R; auto.
+  + apply semax_seq_inv in H.
+    destruct H as [? [? ?]].
+    apply semax_seq_inv in H.
+    destruct H as [? [? ?]].
+    eapply semax_seq with x0; [destruct R; exact H |].
+    eapply semax_seq; eauto.
+Qed.
+
+
 Lemma seq_assoc2:
   forall (Espec: OracleKind) {cs: compspecs}  Delta P c1 c2 c3 c4 Q,
   semax Delta P (Ssequence (Ssequence c1 c2) (Ssequence c3 c4)) Q ->
@@ -1728,8 +1756,8 @@ intros.
 destruct Archi.ptr64 eqn:Hp; simpl in H;
 destruct p; inversion H;
 unfold strict_bool_val in H1.
-destruct (Int64.eq i Int64.zero) eqn:?; inv H1.
-apply int64_eq_e in Heqb. subst; reflexivity.
+(* destruct (Int64.eq i Int64.zero) eqn:?; inv H1.
+apply int64_eq_e in Heqb. subst; reflexivity. *)
 destruct (Int.eq i Int.zero) eqn:?; inv H1.
 apply int_eq_e in Heqb. subst; reflexivity.
 Qed.
@@ -2259,6 +2287,18 @@ Lemma seq_assoc1:
        semax Delta P (Ssequence (Ssequence s1 s2) s3) R.
 Proof. intros. apply -> seq_assoc; auto. Qed.
 
+
+Lemma semax_post_flipped:
+  forall (R' : ret_assert) Espec {cs: compspecs} (Delta : tycontext) (R : ret_assert)
+         (P : environ->mpred) (c : statement),
+   @semax cs Espec Delta P c R' ->
+   ENTAIL Delta, RA_normal R' |-- RA_normal R ->
+   ENTAIL Delta, RA_break R' |-- RA_break R ->
+   ENTAIL Delta, RA_continue R' |-- RA_continue R ->
+   (forall vl, ENTAIL Delta, RA_return R' vl |-- RA_return R vl) ->
+       @semax cs Espec Delta P c R.
+Proof. intros; eapply semax_post; eassumption. Qed.
+
 Lemma semax_loop_noincr :
   forall {Espec: OracleKind}{CS: compspecs} ,
 forall Delta Q body R,
@@ -2552,7 +2592,7 @@ forward_for  Inv   (* where Inv: A->environ->mpred is a predicate on index value
 forward_for Inv continue: PreInc (* where Inv,PreInc are predicates on index values of type A *)
 forward_for Inv continue: PreInc break:Post (* where Post: environ->mpred is an assertion *)".
 
-Lemma semax_convert_for_while:
+(* Lemma semax_convert_for_while:
  forall CS Espec Delta Pre s1 e2 s3 s4 Post,
   nocontinue s4 = true ->
   nocontinue s3 = true ->
@@ -2560,6 +2600,7 @@ Lemma semax_convert_for_while:
   @semax CS Espec Delta Pre (Sfor s1 e2 s4 s3) Post.
 Proof.
 intros.
+Locate semax_extract_prop.
 pose proof (semax_convert_for_while' CS Espec Delta Pre s1 e2 s3 s4 Sskip Post H).
 spec H2; auto.
 apply -> semax_seq_skip in H1; auto.
@@ -2592,7 +2633,7 @@ Tactic Notation "forward_for" constr(Inv) :=
                    [  |  forward_while (EX x:_, Inv x);
                              [ apply ENTAIL_refl | | | eapply semax_post_flipped'; [apply semax_skip | ] ]  ] ]
         
-  end.
+  end. *)
 
 Ltac process_cases sign := 
 match goal with
@@ -2889,6 +2930,14 @@ Ltac warn s :=
    assert_ (Warning s
                IGNORE_THIS_WARNING_USING_THE_ack_TACTIC_IF_YOU_WISH).
 
+
+Lemma semax_post': forall R' Espec {cs: compspecs} Delta R P c,
+ENTAIL Delta, R' |-- R ->
+@semax cs Espec Delta P c (normal_ret_assert R') ->
+@semax cs Espec Delta P c (normal_ret_assert R).
+Proof. intros. eapply semax_post; eauto.
+simpl RA_normal; auto.
+Qed.
 
 Lemma semax_post3:
   forall R' Espec {cs: compspecs} Delta P c R,
@@ -3455,20 +3504,6 @@ rewrite sepcon_emp.
 auto.
 Qed.
 
-Ltac try_clean_up_stackframe :=
-  lazymatch goal with |-
-     ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |--
-        PROPx _ (LOCALx _ (SEPx _)) * stackframe_of _ =>
-     unfold stackframe_of;
-     simpl fn_vars;
-     repeat (
-     simple eapply fold_another_var_block;
-       [reflexivity | reflexivity | reflexivity | reflexivity | reflexivity 
-         | reflexivity | ]);
-     try simple apply no_more_var_blocks
-  | |- _ => idtac
- end.
-
 Ltac clean_up_stackframe ::=
   lazymatch goal with |-
      ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |--
@@ -3769,7 +3804,7 @@ Ltac forward :=
       | fwd_result;
         Intros;
         abbreviate_semax;
-        try (fwd_skip; try_clean_up_stackframe) ]
+        try fwd_skip ]
     end
   end
  end.
