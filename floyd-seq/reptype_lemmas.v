@@ -2,7 +2,7 @@ Require Import FloydSeq.base2.
 Require Import FloydSeq.type_induction.
 Require Export FloydSeq.compact_prod_sum.
 Require Import FloydSeq.fieldlist.
-Require Import FloydSeq.sublist.
+Require Import VST.floyd.sublist.
 
 Definition
 map_map: forall {A B C : Type} (f : A -> B) (g : B -> C) (l : list A),

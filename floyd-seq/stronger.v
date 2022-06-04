@@ -11,7 +11,7 @@ Require Import FloydSeq.entailer.
 Require Import FloydSeq.closed_lemmas.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Classes.Morphisms.
-Require Import FloydSeq.sublist.
+Require Import VST.floyd.sublist.
 
 Local Open Scope logic.
 

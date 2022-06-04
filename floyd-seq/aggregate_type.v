@@ -4,7 +4,7 @@ Require Import FloydSeq.type_induction.
 Require Import VST.floyd.jmeq_lemmas.
 Require Export FloydSeq.fieldlist.
 Require Export FloydSeq.compact_prod_sum.
-Require Export FloydSeq.sublist.
+Require Export VST.floyd.sublist.
 
 Definition proj_struct (i : ident) (m : members) {A: ident * type -> Type} (v: compact_prod (map A m)) (d: A (i, field_type i m)): A (i, field_type i m) :=
   proj_compact_prod (i, field_type i m) m v d member_dec.

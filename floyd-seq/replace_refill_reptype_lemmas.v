@@ -6,7 +6,7 @@ Require Import FloydSeq.aggregate_type.
 Require Import FloydSeq.reptype_lemmas.
 Require Import FloydSeq.proj_reptype_lemmas.
 Require Import Coq.Classes.RelationClasses.
-Require Import FloydSeq.sublist.
+Require Import VST.floyd.sublist.
 Require Import FloydSeq.stronger.
 
 Require Import FloydSeq.stronger.

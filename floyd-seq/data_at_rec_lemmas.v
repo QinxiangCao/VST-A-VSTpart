@@ -7,7 +7,7 @@ Require FloydSeq.aggregate_pred. Import FloydSeq.aggregate_pred.aggregate_pred.
 Import FloydSeq.aggregate_pred.auxiliary_pred.
 Require Import FloydSeq.reptype_lemmas.
 Require Import VST.floyd.jmeq_lemmas.
-Require Import FloydSeq.sublist.
+Require Import VST.floyd.sublist.
 Require Export FloydSeq.fieldlist.
 Require Export FloydSeq.aggregate_type.
 

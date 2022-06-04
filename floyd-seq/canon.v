@@ -662,9 +662,9 @@ Module ConseqFacts :=
     (SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Def)
     (Conseq). *)
 
-(* 
-[litao]
-Admitted: seems not provable
+
+(* [litao]
+Admitted: seems not provable 
 
 Lemma extract_exists_pre_later {CS: compspecs} {Espec: OracleKind}:
   forall  (A : Type) (Q: assert) (P : A -> assert) c Delta (R: ret_assert),
@@ -678,18 +678,19 @@ Proof.
     (* eapply derives_trans; [| apply bupd_intro]. *)
     rewrite andp_comm.
     apply imp_andp_adjoint.
-    Search later exp.
+    (* Search later exp.
     Check later_exp''.
-    Search 
-    eapply derives_trans; [apply later_exp' |].
+    Search  *)
+    Check later_exp''.
+    eapply derives_trans; [apply later_exp'' |].
     apply orp_left.
     - apply imp_andp_adjoint.
       rewrite andp_comm.
-      apply orp_right2.
+      (* apply orp_right2. *)
       rewrite exp_andp2.
       apply derives_refl.
     - apply imp_andp_adjoint.
-      apply andp_left1, orp_right1, derives_refl.
+      apply andp_left1. derives_refl.
   + reduce2derives; apply derives_refl.
   + reduce2derives; apply derives_refl.
   + reduce2derives; apply derives_refl.
