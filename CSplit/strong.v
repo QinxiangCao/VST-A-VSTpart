@@ -2122,7 +2122,7 @@ Proof.
     apply exp_derives; intros P''.
     normalize.
     apply andp_right; auto.
-    apply prop_right.
+    apply prop_right. destruct H6.
     split.
     - eapply semax_conseq; try eassumption. solve_andp.
     - eapply semax_conseq; try eassumption. solve_andp.
@@ -2475,7 +2475,8 @@ Lemma semax_extract_prop: forall (CS : compspecs) (Espec : OracleKind)
 Proof.
   intros.
   eapply semax_conseq with (P':=EX H: PP, P) (R':=Q); try solve [intros; solve_andp].
-  + apply andp_left2. Intros. Exists H0. solve_andp.
+  + apply andp_left2. rewrite andp_comm. rewrite andp_assoc.
+    apply derives_extract_prop. intros. Exists H0. solve_andp.
   + apply semax_extract_exists, H.
 Qed.
 
