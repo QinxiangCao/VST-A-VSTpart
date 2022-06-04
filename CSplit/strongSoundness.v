@@ -1,8 +1,24 @@
-
-
-
+Require Export VST.veric.base.
+Require Export VST.veric.SeparationLogic.
+Require Export VST.msl.Extensionality.
+Require Export compcert.lib.Coqlib.
+Require Export VST.msl.Coqlib2 VST.veric.coqlib4 VST.floyd.coqlib3.
+Require Export VST.veric.juicy_extspec.
+Require Import VST.veric.NullExtension.
+Require Export VST.floyd.jmeq_lemmas.
+Require Export VST.floyd.find_nth_tactic.
+Require Export VST.floyd.val_lemmas.
+Require Export VST.floyd.assert_lemmas.
+Require Import VST.veric.semax_lemmas.
+Require Import VST.floyd.SeparationLogicFacts.
+Require VST.floyd.SeparationLogicAsLogicSoundness.
+Require Import VST.floyd.SeparationLogicAsLogic.
+Require Import VST.floyd.proofauto.
+Import Ctypes LiftNotation.
+Local Open Scope logic.
+Require Import CSplit.strong.
 (* Lemma semax_derives_vst: forall CS  Espec Delta P c Q,
-@SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q ->
+@SeparationLogicAsLogic.semax CS Espec Delta P c Q ->
 @CSHL_Def.semax CS Espec Delta P c Q.
 Proof.
   intros.
@@ -16,12 +32,12 @@ Proof.
   - eapply CSHL_MinimumLogic.semax_loop;eauto.
   - eapply CSHL_MinimumLogic.semax_switch;eauto.
 
-  Search AuxDefs.semax.
+  Search semax.
   apply H. *)
 
-  Theorem semax_derives: forall CS Espec Delta P c Q,
+Theorem semax_derives: forall CS Espec Delta P c Q,
   @semax CS Espec Delta P c Q -> 
-  (* @SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c Q. *)
+  (* @SeparationLogicAsLogic.semax CS Espec Delta P c Q. *)
   @CSHL_Def.semax CS Espec Delta P c Q.
 Proof.
   intros.
@@ -162,4 +178,4 @@ Proof.
   - apply CSHL_MinimumLogic.semax_Slabel. auto.
   - apply semax_ff.
   - apply semax_ff.
-Qed.
+Qed. 

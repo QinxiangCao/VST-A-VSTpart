@@ -3,7 +3,7 @@ Require Import VST.veric.seplog.
 Require Import FloydSeq.base2.
 Import LiftNotation.
 Require Import CSplit.strong.
-
+Require Import CSplit.strongFacts.
 
 Local Open Scope logic.
 
@@ -334,10 +334,10 @@ Proof.
 intros. extensionality rho.
 unfold PROPx, LOCALx, local; super_unfold_lift. simpl.
 apply pred_ext; autorewrite with gather_prop; normalize.
-(* repeat apply andp_right; auto.
+repeat apply andp_right; auto.
 apply prop_right; repeat split; auto.
 apply andp_right; auto.
-apply prop_right; repeat split; auto. *)
+apply prop_right; repeat split; auto.
 Qed.
 
 Lemma insert_local: forall Q1 P Q R,
@@ -647,7 +647,7 @@ intros. reflexivity.
 Qed.
 Hint Rewrite exp_unfold: norm2.
 
-Module CConseqFacts :=
+(* Module CConseqFacts :=
   SeparationLogicFacts.GenCConseqFacts
     (SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Def)
     (SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic).
@@ -660,7 +660,7 @@ Module Conseq :=
 Module ConseqFacts :=
   SeparationLogicFacts.GenConseqFacts
     (SeparationLogicAsLogicSoundness.MainTheorem.CSHL_PracticalLogic.CSHL_MinimumLogic.CSHL_Def)
-    (Conseq).
+    (Conseq). *)
 
 (* 
 [litao]
@@ -760,6 +760,9 @@ Proof.
 (* ?  eapply semax_pre_post_bupd; eauto; intros; eapply derives_trans, bupd_intro; auto. *)
 Qed.
 
+(* Locate semax_frame. *)
+
+
 Lemma semax_frame_PQR:
   forall Q2 R2 Espec {cs: compspecs} Delta R1 P Q P' Q' R1' c,
      closed_wrt_modvars c (LOCALx Q2 (SEPx R2)) ->
@@ -771,9 +774,8 @@ Proof.
 intros.
 replace (PROPx P (LOCALx (Q++Q2) (SEPx (R1 ++ R2))))
    with (PROPx P (LOCALx Q (SEPx (R1))) * (LOCALx Q2 (SEPx R2))).
-
-   Locate semax.
-
+(* eapply semax_pre_post. *)
+(* 6: { Locate semax_frame. apply semax_frame; try eassumption. } *)
 eapply semax_pre_post; try (apply semax_frame; try eassumption).
 apply andp_left2; auto.
 apply andp_left2. intro rho; simpl; normalize.
@@ -815,6 +817,10 @@ apply H1.
 apply semax_frame_PQR; auto.
 Qed.
 
+(* 
+[litao]
+removes bupd
+
 Lemma semax_post_bupd:
  forall (R': ret_assert) Espec {cs: compspecs} Delta (R: ret_assert) P c,
    ENTAIL Delta, RA_normal R' |-- |==> RA_normal R ->
@@ -825,7 +831,7 @@ Lemma semax_post_bupd:
 Proof.
 intros; eapply semax_pre_post_bupd; try eassumption.
 apply andp_left2, bupd_intro; auto.
-Qed.
+Qed. *)
 
 Lemma semax_post:
  forall (R': ret_assert) Espec {cs: compspecs} Delta (R: ret_assert) P c,
@@ -1184,7 +1190,7 @@ Tactic Notation "replace_SEP" constr(n) constr(R) "by" tactic1(t):=
   unfold my_nth,replace_nth; simpl Z.to_nat;
    repeat simpl_nat_of_P; cbv beta iota; cbv beta iota; [ now t | ].
 
-Lemma replace_SEP'_bupd:
+(* Lemma replace_SEP'_bupd:
  forall n R' Espec {cs: compspecs} Delta P Q Rs c Post,
  ENTAIL Delta, PROPx P (LOCALx Q (SEPx (my_nth n Rs TT ::  nil))) |-- `(|==> R') ->
  @semax cs Espec Delta (PROPx P (LOCALx Q (SEPx (replace_nth n Rs R')))) c Post ->
@@ -1225,15 +1231,22 @@ rewrite !prop_true_andp by auto.
 revert Rs H; induction n; destruct Rs; simpl ; intros; auto; try solve [apply bupd_intro; auto].
 - eapply derives_trans, bupd_frame_r; apply sepcon_derives; auto.
 - eapply derives_trans, bupd_frame_l; apply sepcon_derives; auto.
-Qed.
+Qed. *)
+
+(* 
+
+[litao]
+not sure if this works?
+commenting replace_SEP_bupd
+*)
 
 Tactic Notation "viewshift_SEP" constr(n) constr(R) :=
-  first [apply (replace_SEP'_bupd (Z.to_nat n) R) | apply (replace_SEP''_bupd (Z.to_nat n) R)];
+  (* first [apply (replace_SEP'_bupd (Z.to_nat n) R) | apply (replace_SEP''_bupd (Z.to_nat n) R)]; *)
   unfold my_nth,replace_nth; simpl Z.to_nat;
    repeat simpl_nat_of_P; cbv beta iota; cbv beta iota.
 
 Tactic Notation "viewshift_SEP" constr(n) constr(R) "by" tactic1(t):=
-  first [apply (replace_SEP'_bupd (Z.to_nat n) R) | apply (replace_SEP''_bupd (Z.to_nat n) R)];
+  (* first [apply (replace_SEP'_bupd (Z.to_nat n) R) | apply (replace_SEP''_bupd (Z.to_nat n) R)]; *)
   unfold my_nth,replace_nth; simpl Z.to_nat;
    repeat simpl_nat_of_P; cbv beta iota; cbv beta iota; [ now t | ].
 
