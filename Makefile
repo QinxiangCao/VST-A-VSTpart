@@ -25,9 +25,10 @@ CPROGS=append mytest sgn reverse # reverse #sumarray2  min  leap_year bst linked
 CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v AClightNotations.v
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
-FLOYD_FILE_NAMES = coqlib3.v jmeq_lemmas.v \
-   find_nth_tactic.v  sublist.v functional_base.v  val_lemmas.v \
-   assert_lemmas.v  \
+#  jmeq_lemmas.v \
+#  find_nth_tactic.v  sublist.v functional_base.v  val_lemmas.v \
+#  assert_lemmas.v  
+FLOYD_FILE_NAMES = coqlib3.v \
    SeparationLogicFacts.v SeparationLogicAsLogic.v SeparationLogicAsLogicSoundness.v \
    base.v seplog_tactics.v typecheck_lemmas.v const_only_eval.v \
    computable_theorems.v computable_functions.v \

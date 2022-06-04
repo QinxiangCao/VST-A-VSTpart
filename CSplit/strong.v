@@ -143,18 +143,19 @@ local (tc_environ Delta) && ((allp_fun_id Delta) && RA_normal R') |-- |==> |> FF
     (forall vl, local (tc_environ Delta) && ((allp_fun_id Delta) && RA_return R' vl) |-- |==> |> FF || RA_return R vl) ->
     @semax CS Espec Delta P' c R' -> @semax2 CS Espec Delta P c R.
 
-
+Declare Scope assert_strong.
 
 Notation "'EX' x .. y , P " :=
   (@exp (environ->mpred) _ _ (fun x =>
     ..
     (@exp (environ->mpred) _ _ (fun y => P))
     ..
-    )) (at level 65, x binder, y binder, right associativity) : assert.
+    )) (at level 65, x binder, y binder, right associativity) : assert_strong.
 
 Notation " 'ENTAIL' d ',' P '|--' Q " :=
-  (@derives (environ->mpred) _ (andp (local (tc_environ d)) P) Q) (at level 80, P at level 79, Q at level 79).
+  (@derives (environ->mpred) _ (andp (local (tc_environ d)) P) Q) (at level 80, P at level 79, Q at level 79) : assert_strong.
 
+Local Open Scope assert_strong.
 
 Lemma semax_skip_inv: forall CS Espec Delta P R,
   @semax CS Espec Delta P (Clight.Sskip) R ->

@@ -1,6 +1,6 @@
 Require Export FloydSeq.base.
 Require Export FloydSeq.typecheck_lemmas.
-Require Export FloydSeq.functional_base.
+Require Export VST.floyd.functional_base.
 Require Export FloydSeq.seplog_tactics.
 Require Export FloydSeq.const_only_eval.
 Require Export compcert.cfrontend.Ctypes.

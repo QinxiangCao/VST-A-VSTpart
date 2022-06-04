@@ -696,6 +696,11 @@ Proof.
   + intros; reduce2derives; apply derives_refl.
 Qed. *)
     
+(*
+
+[litao]
+remove bupd related lemmas
+
 Lemma semax_pre_post_bupd:
   forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
  forall P' (R': ret_assert) P c (R: ret_assert) ,
@@ -711,13 +716,13 @@ Lemma semax_pre_bupd:
  forall P' Espec {cs: compspecs} Delta P c R,
      ENTAIL Delta , P |-- |==> P' ->
      @semax cs Espec Delta P' c R  -> @semax cs Espec Delta P c R.
-Proof. exact @CConseqFacts.semax_pre_bupd. Qed.
+Proof. exact @CConseqFacts.semax_pre_bupd. Qed. *)
 
 Lemma semax_pre:
  forall P' Espec {cs: compspecs} Delta P c R,
      ENTAIL Delta , P |-- P' ->
      @semax cs Espec Delta P' c R  -> @semax cs Espec Delta P c R.
-Proof. intros ? ? ?; apply ConseqFacts.semax_pre. Qed.
+Proof. intros ? ? ?; apply semax_pre. Qed.
 
 Lemma semax_pre_simple:
  forall P' Espec {cs: compspecs} Delta P c R,
@@ -745,7 +750,14 @@ Lemma semax_pre_post : forall {Espec: OracleKind}{CS: compspecs},
     (forall vl, local (tc_environ Delta) && RA_return R' vl |-- RA_return R vl) ->
    @semax CS Espec Delta P' c R' -> @semax CS Espec Delta P c R.
 Proof.
-  intros; eapply semax_pre_post_bupd; eauto; intros; eapply derives_trans, bupd_intro; auto.
+  intros.
+  eapply semax_conseq;[..|exact H4];auto.
+  - eapply derives_trans;[..|apply H];solve_andp.
+  - eapply derives_trans;[..|apply H0];solve_andp.
+  - eapply derives_trans;[..|apply H1];solve_andp.
+  - eapply derives_trans;[..|apply H2];solve_andp.
+  - intros. eapply derives_trans;[..|apply H3];solve_andp.
+(* ?  eapply semax_pre_post_bupd; eauto; intros; eapply derives_trans, bupd_intro; auto. *)
 Qed.
 
 Lemma semax_frame_PQR:
@@ -759,6 +771,9 @@ Proof.
 intros.
 replace (PROPx P (LOCALx (Q++Q2) (SEPx (R1 ++ R2))))
    with (PROPx P (LOCALx Q (SEPx (R1))) * (LOCALx Q2 (SEPx R2))).
+
+   Locate semax.
+
 eapply semax_pre_post; try (apply semax_frame; try eassumption).
 apply andp_left2; auto.
 apply andp_left2. intro rho; simpl; normalize.
