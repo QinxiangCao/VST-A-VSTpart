@@ -381,3 +381,27 @@ Proof.
 
 Qed.
 
+
+(* 
+Lemma semax_extract_later_prop:
+  forall {CS: compspecs} {Espec: OracleKind},
+  forall Delta (PP: Prop) P c Q,
+           (PP -> @semax CS Espec Delta P c Q) ->
+           @semax CS Espec Delta ((|> !!PP) && P) c Q.
+Proof.
+  intros.
+  apply semax_extract_prop in H.
+  eapply semax_pre_post_indexed_bupd; [.. | exact H].
+  + apply andp_left2.
+    eapply derives_trans; [| apply bupd_intro].
+    rewrite orp_comm, distrib_andp_orp.
+    apply andp_right.
+    - apply andp_left1.
+      apply later_prop.
+    - apply orp_right1.
+      solve_andp.
+  + apply derives_bupd0_refl.
+  + apply derives_bupd0_refl.
+  + apply derives_bupd0_refl.
+  + intros; apply derives_bupd0_refl.
+Qed. *)

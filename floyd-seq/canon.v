@@ -1594,6 +1594,10 @@ apply semax_extract_prop.
 auto.
 Qed.
 
+(*
+[litao]
+not provable?
+
 Lemma semax_extract_later_prop1:
   forall {cs: compspecs} {Espec: OracleKind} Delta (PP: Prop) P c Q,
            (PP -> semax Delta (|> P) c Q) ->
@@ -1602,9 +1606,9 @@ Proof.
   intros.
   rewrite later_andp.
   apply semax_extract_later_prop; auto.
-Qed.
+Qed. *)
 
-Lemma assert_later_PROP:
+(* Lemma assert_later_PROP:
  forall P1 Espec {cs: compspecs} Delta PQR c Post,
     ENTAIL Delta, PQR|-- !! P1 ->
    (P1 -> @semax cs Espec Delta (|> PQR) c Post) ->
@@ -1618,7 +1622,7 @@ apply H.
 apply andp_left2; apply derives_refl.
 apply semax_extract_later_prop1.
 auto.
-Qed.
+Qed. *)
 
 Lemma assert_PROP' {A}{NA: NatDed A}:
  forall P Pre (Post: A),
@@ -1633,16 +1637,24 @@ apply derives_extract_prop. auto.
 Qed.
 
 Tactic Notation "assert_PROP" constr(A) :=
-  first [apply (assert_later_PROP A) | apply (assert_PROP A) | apply (assert_PROP' A)]; [ | intro ].
+  first [
+    (* apply (assert_later_PROP A) | *)
+     apply (assert_PROP A) | apply (assert_PROP' A)]; [ | intro ].
 
 Tactic Notation "assert_PROP" constr(A) "by" tactic1(t) :=
-  first [apply (assert_later_PROP A) | apply (assert_PROP A) | apply (assert_PROP' A) ]; [ now t | intro ].
+  first [
+    (* apply (assert_later_PROP A) |  *)
+    apply (assert_PROP A) | apply (assert_PROP' A) ]; [ now t | intro ].
 
 Tactic Notation "assert_PROP" constr(A) "as" simple_intropattern(H)  :=
-  first [apply (assert_later_PROP A) | apply (assert_PROP A) | apply (assert_PROP' A)]; [ | intro H ].
+  first [
+    (* apply (assert_later_PROP A) | *)
+  apply (assert_PROP A) | apply (assert_PROP' A)]; [ | intro H ].
 
 Tactic Notation "assert_PROP" constr(A) "as" simple_intropattern(H) "by" tactic1(t) :=
-  first [apply (assert_later_PROP A) | apply (assert_PROP A) | apply (assert_PROP' A)]; [ now t | intro H ].
+  first [
+    (* apply (assert_later_PROP A) |  *)
+    apply (assert_PROP A) | apply (assert_PROP' A)]; [ now t | intro H ].
 
 Lemma assert_LOCAL:
  forall Q1 Espec {cs: compspecs} Delta P Q R c Post,

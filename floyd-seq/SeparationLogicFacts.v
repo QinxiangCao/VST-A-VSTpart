@@ -13,6 +13,8 @@ Import LiftNotation.
 
 Local Open Scope logic.
 
+
+
 (* TODO: move it *)
 Lemma exp_derives:
        forall {A: Type}  {NA: NatDed A} (B: Type) (P Q: B -> A),
