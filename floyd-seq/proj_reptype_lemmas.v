@@ -4,7 +4,7 @@ Require Import FloydSeq.nested_field_lemmas.
 Require Import FloydSeq.type_induction.
 Require Import FloydSeq.reptype_lemmas.
 Require Import FloydSeq.aggregate_type.
-Require Import FloydSeq.sublist.
+Require Import VST.floyd.sublist.
 
 Section PROJ_REPTYPE.
 

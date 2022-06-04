@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-
+Require Import CSplit.strong.
 (* Bug: abbreviate replaces _ALL_ instances, when sometimes
   we only want just one. *)
 Tactic Notation "abbreviate" constr(y) "as"  ident(x)  :=
@@ -574,7 +574,7 @@ destruct H.
 auto.
 Qed.
 
-Lemma leaf_function': 
+(* Lemma leaf_function': 
  forall Vprog Gprog (CS: compspecs) f s,
  check_no_overlap Vprog Gprog = true ->
  semax_body Vprog nil f s ->
@@ -632,7 +632,7 @@ intros.
 hnf; intros.
 simpl.
 rewrite !PTree.gempty; auto.
-Qed.
+Qed. *)
 
 Definition check_no_overlap'
     (V: varspecs) (Gtable: PTree.t unit) : bool :=
@@ -643,7 +643,7 @@ Definition check_no_Gvars (Gtable: PTree.t unit) (s: statement) : bool :=
     (find_vars (fun i b => match Gtable!i with Some _=> false | None => b end))
     s true.
 
-Lemma leaf_function: 
+(* Lemma leaf_function: 
  forall Vprog Gprog (CS: compspecs) f s Gtable,
  Gtable = fold_left
     (fun (t : PTree.t unit) (v : ident * funspec) =>
@@ -658,7 +658,7 @@ clear H1.
 eapply leaf_function'; try apply H2.
 subst Gtable.
 apply H0.
-Qed.
+Qed. *)
 
 Definition function_pointers := tt.
 Ltac function_pointers :=
@@ -668,12 +668,12 @@ Ltac function_pointers :=
 Ltac leaf_function := 
  try lazymatch goal with
  | x := function_pointers |- _ => clear x
- | |- semax_body ?Vprog ?Gprog _ _ =>
+ (* | |- semax_body ?Vprog ?Gprog _ _ =>
  eapply leaf_function;
  [reflexivity 
  | reflexivity; fail "Error in leaf_function tactic: your" Vprog "and" Gprog "overlap!"
  | reflexivity; fail "Error in leaf_function tactic: your function body refers to an identifier in" Gprog
- | ]
+ | ] *)
 end.
 
 (*

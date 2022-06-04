@@ -952,7 +952,7 @@ Declare Scope formals.
 Notation " a 'OF' ta " := (a%positive,ta%type) (at level 100, only parsing): formals.
 Delimit Scope formals with formals.
 
-Definition NDsemax_external {Hspec: OracleKind} (ids: list ident) (ef: external_function)
+(* Definition NDsemax_external {Hspec: OracleKind} (ids: list ident) (ef: external_function)
   (A: Type) (P Q: A -> environ -> mpred): Prop :=
   @semax_external Hspec ids ef (rmaps.ConstType A) (fun _ => P) (fun _ => Q).
 
@@ -1333,7 +1333,7 @@ Notation "'WITH'  x1 : t1 , x2 : t2 , x3 : t3 , x4 : t4 , x5 : t5 , x6 : t6 , x7
              x10 at level 0, x11 at level 0, x12 at level 0, x13 at level 0, x14 at level 0,
              x15 at level 0, x16 at level 0, x17 at level 0, x18 at level 0, x19 at level 0,
              x20 at level 0, x21 at level 0, x22 at level 0,
-             P at level 100, Q at level 100).
+             P at level 100, Q at level 100). *)
 
 
 Lemma prop_true_andp1 {A}{NA: NatDed A} :
@@ -1395,6 +1395,9 @@ Ltac hoist_later_left :=
          [ solve [ auto 50 with derives ] | ]
   end.
 
+Require Import CSplit.strong.
+
+  (* [litao] is this correct? *)
 Lemma semax_later_trivial: forall Espec  {cs: compspecs} Delta P c Q,
   @semax cs Espec Delta (|> P) c Q ->
   @semax cs Espec Delta P c Q.
