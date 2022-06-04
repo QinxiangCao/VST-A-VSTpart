@@ -1,7 +1,7 @@
 From compcert Require Export common.AST cfrontend.Ctypes cfrontend.Clight.
 Export Cop.
 Require Export FloydSeq.base2.
-Require Export FloydSeq.functional_base.
+Require Export VST.floyd.functional_base.
 Require Export FloydSeq.client_lemmas.
 Require Export FloydSeq.go_lower.
 Require Export FloydSeq.closed_lemmas.

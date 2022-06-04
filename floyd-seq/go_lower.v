@@ -5,6 +5,7 @@ Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 Require Import FloydSeq.local2ptree_typecheck.
 Require Import FloydSeq.semax_tactics.
+Require Import CSplit.strong.
 Import LiftNotation.
 
 Local Open Scope logic.

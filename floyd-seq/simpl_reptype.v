@@ -1,5 +1,5 @@
 Require Import FloydSeq.base2.
-Require Import FloydSeq.functional_base.
+Require Import VST.floyd.functional_base.
 Require Import FloydSeq.nested_field_lemmas.
 Require Import FloydSeq.reptype_lemmas.
 Require Import FloydSeq.proj_reptype_lemmas.

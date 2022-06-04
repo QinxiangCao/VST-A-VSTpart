@@ -1,7 +1,7 @@
 From compcert Require Import common.AST cfrontend.Ctypes cfrontend.Clight.
 Import Cop.
 Require Import FloydSeq.base2.
-Require Import FloydSeq.functional_base.
+Require Import VST.floyd.functional_base.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.compare_lemmas.
 Require Import FloydSeq.nested_pred_lemmas.

@@ -19,7 +19,7 @@ Require Import FloydSeq.reptype_lemmas.
 Require Import FloydSeq.proj_reptype_lemmas.
 Require Import FloydSeq.replace_refill_reptype_lemmas.
 Require Import FloydSeq.aggregate_type.
-Require Import FloydSeq.functional_base.
+Require Import VST.floyd.functional_base.
 Require Import FloydSeq.entailer.
 Require Import FloydSeq.globals_lemmas.
 Require Import FloydSeq.deadvars.
