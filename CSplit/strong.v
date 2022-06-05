@@ -575,7 +575,7 @@ Tactic Notation "Intros" simple_intropattern(x0)
 
 
 
- Lemma assert_PROP' {A}{NA: NatDed A}:
+ Lemma assert_PROPP' {A}{NA: NatDed A}:
  forall P Pre (Post: A),
    Pre |-- !! P ->
    (P -> Pre |-- Post) ->
@@ -587,17 +587,17 @@ apply andp_right; auto.
 apply derives_extract_prop. auto.
 Qed.
 
-Tactic Notation "assert_PROP" constr(A) :=
-  first [ apply (assert_PROP' A)]; [ | intro ].
+Tactic Notation "assert_PROPP" constr(A) :=
+  first [ apply (assert_PROPP' A)]; [ | intro ].
 
-Tactic Notation "assert_PROP" constr(A) "by" tactic1(t) :=
-  first [apply (assert_PROP' A) ]; [ now t | intro ].
+Tactic Notation "assert_PROPP" constr(A) "by" tactic1(t) :=
+  first [apply (assert_PROPP' A) ]; [ now t | intro ].
 
-Tactic Notation "assert_PROP" constr(A) "as" simple_intropattern(H)  :=
-  first [apply (assert_PROP' A)]; [ | intro H ].
+Tactic Notation "assert_PROPP" constr(A) "as" simple_intropattern(H)  :=
+  first [apply (assert_PROPP' A)]; [ | intro H ].
 
-Tactic Notation "assert_PROP" constr(A) "as" simple_intropattern(H) "by" tactic1(t) :=
-  first [apply (assert_PROP' A)]; [ now t | intro H ].
+Tactic Notation "assert_PROPP" constr(A) "as" simple_intropattern(H) "by" tactic1(t) :=
+  first [apply (assert_PROPP' A)]; [ now t | intro H ].
 
 
 Ltac Exists'' a :=
@@ -733,9 +733,9 @@ Proof.
   
   rewrite (add_andp _ _ (func_ptr_der_logic _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
   Intros blk_fun gA gP1 gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2.
-  assert_PROP (argsig1 = argsig2). { solve_andp. }
+  assert_PROPP (argsig1 = argsig2). { solve_andp. }
   subst argsig2.
-  assert_PROP (
+  assert_PROPP (
     precise_funspec Delta (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)).
   { solve_andp. }
   
@@ -1581,8 +1581,8 @@ Proof.
   eapply ENTAIL_trans;[apply H1|]. clear H1.
   Intros sh1. Intros sh2.
   Exists (Share.lub sh1 sh2).
-  assert_PROP (writable_share sh1). { solve_andp. }
-  assert_PROP (writable_share sh2). { solve_andp. }
+  assert_PROPP (writable_share sh1). { solve_andp. }
+  assert_PROPP (writable_share sh2). { solve_andp. }
   apply andp_right. {
     (* rewrite andp_assoc. rewrite andp_comm.
     rewrite !andp_assoc.
@@ -1610,7 +1610,7 @@ Proof.
   apply later_ENTAIL.
   repeat apply andp_right; try solve_andp.
   intros r.
-  assert_PROP (tc_val (typeof e)
+  assert_PROPP (tc_val (typeof e)
   ((` force_val) ((` (sem_cast (typeof e0) (typeof e))) (eval_expr e0)) r)).
   { unfold tc_environ. simpl. unfold local.
     unfold lift1. Intros. apply derives_extract_prop. intros H3.
@@ -1662,16 +1662,16 @@ ENTAIL Delta,  local (` (tc_val t v1)) &&
     (subst i (` v1) Q1 && subst i (` v1) Q2).
 Proof.
   intros.
-  assert_PROP (v1 <> Vundef).
+  assert_PROPP (v1 <> Vundef).
   { destruct (eq_dec v1 Vundef).
     { subst. unfold local. unfold lift1. simpl. intros.
-      assert_PROP (tc_val t Vundef). { solve_andp. } 
+      assert_PROPP (tc_val t Vundef). { solve_andp. } 
       apply tc_val_Vundef in H1. tauto. }
     apply prop_right. auto. }
-  assert_PROP (v2 <> Vundef).
+  assert_PROPP (v2 <> Vundef).
   { destruct (eq_dec v2 Vundef).
     { subst. unfold local. unfold lift1. simpl. intros.
-      assert_PROP (tc_val t Vundef). { solve_andp. }
+      assert_PROPP (tc_val t Vundef). { solve_andp. }
       apply tc_val_Vundef in H2. tauto. }
     apply prop_right. auto. }
   unfold liftx. simpl. unfold lift. intros r.
@@ -1683,7 +1683,7 @@ Proof.
       solve_andp.
     + apply derives_refl.
   }
-  assert_PROP (v1 = v2). { solve_andp. } subst.
+  assert_PROPP (v1 = v2). { solve_andp. } subst.
   solve_andp.
 Qed.
 
@@ -1711,12 +1711,12 @@ Proof.
   destruct (eq_dec v1 Vundef).
   { subst. rewrite semax_straight.eval_cast_Vundef.
     unfold local. unfold lift1. simpl. intros.
-    assert_PROP (tc_val t2 Vundef). { solve_andp. }
+    assert_PROPP (tc_val t2 Vundef). { solve_andp. }
     apply tc_val_Vundef in H1. tauto. }
   destruct (eq_dec v2 Vundef).
   { subst. rewrite semax_straight.eval_cast_Vundef.
     unfold local. unfold lift1. simpl. intros.
-    assert_PROP (tc_val t2 Vundef). { solve_andp. }
+    assert_PROPP (tc_val t2 Vundef). { solve_andp. }
     apply tc_val_Vundef in H1. tauto. }
   unfold liftx. simpl. unfold lift. intros r.
   pose proof mapsto_join_andp_det_logic 
@@ -1726,7 +1726,7 @@ Proof.
     + eapply derives_trans. 2:{ apply H1. } solve_andp.
     + apply derives_refl.
   }
-  assert_PROP (v1 = v2). { solve_andp. }
+  assert_PROPP (v1 = v2). { solve_andp. }
   Intros. subst.
   solve_andp.
 Qed.
@@ -1809,7 +1809,7 @@ Lemma derives_extract_prop'': forall Delta (P: Prop) Q R,
   ENTAIL Delta, !! P && Q |-- R.
 Proof.
   intros.
-  assert_PROP P. { solve_andp. }
+  assert_PROPP P. { solve_andp. }
   eapply derives_trans;[|apply H];auto.
   solve_andp.
 Qed.
@@ -1839,7 +1839,7 @@ Proof.
     + rewrite subst_andp. rewrite <- later_andp.
       apply later_ENTAIL. solve_andp.
     + Intros sh t2 v2.
-      assert_PROP (typeof_temp Delta i = Some t2 /\
+      assert_PROPP (typeof_temp Delta i = Some t2 /\
       is_neutral_cast (typeof e) t2 = true /\ readable_share sh).
       { solve_andp. }
       destruct H1 as [? [H2 ?]].
@@ -1860,7 +1860,7 @@ Proof.
       2:{ apply FF_left. }
       apply eval_lvalue_expr_contra; auto.
     + Intros sh e1 t1 v2.
-      assert_PROP ((e = Ecast e1 t1 /\
+      assert_PROPP ((e = Ecast e1 t1 /\
       typeof_temp Delta i = Some t1 /\
       cast_pointer_to_bool (typeof e1) t1 = false /\ readable_share sh)).
       { solve_andp. }
@@ -1875,7 +1875,7 @@ Proof.
      subst i (` (force_val (sem_cast (typeof e1) t1 v2))) Q2))
       )). { solve_andp. }
       rewrite <- later_andp. apply later_ENTAIL.
-      assert_PROP (access_mode (typeof e1) <> By_reference).
+      assert_PROPP (access_mode (typeof e1) <> By_reference).
       { destruct (typeof e1) eqn:E0; simpl; simpl in H3; intros r; try solve [apply prop_right;intros C;inv C].
         + destruct i0, s; try solve [apply prop_right;intros C;inv C].
         + destruct f; try try solve [apply prop_right;intros C;inv C].
@@ -1945,7 +1945,7 @@ Proof.
       rewrite <- later_andp.
       apply andp_right. { apply prop_right;auto. }
       apply later_ENTAIL.
-      assert_PROP (access_mode (typeof e2) <> By_reference).
+      assert_PROPP (access_mode (typeof e2) <> By_reference).
       { destruct (typeof e2) eqn:E0; simpl; simpl in H3; intros r; try solve [apply prop_right;intros C;inv C].
         + destruct i0, s; try solve [apply prop_right;intros C;inv C].
         + destruct f; try try solve [apply prop_right;intros C;inv C].
@@ -2723,13 +2723,13 @@ Proof.
     { eapply semax_conseq;[..|apply H1];unfold_der;
       intros;try solve_andp.
       Intros Q1. Intros Q2. Exists (Q1 && Q2).
-      assert_PROP (semax Delta Q1 c2
+      assert_PROPP (semax Delta Q1 c2
           {|
           RA_normal := Q1n;
           RA_break := Q1b;
           RA_continue := Q1c;
           RA_return := Q1r |}). { solve_andp. }
-      assert_PROP (semax Delta Q2 c2
+      assert_PROPP (semax Delta Q2 c2
       {|
       RA_normal := Q2n;
       RA_break := Q2b;
