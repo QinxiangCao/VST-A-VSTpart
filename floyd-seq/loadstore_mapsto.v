@@ -1,6 +1,8 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.mapsto_memory_block.
+Require Import CSplit.strong.
+Require Import CSplit.strongFacts.
 Import LiftNotation.
 
 Local Open Scope logic.
@@ -15,8 +17,9 @@ Load/store lemmas about mapsto:
 
 ***************************************)
 
-
-Definition semax_load_37 := @semax_load.
+(* [litao] semax_load is new *)
+Definition semax_load := @semax_load_forward.
+Definition semax_load_37 := @semax_load_forward.
 
 Lemma semax_load_37' :
   forall {Espec: OracleKind}{cs: compspecs} ,
@@ -82,6 +85,8 @@ Proof.
     - apply andp_left2. auto.
 Qed.
 
+Definition semax_cast_load := @semax_cast_load_forward.
+
 Definition semax_cast_load_37 := @semax_cast_load.
 
 Lemma semax_cast_load_37' :
@@ -102,7 +107,7 @@ forall (Delta: tycontext) sh id P Q R e1 t1 (v2: val),
              (SEPx R)))).
 Proof.
   intros until 1. intros HCAST H_READABLE H1. pose proof I.
-  eapply semax_pre_post'; [ | | apply semax_cast_load with (sh0:=sh)(v3:= v2); auto].
+  eapply semax_pre_post'; [ | | apply semax_cast_load with (sh:=sh)(v2:= v2); auto].
   + instantiate (1:= PROPx (tc_val t1 (force_val (sem_cast (typeof e1) t1 v2)) :: P) (LOCALx Q (SEPx R))).
     apply later_left2.
     match goal with |- ?A |-- _ => rewrite <- (andp_dup A) end.
@@ -248,7 +253,7 @@ Lemma semax_store_nth_ram:
         (PROPx P (LOCALx Q (SEPx (replace_nth n R Post))))).
 Proof.
   intros.
-  eapply semax_pre_simple; [| eapply semax_post'; [| apply semax_store; eauto]].
+  eapply canon.semax_pre_simple; [| eapply canon.semax_post'; [| apply semax_store_forward; eauto]].
   + apply later_left2.
     apply andp_right;  [subst; auto |].
     simpl lifted.

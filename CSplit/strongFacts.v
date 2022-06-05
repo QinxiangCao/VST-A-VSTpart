@@ -382,6 +382,388 @@ Proof.
 Qed.
 
 
+Lemma semax_pre_simple: forall {Espec: OracleKind}{cs: compspecs},
+ forall P' Delta P c R,
+     P |-- P' ->
+     @semax cs Espec Delta P' c R  -> @semax cs Espec Delta P c R.
+Proof.
+intros; eapply semax_pre; [| eauto].
+apply andp_left2; auto.
+Qed.
+
+
+
+Theorem semax_load_backward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall (P: environ->mpred) id e1,
+    @semax CS Espec Delta
+        (EX sh: share, EX t2: type, EX v2: val,
+              !! (typeof_temp Delta id = Some t2 /\
+                  is_neutral_cast (typeof e1) t2 = true /\
+                  readable_share sh) &&
+         |> ( (tc_lvalue Delta e1) &&
+              local (`(tc_val (typeof e1) v2)) &&
+              (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`v2) * TT) &&
+              subst id (`v2) P))
+        (Sset id e1) (normal_ret_assert P).
+Proof.
+  intros.
+  eapply semax_pre_simple; [| apply semax_set_ptr_compare_load_cast_load_backward].
+  apply orp_right1, orp_right2; auto.
+Qed.
+
+
+Theorem semax_load_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall  sh id P e1 t2 (v2: val),
+    typeof_temp Delta id = Some t2 ->
+    is_neutral_cast (typeof e1) t2 = true ->
+    readable_share sh ->
+    local (tc_environ Delta) && P |-- `(mapsto sh (typeof e1)) (eval_lvalue e1) (` v2) * TT ->
+    @semax CS Espec Delta
+       (|> ( (tc_lvalue Delta e1) &&
+       local (`(tc_val (typeof e1) v2)) &&
+          P))
+       (Sset id e1)
+       (normal_ret_assert (EX old:val, local (`eq (eval_id id) (` v2)) &&
+                                          (subst id (`old) P))).
+Proof.
+  intros.
+  eapply semax_pre; [| apply semax_load_backward].
+  apply (exp_right sh).
+  apply (exp_right t2).
+  apply (exp_right v2).
+  apply andp_right; [apply prop_right; auto |].
+  apply later_ENTAIL.
+  rewrite (andp_assoc _ _ (subst _ _ _)).
+  apply andp_ENTAIL; [apply ENTAIL_refl |].
+  apply andp_right; auto.
+  rewrite subst_exp.
+  intros rho.
+  change (local (tc_environ Delta) rho && P rho
+  |-- EX b : val,
+       subst id (` v2) (local ((` eq) (eval_id id) (` v2)) && subst id (` b) P) rho).
+  apply (exp_right (eval_id id rho)).
+  autorewrite with subst.
+  unfold local, lift1; unfold_lift; simpl.
+  unfold typeof_temp in H.
+  destruct ((temp_types Delta) ! id) eqn:?H; inv H.
+  normalize.
+  apply andp_right; [| erewrite subst_self by eauto; auto].
+  apply prop_right.
+  unfold subst.
+  apply eval_id_same.
+Qed.
+
+
+Lemma semax_post': forall R' Espec {cs: compspecs} Delta R P c,
+           local (tc_environ Delta) && R' |-- R ->
+      @semax cs Espec Delta P c (normal_ret_assert R') ->
+      @semax cs Espec Delta P c (normal_ret_assert R).
+Proof. intros. eapply semax_post; eauto.
+ simpl RA_normal; auto.
+ simpl RA_break; normalize.
+ simpl RA_continue; normalize.
+ intro vl; simpl RA_return; normalize.
+Qed.
+
+Lemma semax_pre_post': forall P' R' Espec {cs: compspecs} Delta R P c,
+      local (tc_environ Delta) && P |-- P' ->
+      local (tc_environ Delta) && R' |-- R ->
+      @semax cs Espec Delta P' c (normal_ret_assert R') ->
+      @semax cs Espec Delta P c (normal_ret_assert R).
+Proof. intros.
+ eapply semax_pre; eauto.
+ eapply semax_post'; eauto.
+Qed.
+
+(* Copied from canon.v end. *)
+
+Lemma semax_post'': forall R' Espec {cs: compspecs} Delta R P c,
+           local (tc_environ Delta) && R' |-- RA_normal R ->
+      @semax cs Espec Delta P c (normal_ret_assert R') ->
+      @semax cs Espec Delta P c R.
+Proof. intros. eapply semax_post; eauto.
+ simpl RA_normal; auto.
+ simpl RA_break; normalize.
+ simpl RA_continue; normalize.
+ intro vl; simpl RA_return; normalize.
+Qed.
+
+Lemma semax_pre_post'': forall P' R' Espec {cs: compspecs} Delta R P c,
+      local (tc_environ Delta) && P |-- P' ->
+      local (tc_environ Delta) && R' |-- RA_normal R ->
+      @semax cs Espec Delta P' c (normal_ret_assert R') ->
+      @semax cs Espec Delta P c R.
+Proof. intros.
+ eapply semax_pre; eauto.
+ eapply semax_post''; eauto.
+Qed.
+
+
+Theorem semax_cast_load_backward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall (P: environ->mpred) id e,
+    @semax CS Espec Delta
+        (EX sh: share, EX e1: expr, EX t1: type, EX v2: val,
+              !! (e = Ecast e1 t1 /\
+                  typeof_temp Delta id = Some t1 /\
+                  cast_pointer_to_bool (typeof e1) t1 = false /\
+                  readable_share sh) &&
+         |> ( (tc_lvalue Delta e1) &&
+              local (`(tc_val t1) (`(eval_cast (typeof e1) t1 v2))) &&
+              (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`v2) * TT) &&
+              subst id (`(force_val (sem_cast (typeof e1) t1 v2))) P))
+        (Sset id e) (normal_ret_assert P).
+Proof.
+  intros.
+  apply semax_extract_exists; intro sh.
+  apply semax_extract_exists; intro e1.
+  apply semax_extract_exists; intro t2.
+  apply semax_extract_exists; intro v2.
+  apply semax_extract_prop; intros [He [? [? ?]]].
+  subst e.
+  rewrite (andp_assoc _ _ (subst _ _ _)).
+  eapply semax_pre';[ ..| apply semax_set_ptr_compare_load_cast_load_backward].
+  apply orp_right2.
+  apply exp_right with (x:=sh).
+  apply exp_right with (x:=e1).
+  apply exp_right with (x:=t2).
+  apply exp_right with (x:=v2).
+  apply andp_right.
+  { apply prop_right. auto. }
+  apply andp_left2. apply andp_left2.
+  apply later_derives. solve_andp.
+Qed.
+
+
+
+Theorem semax_cast_load_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall sh id P e1 t1 (v2: val),
+    typeof_temp Delta id = Some t1 ->
+   cast_pointer_to_bool (typeof e1) t1 = false ->
+    readable_share sh ->
+    local (tc_environ Delta) && P |-- `(mapsto sh (typeof e1)) (eval_lvalue e1) (`v2) * TT ->
+    @semax CS Espec Delta
+       (|> ( (tc_lvalue Delta e1) &&
+       local (`(tc_val t1) (`(eval_cast (typeof e1) t1 v2))) &&
+          P))
+       (Sset id (Ecast e1 t1))
+       (normal_ret_assert (EX old:val, local (`eq (eval_id id) (subst id (`old) (`(eval_cast (typeof e1) t1 v2)))) &&
+                                          (subst id (`old) P))).
+Proof.
+  intros.
+  eapply semax_pre; [| apply semax_cast_load_backward].
+  apply (exp_right sh).
+  apply (exp_right e1).
+  apply (exp_right t1).
+  apply (exp_right v2).
+  apply andp_right; [apply prop_right; auto |].
+  apply later_ENTAIL.
+  rewrite (andp_assoc _ _ (subst _ _ _)).
+  apply andp_ENTAIL; [apply ENTAIL_refl |].
+  apply andp_right; auto.
+  rewrite subst_exp.
+  intros rho.
+  change (local (tc_environ Delta) rho && P rho
+  |-- EX b : val,
+       subst id (` (force_val (sem_cast (typeof e1) t1 v2))) (local ((` eq) (eval_id id) (subst id (` b) (` (eval_cast (typeof e1) t1 v2)))) && subst id (` b) P) rho).
+  apply (exp_right (eval_id id rho)).
+  autorewrite with subst.
+  unfold local, lift1; unfold_lift; simpl.
+  unfold typeof_temp in H.
+  destruct ((temp_types Delta) ! id) eqn:?H; inv H.
+  normalize.
+  apply andp_right; [| erewrite subst_self by eauto; auto].
+  apply prop_right.
+  unfold subst.
+  apply eval_id_same.
+Qed.
+
+
+Theorem semax_set_backward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall (P: environ->mpred) id e,
+    @semax CS Espec Delta
+        (|> ( (tc_expr Delta e) &&
+             (tc_temp_id id (typeof e) Delta e) &&
+             subst id (eval_expr e) P))
+          (Sset id e) (normal_ret_assert P).
+Proof.
+  intros.
+  eapply semax_pre_simple; [| apply semax_set_ptr_compare_load_cast_load_backward].
+  apply orp_right1, orp_right1; auto.
+Qed.
+
+Theorem semax_set_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall (P: environ->mpred) id e,
+    @semax CS Espec Delta
+        (|> ( (tc_expr Delta e) &&
+             (tc_temp_id id (typeof e) Delta e) &&
+          P))
+          (Sset id e)
+        (normal_ret_assert
+          (EX old:val, local (`eq (eval_id id) (subst id (`old) (eval_expr e))) &&
+                            subst id (`old) P)).
+Proof.
+  intros.
+  eapply semax_pre; [| apply semax_set_backward].
+  apply later_ENTAIL.
+  apply andp_right; [solve_andp |].
+  rewrite subst_exp.
+  intro rho.
+  simpl.
+  apply (exp_right (eval_id id rho)).
+  unfold_lift; unfold local, lift1.
+  simpl.
+  unfold subst.
+  normalize.
+  rewrite !env_set_env_set.
+  assert (tc_temp_id id (typeof e) Delta e rho |-- !! (env_set rho id (eval_id id rho) = rho)).
+  + unfold tc_temp_id, typecheck_temp_id.
+    destruct ((temp_types Delta) ! id) eqn:?H; [| apply FF_left].
+    apply prop_right.
+    eapply env_set_eval_id; eauto.
+  + rewrite (add_andp _ _ H0).
+    rewrite !andp_assoc.
+    apply andp_left2.
+    apply andp_left2.
+    normalize.
+    rewrite H1.
+    normalize.
+Qed.
+
+
+Lemma semax_orp:
+  forall {CS: compspecs} {Espec: OracleKind},
+  forall Delta P1 P2 c Q,
+           @semax CS Espec Delta P1 c Q ->
+           @semax CS Espec Delta P2 c Q ->
+           @semax CS Espec Delta (P1 || P2) c Q.
+Proof.
+  intros.
+  eapply semax_pre with (EX b: bool, if b then P1 else P2).
+  + apply andp_left2.
+    apply orp_left.
+    - apply (exp_right true), derives_refl.
+    - apply (exp_right false), derives_refl.
+  + apply semax_extract_exists.
+    intros.
+    destruct x; auto.
+Qed.
+
+
+Theorem semax_set_load_cast_load_backward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+  forall (P: environ->mpred) id e,
+    @semax CS Espec Delta
+       ((|> ( (tc_expr Delta e) &&
+             (tc_temp_id id (typeof e) Delta e) &&
+             subst id (eval_expr e) P)) ||
+
+        (EX sh: share, EX t2: type, EX v2: val,
+              !! (typeof_temp Delta id = Some t2 /\
+                  is_neutral_cast (typeof e) t2 = true /\
+                  readable_share sh) &&
+         |> ( (tc_lvalue Delta e) &&
+              local (`(tc_val (typeof e) v2)) &&
+              (`(mapsto sh (typeof e)) (eval_lvalue e) (`v2) * TT) &&
+              subst id (`v2) P)) ||
+        (EX sh: share, EX e1: expr, EX t1: type, EX v2: val,
+              !! (e = Ecast e1 t1 /\
+                  typeof_temp Delta id = Some t1 /\
+                  cast_pointer_to_bool (typeof e1) t1 = false /\
+                  readable_share sh) &&
+         |> ( (tc_lvalue Delta e1) &&
+              local (`(tc_val t1) (`(eval_cast (typeof e1) t1 v2))) &&
+              (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`v2) * TT) &&
+              subst id (`(force_val (sem_cast (typeof e1) t1 v2))) P)))
+        (Sset id e) (normal_ret_assert P).
+Proof.
+  intros.
+  apply semax_orp; [apply semax_orp  |].
+  + apply semax_set_backward.
+  + apply semax_load_backward.
+  + apply semax_cast_load_backward.
+Qed.
+
+Theorem semax_store_backward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext) e1 e2 P,
+   @semax CS Espec Delta
+          (EX sh: share, !! writable_share sh && |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
+             ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1)) * (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) -* P))))
+          (Sassign e1 e2)
+          (normal_ret_assert P).
+Proof.
+  intros.
+  eapply semax_pre';[..|apply semax_assign].
+  solve_andp.
+Qed.
+
+Theorem semax_store_forward:
+  forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+ forall e1 e2 sh P,
+   writable_share sh ->
+   @semax CS Espec Delta
+          (|> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
+             (`(mapsto_ sh (typeof e1)) (eval_lvalue e1) * P)))
+          (Sassign e1 e2)
+          (normal_ret_assert
+             (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) * P)).
+Proof.
+  intros.
+  eapply semax_pre; [| apply semax_store_backward].
+  apply (exp_right sh).
+  normalize.
+  apply andp_left2.
+  apply later_derives.
+  apply andp_derives; auto.
+  apply sepcon_derives; auto.
+  apply wand_sepcon_adjoint.
+  rewrite sepcon_comm.
+  apply derives_refl.
+Qed.
+
+
+
+(* 
+Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
+    forall A P Q NEP NEQ ts x (F: environ -> mpred) ret argsig retsig cc a bl,
+           Cop.classify_fun (typeof a) =
+           Cop.fun_case_f (type_of_params argsig) retsig cc ->
+           (retsig = Tvoid -> ret = None) ->
+          tc_fn_return Delta ret retsig ->
+  @semax CS Espec Delta
+          (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
+         (`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+          |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
+         (Scall ret a bl)
+         (normal_ret_assert
+            (EX old:val, substopt ret (`old) F * maybe_retval (Q ts x) retsig ret)).
+Proof.
+  intros.
+  eapply semax_pre; [| apply semax_call].
+  apply (exp_right argsig), (exp_right retsig), (exp_right cc), (exp_right A), (exp_right P), (exp_right Q), (exp_right NEP), (exp_right NEQ). (exp_right ts), (exp_right x).
+  rewrite !andp_assoc.
+  apply andp_right; [apply prop_right; auto |].
+  apply andp_right; [solve_andp |].
+  apply andp_right; [solve_andp |]. 
+  rewrite andp_comm, imp_andp_adjoint.
+  apply andp_left2.
+  apply andp_left2.
+  rewrite <- imp_andp_adjoint, andp_comm.
+  apply andp_right. solve_andp. 
+  rewrite andp_comm, imp_andp_adjoint. apply andp_left2.
+  rewrite <- imp_andp_adjoint, andp_comm.
+  apply later_left2.
+  rewrite <- corable_andp_sepcon1 by (intro; apply corable_prop).
+  rewrite sepcon_comm.
+  apply sepcon_derives; auto.
+  eapply derives_trans; [apply (odiaopt_D _ ret) |].
+    1: destruct ret; hnf in H1 |- *; [destruct ((temp_types Delta) ! i) |]; auto; congruence.
+  rewrite <- oboxopt_odiaopt.
+    2: destruct ret; hnf in H1 |- *; [destruct ((temp_types Delta) ! i) |]; auto; congruence.
+  apply oboxopt_K.
+  rewrite <- wand_sepcon_adjoint.
+  rewrite <- exp_sepcon1.
+  apply sepcon_derives; auto.
+  apply odiaopt_derives_EX_substopt.
+Qed. *)
+
 (* 
 Lemma semax_extract_later_prop:
   forall {CS: compspecs} {Espec: OracleKind},
