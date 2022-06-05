@@ -7,6 +7,10 @@ Require Import FloydSeq.reptype_lemmas.
 Require Import FloydSeq.data_at_rec_lemmas.
 Require Import FloydSeq.field_at.
 Require Import FloydSeq.loadstore_mapsto.
+Require Import CSplit.strongFacts.
+Require Import CSplit.strong.
+
+
 
 Import LiftNotation.
 Local Open Scope logic.
@@ -108,7 +112,7 @@ Lemma semax_max_path_field_load_nth_ram:
               (LOCALx (temp id v :: remove_localdef_temp id Q)
                 (SEPx R)))).
 Proof.
-  intros.
+  (* intros.
   pose proof is_neutral_cast_by_value _ _ H0.
   assert_PROP (typeof (nested_efield e1 efs tts) = nested_field_type t_root gfs).
   {
@@ -143,7 +147,8 @@ Proof.
     solve_andp.
   + eapply derives_trans; [exact H9 |].
     rewrite H11; solve_andp.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 (* TODO: delete it *)
 Lemma semax_max_path_field_load_nth_ram':
@@ -170,7 +175,7 @@ Lemma semax_max_path_field_load_nth_ram':
             (PROPx P 
               (LOCALx (temp id v :: remove_localdef_temp id Q)
                 (SEPx R)))).
-Proof.
+(* Proof.
   intros.
   pose proof is_neutral_cast_by_value _ _ H0.
   rewrite H1 in H8.
@@ -187,7 +192,8 @@ Proof.
   + eapply self_ramify_trans; [exact H6 |].
     eapply RAMIF_PLAIN.weak_ramif_spec.
     apply mapsto_field_at_ramify; try rewrite <- H1; eauto.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 (* TODO: delete it *)
 Lemma semax_max_path_field_load_nth_ram'':
@@ -217,7 +223,7 @@ Lemma semax_max_path_field_load_nth_ram'':
             (PROPx P
               (LOCALx (temp id v :: remove_localdef_temp id Q)
                 (SEPx R)))).
-Proof.
+(* Proof.
   intros *. intros TId Cast Rsh EqLr Volatile Lnf JM GetR F Evale1 Tc.
   pose proof is_neutral_cast_by_value _ _ Cast as ByVal.
   assert_PROP (typeof (nested_efield e1 efs tts) = nested_field_type t_root (gfsB ++ gfsA)) as EqT. {
@@ -262,7 +268,8 @@ Proof.
       * rewrite nested_field_type_nested_field_type. exact ByVal.
     - eapply derives_trans; [exact Tc |].
       rewrite EqT. solve_andp.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 Lemma semax_cast_load_nth_ram_field_at :
   forall {Espec: OracleKind}{cs: compspecs} n (Delta: tycontext) sh id P Q R e1 Pre
@@ -331,7 +338,7 @@ Lemma semax_max_path_field_cast_load_nth_ram:
             (PROPx P
               (LOCALx (temp id (eval_cast (typeof (nested_efield e1 efs tts)) t v) :: remove_localdef_temp id Q)
                 (SEPx R)))).
-Proof.
+(* Proof.
   intros until 2. intro HCAST; intros.
   assert_PROP (typeof (nested_efield e1 efs tts) = nested_field_type t_root gfs).
   {
@@ -364,7 +371,8 @@ Proof.
     solve_andp.
   + eapply derives_trans; [exact H9 |].
     rewrite H10; solve_andp.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 Lemma lower_andp_lifted_val:
   forall (P Q: val->mpred) v,
@@ -450,7 +458,7 @@ Lemma semax_max_path_field_store_nth_ram:
               (LOCALx Q
                 (SEPx
                   (replace_nth n R Post))))).
-Proof.
+(* Proof.
   intros.
   assert_PROP (typeof (nested_efield e1 efs tts) = nested_field_type t_root gfs).
   {
@@ -483,7 +491,8 @@ Proof.
     solve_andp.
   + eapply derives_trans; [exact H9 |].
     rewrite H10; solve_andp.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 (* TODO: delete it *)
 Lemma semax_partial_path_field_store_nth_ram:
@@ -516,7 +525,7 @@ Lemma semax_partial_path_field_store_nth_ram:
               (LOCALx Q
                 (SEPx
                   (replace_nth n R Post))))).
-Proof.
+(* Proof.
   intros *. intros ByVal Wsh LRo Volatile JM GetR F Evale1 Evale2 Tc Lnef.
   assert_PROP (typeof (nested_efield e1 efs tts) = nested_field_type t_root (gfsB ++ gfsA)) as EqT. {
     rewrite <- nested_field_type_nested_field_type.
@@ -560,7 +569,8 @@ Proof.
       * rewrite nested_field_type_nested_field_type. exact ByVal.
     - eapply derives_trans; [exact Tc |].
       rewrite EqT; solve_andp.
-Qed.
+Qed. *)
+Abort. (* [litao] related to later_extract_prop *)
 
 (* TODO: delete it *)
 Lemma semax_no_path_field_store_nth_ram:
