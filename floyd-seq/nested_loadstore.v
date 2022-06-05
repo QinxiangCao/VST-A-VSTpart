@@ -13,6 +13,7 @@ Require Import FloydSeq.closed_lemmas.
 Require Import FloydSeq.proj_reptype_lemmas.
 Require Import FloydSeq.replace_refill_reptype_lemmas.
 Require Import FloydSeq.loadstore_field_at.
+Require Import CSplit.strong.
 Import DataCmpNotations.
 Import LiftNotation.
 
@@ -455,13 +456,14 @@ Qed.
 
 End NESTED_RAMIF.
 
+
 Lemma semax_extract_later_prop' {cs: compspecs}:
   forall {Espec: OracleKind},
     forall (Delta : tycontext) (PP : Prop) P Q R c post,
       ENTAIL Delta, PROPx P (LOCALx Q (SEPx R)) |-- !!PP ->
       (PP -> semax Delta (|>PROPx P (LOCALx Q (SEPx R))) c post) ->
       semax Delta (|>PROPx P (LOCALx Q (SEPx R))) c post.
-Proof.
+(* Proof.
   intros.
   eapply semax_pre_simple.
   + hoist_later_left.
@@ -473,7 +475,10 @@ Proof.
     apply derives_refl.
   + apply semax_extract_later_prop1.
     auto.
-Qed.
+Qed. *)
+Abort.
+(* [litao] semax_extract_later not available *)
+
 
 Lemma insert_corable_sep: forall R1 P Q R,
   corable R1 ->

@@ -9,6 +9,7 @@ Require Import FloydSeq.field_compat.
 Require Import FloydSeq.closed_lemmas.
 Require Import FloydSeq.nested_pred_lemmas.
 (*Require Import FloydSeq.unfold_data_at.*)
+Require Import CSplit.strong.
 Import LiftNotation.
 Local Open Scope logic.
 

@@ -18,7 +18,6 @@ Import Ctypes LiftNotation.
 Local Open Scope logic.
 Require Import CSplit.strong.
 
-
 Lemma modifiedvars_aux: forall id, (fun i => isSome (insert_idset id idset0) ! i) = eq id.
 Proof.
   intros.
