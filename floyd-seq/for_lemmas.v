@@ -8,6 +8,11 @@ Require Import FloydSeq.forward_lemmas.
 Require Import FloydSeq.entailer.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
+Require Import FloydSeq.const_only_eval.
+
+Require Import CSplit.strong.
+Require Import CSplit.strongFacts.
+
 Import Cop.
 Import LiftNotation.
 Local Open Scope logic.
@@ -297,6 +302,12 @@ Proof.
     auto.
 Qed.
 
+(* [litao]
+Admitted
+because use const_only_isUnOpResultType_spec
+
+
+
 Lemma Sfor_setup_spec: forall {cs: compspecs} {Espec: OracleKind} (Delta: tycontext),
   forall _i Pre init type_i hi m n assert_callee inv0 inv1,
     Sfor_setup Delta _i Pre init hi type_i m n assert_callee inv0 ->
@@ -369,6 +380,9 @@ Proof.
       split; [destruct type_i as [| [| | |] | | | | | | | ]; inv H; auto |].
       omega.
 Qed.
+
+*)
+
 
 Lemma typed_false_tint_e:
   forall v, typed_false tint v -> v = Vint Int.zero.
@@ -756,6 +770,13 @@ Qed.
 
 End Sfor.
 
+(* 
+
+
+Admitted
+because use const_only_isUnOpResultType_spec
+because use setup lemma
+*)
 Lemma semax_for :
  forall (Inv: environ->mpred) (n: Z) Espec {cs: compspecs} Delta
            (Pre: environ->mpred)
@@ -781,8 +802,8 @@ Lemma semax_for :
                 body
                 (Sset _i (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i)))
          MORE_COMMAND) Post.
-Proof.
-  intros.
+(* Proof. *)
+  (* intros.
   destruct Post as [nPost bPost cPost rPost].
   apply semax_seq with (inv1 n); [clear H0 | exact H0].
   apply semax_post with {| RA_normal := inv1 n; RA_break := FF; RA_continue := FF; RA_return := rPost |};
@@ -840,8 +861,16 @@ Proof.
     - apply andp_left2, FF_left.
     - apply andp_left2, FF_left.
     - intros; apply andp_left2, FF_left.
-Qed.
+Qed. *)
+Abort.
 
+(* 
+
+
+Admitted
+because use const_only_isUnOpResultType_spec
+because use setup lemma
+*)
 Lemma semax_for_x :
  forall (Inv: environ->mpred) (n: Z) Espec {cs: compspecs} Delta
            (Pre: environ->mpred)
@@ -867,11 +896,12 @@ Lemma semax_for_x :
      @semax cs Espec Delta Pre
        (Ssequence (Sfor init test body incr)
          MORE_COMMAND) Post.
-Proof.
+(* Proof.
 intros.
 subst test incr.
 eapply semax_for; eauto.
-Qed.
+Qed. *)
+Abort.
 
 Lemma quick_derives_right:
   forall P Q : environ -> mpred,
@@ -1008,6 +1038,10 @@ Ltac check_forloop_incr :=
 Required:" desired
   end.
 
+(*   
+[litao]
+Abort tactic because using semax_for
+
 Ltac forward_for_simple_bound'' n Inv :=
   eapply (semax_for_x Inv n);
   [ check_forloop_test
@@ -1023,5 +1057,5 @@ Ltac forward_for_simple_bound'' n Inv :=
           let x' := fresh x in
           apply extract_exists_pre; intro x'; cbv beta
       end
-  | ..].
+  | ..]. *)
 

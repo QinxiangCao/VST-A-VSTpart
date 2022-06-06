@@ -4,6 +4,9 @@ Require Import FloydSeq.closed_lemmas.
 Require Import FloydSeq.mapsto_memory_block.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
+Require Import CSplit.strong.
+Require Import CSplit.strongFacts.
+
 Import LiftNotation.
 Local Open Scope logic.
 
@@ -156,17 +159,21 @@ Lemma semax_call_subsume:
   @semax CS Espec Delta
           (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
          (`(func_ptr fs1) (eval_expr a) &&
+          ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
           (EX old:val, substopt ret (`old) F * maybe_retval (Q ts x) retsig ret)).
 Proof. intros.
-eapply semax_pre. 2: apply semax_call with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
+eapply semax_pre.
+2: apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
 apply andp_left2. apply andp_derives; trivial. apply andp_derives; trivial.
 unfold liftx, lift. simpl. intros rho. clear - H.
 remember (mk_funspec (argsig, retsig) cc A P Q NEP NEQ) as gs.
 remember (eval_expr a rho) as v.
-unfold func_ptr.
+apply andp_right.
+2:{ apply andp_left2. auto. }
+unfold func_ptr. apply andp_left1.
 apply func_ptr_mono; trivial.
 Qed.
 
@@ -181,14 +188,16 @@ Lemma semax_call_subsume_si:
           (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  && 
           
          (`(func_ptr fs1) (eval_expr a) && `(funspec_sub_si fs1 (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) &&
+         ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
           (EX old:val, substopt ret (`old) F * maybe_retval (Q ts x) retsig ret)).
 Proof. intros.
-eapply semax_pre. 2: apply semax_call with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
+eapply semax_pre. 2: apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
 apply andp_left2. apply andp_derives; trivial. apply andp_derives; trivial.
 unfold liftx, lift. simpl. clear. intros rho.
+apply andp_derives;auto.
 rewrite andp_comm. apply func_ptr_si_mono.
 Qed.
 
@@ -205,6 +214,7 @@ Lemma semax_call_NDsubsume :
   @semax CS Espec Delta
           (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
          (`(func_ptr fs1) (eval_expr a) &&
+         ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
           |>(F * `(P x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert

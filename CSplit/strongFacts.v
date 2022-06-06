@@ -719,7 +719,7 @@ Qed.
 
 
 
-(* 
+
 Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
     forall A P Q NEP NEQ ts x (F: environ -> mpred) ret argsig retsig cc a bl,
            Cop.classify_fun (typeof a) =
@@ -729,6 +729,7 @@ Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: t
   @semax CS Espec Delta
           (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
          (`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
+         (` (model_lemmas.precise_fun_at_ptr Delta)) (eval_expr a) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
@@ -736,7 +737,7 @@ Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: t
 Proof.
   intros.
   eapply semax_pre; [| apply semax_call].
-  apply (exp_right argsig), (exp_right retsig), (exp_right cc), (exp_right A), (exp_right P), (exp_right Q), (exp_right NEP), (exp_right NEQ). (exp_right ts), (exp_right x).
+  apply (exp_right argsig), (exp_right retsig), (exp_right cc), (exp_right A), (exp_right P), (exp_right Q), (exp_right NEP), (exp_right NEQ).
   rewrite !andp_assoc.
   apply andp_right; [apply prop_right; auto |].
   apply andp_right; [solve_andp |].
@@ -745,11 +746,14 @@ Proof.
   apply andp_left2.
   apply andp_left2.
   rewrite <- imp_andp_adjoint, andp_comm.
+  apply andp_right. solve_andp.
   apply andp_right. solve_andp. 
   rewrite andp_comm, imp_andp_adjoint. apply andp_left2.
+  apply andp_left2.
   rewrite <- imp_andp_adjoint, andp_comm.
   apply later_left2.
   rewrite <- corable_andp_sepcon1 by (intro; apply corable_prop).
+  apply (exp_right ts), (exp_right x).
   rewrite sepcon_comm.
   apply sepcon_derives; auto.
   eapply derives_trans; [apply (odiaopt_D _ ret) |].
@@ -761,7 +765,7 @@ Proof.
   rewrite <- exp_sepcon1.
   apply sepcon_derives; auto.
   apply odiaopt_derives_EX_substopt.
-Qed. *)
+Qed.
 
 (* 
 Lemma semax_extract_later_prop:
