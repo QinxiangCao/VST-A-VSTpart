@@ -1,7 +1,7 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.reptype_lemmas.
-
+Require Import CSplit.strong.
 Local Open Scope logic.
 
 Lemma no_post_exists_unit:

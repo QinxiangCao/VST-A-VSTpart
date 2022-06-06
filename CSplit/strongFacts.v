@@ -36,7 +36,6 @@ Proof.
     congruence.
 Qed.
 
-
 Lemma sepcon_derives_full: forall Delta P1 P2 Q1 Q2,
   local (tc_environ Delta) && (allp_fun_id Delta && P1) |-- P2 ->
   local (tc_environ Delta) && (allp_fun_id Delta && Q1) |-- Q2 ->

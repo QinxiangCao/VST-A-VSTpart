@@ -293,6 +293,7 @@ C_post_return := {GIVEN (a a0 : val) (a1 a2 : list val),
 *)
 
 Require Import CSplit.semantics.
+Require Import FloydSeq.forward.
 
 Check path_to_semax.
 
@@ -418,7 +419,7 @@ mk_C_full_path
 Parameter CS: compspecs.
 Parameter Espec : OracleKind.
 
-Require Import FloydSeq.proofauto.
+(* Require Import FloydSeq.proofauto. *)
 
 Goal @path_to_semax CS Espec reverse_delta _
 (GIVEN (a a0 : val) (a1 a2 : list val) (a3 a4 : val)
@@ -447,6 +448,6 @@ Goal @path_to_semax CS Espec reverse_delta _
 Proof.
   repeat (hnf;intros).
   unfold path_to_statement. simpl.
-  unfold reverse_delta.
+ (* unfold reverse_delta.*)
   
   forward.

@@ -4,6 +4,7 @@ Require Import FloydSeq.entailer.
 Require Import Coq.Lists.List.
 Export ListNotations.
 Require Import FloydSeq.client_lemmas.
+Require Import CSplit.strong.
 
 Local Open Scope logic.
 
