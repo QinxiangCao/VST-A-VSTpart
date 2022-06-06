@@ -5,6 +5,9 @@ Require Import FloydSeq.mapsto_memory_block.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 Require Import FloydSeq.subsume_funspec.
+Require Import CSplit.strong.
+Require Import CSplit.strongFacts.
+
 Import LiftNotation.
 Local Open Scope logic.
 
@@ -49,6 +52,7 @@ Lemma semax_call': forall Espec {cs: compspecs} Delta fs A Pre Post NEPre NEPost
   @semax cs Espec Delta
           ((*|>*)(tc_expr Delta a && tc_exprlist Delta (argtypes argsig) bl)
            &&
+           ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
    (|>`(Pre ts x: environ -> mpred) ( (make_args' (argsig,retsig) (eval_exprlist (argtypes argsig) bl))) *
                       `(func_ptr' fs) (eval_expr a)
      * |>PROPx P (LOCALx Q (SEPx R))))
@@ -71,11 +75,14 @@ Proof.
     unfold_lift; unfold local, lift1. unfold func_ptr'. intro rho; simpl.
     normalize;
     progress (autorewrite with subst norm1 norm2; normalize).
-    apply andp_derives; auto.
+    rewrite andp_assoc.
+    apply andp_derives;auto.
+    rewrite andp_assoc.
     rewrite sepcon_assoc, sepcon_comm.
     rewrite !corable_andp_sepcon1 by apply corable_func_ptr.
     rewrite sepcon_comm. rewrite emp_sepcon.
-    apply andp_derives; auto.
+    rewrite <- !andp_assoc.
+    apply andp_derives; try solve_andp.
     rewrite sepcon_comm, <- later_sepcon.
     progress (autorewrite with subst norm1 norm2; normalize).
   + intros.
@@ -107,7 +114,8 @@ Lemma semax_call1: forall Espec {cs: compspecs} Delta fs A Pre Post NEPre NEPost
    tc_fn_return Delta (Some id) retsig ->
   @semax cs Espec Delta
          ((*|>*)(tc_expr Delta a && tc_exprlist Delta (argtypes argsig) bl)
-           && (|>`(Pre ts x: environ -> mpred) ( (make_args' (argsig,retsig) (eval_exprlist (argtypes argsig) bl))) *
+           && ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
+           (|>`(Pre ts x: environ -> mpred) ( (make_args' (argsig,retsig) (eval_exprlist (argtypes argsig) bl))) *
                  `(func_ptr' fs) (eval_expr a) *
                   |>PROPx P (LOCALx Q (SEPx R))))
           (Scall (Some id) a bl)
@@ -128,7 +136,8 @@ Lemma semax_call0: forall Espec {cs: compspecs} Delta fs A Pre Post NEPre NEPost
    Cop.classify_fun (typeof a) = Cop.fun_case_f (type_of_params argsig) retty cc ->
   @semax cs Espec Delta
          ((*|>*)(tc_expr Delta a && tc_exprlist Delta (argtypes argsig) bl)
-           && (|>`(Pre ts x: environ -> mpred) ( (make_args' (argsig,retty) (eval_exprlist (argtypes argsig) bl)))
+           && ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
+           (|>`(Pre ts x: environ -> mpred) ( (make_args' (argsig,retty) (eval_exprlist (argtypes argsig) bl)))
                  * `(func_ptr' fs) (eval_expr a)
                  * |>PROPx P (LOCALx Q (SEPx R))))
           (Scall None a bl)
@@ -149,11 +158,13 @@ intro rho; normalize.
 autorewrite with norm1 norm2; normalize.
 unfold func_ptr'.
 rewrite !sepcon_assoc.
+rewrite andp_assoc.
 apply andp_derives; auto.
 rewrite !corable_andp_sepcon1 by apply corable_func_ptr.
 rewrite emp_sepcon, sepcon_comm.
 rewrite !corable_andp_sepcon1 by apply corable_func_ptr.
-apply andp_derives; auto.
+rewrite <- !andp_assoc.
+apply andp_derives; try solve_andp.
 rewrite later_sepcon; apply derives_refl.
 intros.
 apply andp_left2.
@@ -163,6 +174,7 @@ autorewrite with subst norm ret_assert.
 destruct retty; auto; rewrite sepcon_comm; apply derives_refl.
 apply Coq.Init.Logic.I.
 Qed.
+
 
 Lemma semax_fun_id':
       forall id f TC
@@ -222,11 +234,13 @@ Qed.
 Lemma semax_call_id0:
  forall Espec {cs: compspecs} Delta P Q R id bl fs argsig retty cc A ts x Pre Post NEPre NEPost
    (Hsub: funspec_sub fs (mk_funspec (argsig,retty) cc A Pre Post NEPre NEPost))
+   (Hprecise: model_lemmas.precise_funspec Delta fs)
    (GLBL: (var_types Delta) ! id = None),
        (glob_specs Delta) ! id = Some fs ->
        (glob_types Delta) ! id = Some (type_of_funspec fs) ->
-  @semax cs Espec Delta ((*|>*) (tc_exprlist Delta (argtypes argsig) bl
-                  && |> (`(Pre ts x: environ -> mpred) (make_args' (argsig,retty) (eval_exprlist (argtypes argsig) bl))
+  @semax cs Espec Delta ((*|>*) (tc_exprlist Delta (argtypes argsig) bl                
+  && 
+  |> (`(Pre ts x: environ -> mpred) (make_args' (argsig,retty) (eval_exprlist (argtypes argsig) bl))
                          * PROPx P (LOCALx Q (SEPx R)))))
     (Scall None (Evar id (Tfunction (type_of_params argsig) retty cc)) bl)
     (normal_ret_assert
@@ -241,7 +255,7 @@ simpl. subst. reflexivity.
 apply (semax_fun_id' id fs (tc_exprlist Delta (argtypes argsig) bl) Espec Delta); auto.
 subst.
 
-eapply semax_pre_simple; [ | apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost ts x argsig _ cc _ bl P Q R Hsub); auto].
+eapply canon.semax_pre_simple; [ | apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost ts x argsig _ cc _ bl P Q R Hsub); auto].
 (*
 rewrite later_andp.
 apply andp_right; [apply andp_right | ].
@@ -273,7 +287,7 @@ rewrite sepcon_comm; apply derives_refl.
 Qed.*)
 apply andp_right.
 { rewrite <- andp_assoc. apply andp_left1.
-  apply andp_right. 
+  apply andp_right;[apply andp_right | ].
   * apply andp_left1. intro rho; unfold tc_expr; simpl.
     subst.
     norm_rewrite. apply prop_left; intro.
@@ -287,18 +301,51 @@ apply andp_right.
     unfold_lift; auto.
     rewrite eqb_type_refl. simpl.
     apply eqb_calling_convention_refl.
-  * apply andp_left2; auto. }
+  * apply andp_left2; auto.
+  * intro rho. unfold_lift.
+    unfold model_lemmas.precise_fun_at_ptr.
+    rewrite_predicates_hered. apply allp_right. intros.
+    rewrite_predicates_hered. apply allp_right. intros.
+    rewrite_predicates_hered.
+    apply (proj1 (imp_andp_adjoint _ _ _)).
+    rewrite andp_comm. rewrite !andp_assoc.
+    apply derives_extract_prop. intros.
+    simpl in H2.
+    rewrite andp_comm. unfold local. unfold lift1.
+    simpl. rewrite andp_assoc.
+    apply derives_extract_prop. intros.
+    (* pose proof tc_eval_gvar_zero _ _ _ _ H3 GLBL H0. *)
+    (* destruct H4 as [b H4]. *)
+    (* unfold eval_var in H4. *)
+    (* hnf in H4. *)
+    (* simpl in H4. *)
+    unfold eval_var in H2.
+    pose proof globvar_eval_var _ _ _ _ H3 GLBL H0.
+    destruct H4 as [b [? ?]].
+    rewrite H5 in H2.
+    hnf in H3. destruct H3 as [? [? ?]].
+    hnf in H6.
+    destruct (Map.get (ve_of rho) id) eqn:E.
+    { destruct p as [b' ty'].
+      assert ((var_types Delta) ! id = Some ty').
+      apply H6. exists b'. auto.
+      rewrite GLBL in H8. inv H8. }
+    inv H2. rewrite_predicates_hered.
+    admit.
+    (* [litao] should be able to prove precise_func *)
+    }
 apply andp_left2, andp_left2, andp_left2.
 intro; simpl.
 rewrite later_sepcon, <- sepcon_assoc.
 apply sepcon_derives; auto.
 rewrite (type_of_funspec_sub _ _ Hsub).
 rewrite sepcon_comm; apply derives_refl.
-Qed.
+Admitted.
 
 Lemma semax_call_id1:
  forall Espec {cs: compspecs} Delta P Q R ret id fs retty cc bl argsig A ts x Pre Post NEPre NEPost
    (Hsub: funspec_sub fs (mk_funspec (argsig,retty) cc A Pre Post NEPre NEPost))
+   (Hprecise: model_lemmas.precise_funspec Delta fs)
    (GLBL: (var_types Delta) ! id = None),
        (glob_specs Delta) ! id = Some fs ->
        (glob_types Delta) ! id = Some (type_of_funspec fs) ->
@@ -324,9 +371,9 @@ assert (Cop.classify_fun (typeof (Evar id (Tfunction (type_of_params argsig) ret
 subst; reflexivity.
 apply (semax_fun_id' id fs); auto.
 subst.
-eapply semax_pre_simple; [ | apply (semax_call1 Espec Delta fs A Pre Post NEPre NEPost ts x ret argsig retty cc _ bl P Q R Hsub H1 H0); auto].
+eapply canon.semax_pre_simple; [ | apply (semax_call1 Espec Delta fs A Pre Post NEPre NEPost ts x ret argsig retty cc _ bl P Q R Hsub H1 H0); auto].
 apply andp_right.
-{ rewrite <- andp_assoc. apply andp_left1. apply andp_right.
+{ rewrite <- andp_assoc. apply andp_left1. apply andp_right;[apply andp_right|].
   * intro rho; unfold tc_expr, local,lift1; simpl.
     subst.
     norm_rewrite.
@@ -337,7 +384,9 @@ apply andp_right.
     rewrite eqb_typelist_refl.
     rewrite eqb_type_refl.
     simpl. apply prop_right; apply eqb_calling_convention_refl.
-  * apply andp_left2; trivial. }
+  * apply andp_left2; trivial.
+  * admit.
+  (* [litao] should be able to prove precise_func *) }
 apply andp_left2.
 apply andp_left2.
 apply andp_left2.
@@ -346,7 +395,7 @@ apply sepcon_derives; auto.
 rewrite (type_of_funspec_sub _ _ Hsub).
 rewrite sepcon_comm.
 apply derives_refl.
-Qed.
+Admitted.
 
 Inductive extract_trivial_liftx {A}: list (environ->A) -> list A -> Prop :=
 | ETL_nil: extract_trivial_liftx nil nil
@@ -1245,11 +1294,14 @@ rewrite ! andp_assoc.
 apply semax_extract_prop; intros. 
 apply semax_extract_prop; intros. 
 rewrite andp_comm.
-eapply semax_pre_post'; [ | |
+eapply canon.semax_pre_post'; [ | |
    apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost 
               ts witness argsig retty cc a bl P Q Frame Hsub)].
 *
-  subst TChecks. eapply semax_call_aux55; eauto.
+  subst TChecks. 
+  (* eapply semax_call_aux55; eauto. *)
+  admit.
+  (* [liao] TODO fix precise_funspec *)
 *
  subst.
  clear CHECKTEMP TC1 PRE1 PPRE.
@@ -1266,7 +1318,7 @@ eapply semax_pre_post'; [ | |
  normalize.
 *
 assumption.
-Qed.
+Admitted.
 
 Lemma semax_call_id00_wow_nil:
  forall  
@@ -1343,7 +1395,8 @@ Proof.
       destruct ((temp_types Delta) ! ret); inv TYret; auto
   ].
   *
-    subst TChecks; eapply semax_call_aux55; eauto.
+    (* subst TChecks; eapply semax_call_aux55; eauto. *)
+    admit.
   *
     subst.
     clear CHECKTEMP TC1 PRE1 PPRE.
@@ -1367,7 +1420,8 @@ Proof.
     repeat apply andp_right; try apply prop_right; auto.
     rewrite !fold_right_and_app_low.
     rewrite !fold_right_and_app_low in H4. destruct H4; split; auto.
-Qed.
+Admitted.
+(* Qed. *)
 
 Lemma semax_call_id1_wow_nil:
  forall  
@@ -1715,7 +1769,9 @@ Proof.
      | apply semax_call0 with (fs:=fs)(cc:=cc)(A:= A) (ts := ts)(x:=witness) (P:=P)(Q:=Q)(NEPre :=NEPre) (NEPost := NEPost)(R := Frame)
      ];
      try eassumption.
-  * subst TChecks. eapply semax_call_aux55; eauto.
+  * 
+  (* subst TChecks. eapply semax_call_aux55; eauto. *)
+  admit.
   *
     subst.
     clear CHECKTEMP TC1 PRE1 PPRE.
@@ -1733,7 +1789,7 @@ Proof.
     rename x0 into vret.
     clear.
     rewrite fold_right_sepcon_app. auto.
-Qed.
+Admitted.
 
 Lemma semax_call_id01_wow_nil:
  forall  
