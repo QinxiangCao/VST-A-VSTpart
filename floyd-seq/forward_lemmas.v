@@ -3,9 +3,13 @@ Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.closed_lemmas.
 Import Cop.
 Import LiftNotation.
+Require Import CSplit.strong.
+Require Import CSplit.strongFacts.
 Local Open Scope logic.
 
-Lemma semax_while_peel:
+
+(* [litao]: remove while *)
+(* Lemma semax_while_peel:
   forall {CS: compspecs} {Espec: OracleKind} Inv Delta P expr body R,
   @semax CS Espec Delta P (Ssequence (Sifthenelse expr Sskip Sbreak) body) 
                              (loop1_ret_assert Inv R) ->
@@ -16,8 +20,10 @@ intros.
 apply semax_loop_unroll1 with (P' := Inv) (Q := Inv); auto.
 eapply semax_pre; [ |  apply sequential; apply semax_skip].
 destruct R; apply ENTAIL_refl.
-Qed.
+Qed. *)
 
+(* 
+[litao] removed semax_func lemmas
 Lemma semax_func_cons_ext_vacuous:
      forall {Espec: OracleKind} (V : varspecs) (G : funspecs) (C : compspecs) ge
          (fs : list (ident * Clight.fundef)) (id : ident) (ef : external_function)
@@ -50,7 +56,7 @@ eapply semax_func_cons_ext with (b0:=b); try reflexivity; auto.
 *
   intros. simpl. apply andp_left1, FF_left.
 *  apply semax_external_FF.
-Qed.
+Qed. *)
 
 Lemma int_eq_false_e:
   forall i j, Int.eq i j = false -> i <> j.
@@ -76,9 +82,12 @@ Lemma semax_ifthenelse_PQR' :
                          (Sifthenelse b c d) Post.
 Proof.
  intros.
- eapply semax_pre;  [ | apply semax_ifthenelse]; auto.
+ eapply canon.semax_pre;  [ | apply semax_ifthenelse]; auto.
  instantiate (1:=(local (`(eq v) (eval_expr b)) && PROPx P (LOCALx Q (SEPx R)))).
- apply andp_right; try assumption. apply andp_right; try assumption.
+ apply andp_right; try assumption.
+ { apply andp_right;[apply prop_right;try assumption|];
+   try assumption. } 
+ apply andp_right; try assumption.
  apply andp_left2; auto.
  eapply semax_pre; [ | eassumption].
  rewrite <- insert_prop.
@@ -147,6 +156,8 @@ Proof. intros.
 eapply semax_pre. apply H0. auto.
 Qed.
 
+(* 
+[litao] removed for/while lemmas
 Lemma semax_while :
  forall Espec {cs: compspecs} Delta Q test body (R: ret_assert),
      bool_type (typeof test) = true ->
@@ -182,8 +193,10 @@ rewrite <- andp_assoc.
 eapply derives_trans; try apply Post.
 destruct R; simpl; auto.
 auto.
-Qed.
+Qed. *)
 
+(*
+[litao] removed for/while lemmas
 Lemma semax_while_3g1 :
  forall Espec {cs: compspecs} {A} (v: A -> val) Delta P Q R test body Post,
      bool_type (typeof test) = true ->
@@ -237,8 +250,10 @@ rewrite H3; auto.
  + apply andp_left2. destruct Post; simpl; auto.
  + apply andp_left2. destruct Post; simpl; auto.
  + intros; apply andp_left2. destruct Post; simpl; auto.
-Qed.
+Qed. *)
 
+(* 
+[litao] removed for/while lemmas
 Lemma semax_for_x :
  forall Espec {cs: compspecs} Delta Q test body incr PreIncr Post,
      bool_type (typeof test) = true ->
@@ -288,8 +303,10 @@ normalize.
 apply andp_left2; intro rho; destruct Post as [?P ?P ?P ?P]; simpl; auto.
 intro; apply andp_left2; intro rho; destruct Post as [?P ?P ?P ?P]; simpl; auto.
 normalize.
-Qed.
+Qed. *)
 
+(* 
+[litao] removed for/while lemmas
 Lemma semax_for :
  forall Espec {cs: compspecs} {A:Type} (v: A -> val) Delta P Q R test body incr PreIncr Post,
      bool_type (typeof test) = true ->
@@ -347,7 +364,7 @@ apply extract_exists_pre; intro a.
 eapply semax_post'; try apply (H3 a).
 apply exp_right with a; auto.
 apply andp_left2; auto.
-Qed.
+Qed. *)
 
 (*
 Lemma field_at_mapsto__at1:
@@ -439,6 +456,9 @@ eapply semax_pre_post;
 Qed.
 *)
 
+(* 
+[litao] remove switch lemmas
+
 Lemma semax_switch_PQR: 
   forall {Espec: OracleKind}{CS: compspecs} ,
   forall n Delta (Pre: environ->mpred) a sl (Post: ret_assert),
@@ -480,6 +500,8 @@ apply andp_left2.
 apply andp_left2.
 auto.
 Qed.
+
+*)
 
 Lemma modulo_samerepr:
  forall x y, 
@@ -572,6 +594,10 @@ Proof.
 Qed.
 *)
 
+(* 
+
+[litao] remove for/while lemmas 
+
 Lemma semax_for_3g1 :
  forall Espec {cs: compspecs} {A} (PQR: A -> environ -> mpred) (v: A -> val) Delta P Q R test body incr Post,
      bool_type (typeof test) = true ->
@@ -635,6 +661,8 @@ apply semax_loop with (Q':= (EX a:A, PQR a)).
  all: intros; destruct Post; simpl_ret_assert; apply andp_left2; auto.
 Qed.
 
+*)
+
 (*
 Definition mk_ret_assert (n b c : environ -> mpred) (r: option val -> environ -> mpred) : ret_assert :=
     fun (ek : exitkind) (vl : option val) =>
@@ -645,6 +673,10 @@ Definition mk_ret_assert (n b c : environ -> mpred) (r: option val -> environ ->
  | EK_return => r vl
  end.
 *)
+
+(* 
+
+[litao] remove for/while lemmas 
 
 Lemma semax_for_3g2:  (* no break statements in loop *)
  forall Espec {cs: compspecs} {A} (PQR: A -> environ -> mpred) (v: A -> val) Delta P Q R test body incr Post,
@@ -670,7 +702,7 @@ eapply semax_for_3g1; try eassumption.
 *
  intro a.
  apply andp_left2. destruct Post; simpl_ret_assert. Exists a. auto.
-Qed.
+Qed. *)
 
 Transparent tc_andp.  (* ? should leave it opaque, maybe? *)
 
