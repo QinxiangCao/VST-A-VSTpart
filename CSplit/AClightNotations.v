@@ -1,6 +1,16 @@
-(* Require Export VST.floyd.proofauto. *)
-(* Require Import FloydSeq.forward. *)
+
+Require Import compcert.cfrontend.Ctypes.
+Require Import compcert.cfrontend.Clight.
 Require Import CSplit.AClightFunc.
+Require Import compcert.common.AST.
+
+(* Require Import VST.floyd.proofauto.
+
+Locate fundef.
+Print AST.fundef.
+Print function. *)
+
+(* Require Import FloydSeq.forward. *)
 (** ** Functions *)
 
 (** A function definition is composed of its return type ([fn_return]),
@@ -30,11 +40,12 @@ Definition fundef := Ctypes.fundef function.
 Definition type_of_function (f: function) : type :=
   Tfunction (type_of_params (fn_params f)) (fn_return f) (fn_callconv f).
 
-Definition type_of_fundef (f: fundef) : type :=
+
+(* Definition type_of_fundef (f: fundef) : type :=
   match f with
   | Internal fd => type_of_function fd
   | External id args res cc => Tfunction args res cc
-  end.
+  end. *)
 
 (** ** Programs *)
 
@@ -51,7 +62,7 @@ Definition program := Ctypes.program function.
 
 (** Generate VST funcspec from annotation funcspec *)
 
-Ltac move_let_inside v :=
+(* Ltac move_let_inside v :=
   lazymatch goal with
   | v := let (a, b) := _ in _ |- _ =>
     lazymatch goal with
@@ -113,7 +124,7 @@ Ltac make_funcspec name funsig spec :=
   | fun x:?T => (?P, ?Q) =>
     exact (name, NDmk_funspec funsig cc_default T (fun x => P) (fun x => Q))
   | _ => fail 0 spec "is not in valid form of funcspec"
-  end.
+  end. *)
 
 
 Global Arguments Cifthenelse _ {_ _} _ _.

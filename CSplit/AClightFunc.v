@@ -17,7 +17,10 @@ Require Import Smallstep.
 Require Import Ctypes.
 Require Import Cop.
 Require Import Clight.
-Require Export VST.floyd.proofauto.
+Require Import VST.veric.mpred.
+Require Import VST.msl.seplog.
+Require Import VST.veric.SeparationLogic.
+Import ListNotations.
 
 
 Definition Sconcat :=
