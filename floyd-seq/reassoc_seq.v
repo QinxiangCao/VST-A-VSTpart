@@ -1,5 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.semax_tactics.
+Require Import CSplit.strong.
 Import ListNotations.
 
 (* Unlike unfold_Ssequence in veric/SeparationLogic.v, unfold_seq preserves Sfor and Swhile.

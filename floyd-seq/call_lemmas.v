@@ -308,6 +308,7 @@ apply andp_right.
     rewrite_predicates_hered. apply allp_right. intros.
     rewrite_predicates_hered.
     apply (proj1 (imp_andp_adjoint _ _ _)).
+
     rewrite andp_comm. rewrite !andp_assoc.
     apply derives_extract_prop. intros.
     simpl in H2.
@@ -319,6 +320,10 @@ apply andp_right.
     (* unfold eval_var in H4. *)
     (* hnf in H4. *)
     (* simpl in H4. *)
+(* 
+    Print typecheck_environ.
+    Search glob_specs.
+    Print allp_fun_id. Print func_ptr_si.
     unfold eval_var in H2.
     pose proof globvar_eval_var _ _ _ _ H3 GLBL H0.
     destruct H4 as [b [? ?]].
@@ -331,6 +336,10 @@ apply andp_right.
       apply H6. exists b'. auto.
       rewrite GLBL in H8. inv H8. }
     inv H2. rewrite_predicates_hered.
+    Check ge_of. Print genviron.
+    Print typecheck_glob_environ. hnf in H7. *)
+
+    
     admit.
     (* [litao] should be able to prove precise_func *)
     }

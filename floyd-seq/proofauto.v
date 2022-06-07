@@ -48,6 +48,7 @@ Require VST.msl.iter_sepcon.
 Require VST.msl.wand_frame.
 Require VST.msl.wandQ_frame.
 Require FloydSeq.linking.
+Require Import CSplit.strong.
 
 Arguments semax {CS} {Espec} Delta Pre%assert cmd%C Post%assert.
 Export ListNotations.

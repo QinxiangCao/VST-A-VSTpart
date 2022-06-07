@@ -42,8 +42,8 @@ Context {cs: compspecs}.
             (PROPx P
               (LOCALx (temp id v :: remove_localdef_temp id Q)
                 (SEPx R)))).
-Proof. *)
-  (* intros.
+Proof.
+  intros.
   assert_PROP (tc_val (typeof e2) v).
   {
     rewrite (add_andp _ _ H1), (add_andp _ _ H2).

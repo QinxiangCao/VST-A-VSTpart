@@ -23,6 +23,7 @@ Require Import VST.floyd.functional_base.
 Require Import FloydSeq.entailer.
 Require Import FloydSeq.globals_lemmas.
 Require Import FloydSeq.deadvars.
+Require Import CSplit.strong.
 Import Cop.
 Import Cop2.
 

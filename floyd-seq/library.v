@@ -32,13 +32,14 @@ Require Import FloydSeq.entailer.
 Require Import FloydSeq.globals_lemmas.
 Require Import FloydSeq.diagnosis.
 Require Import FloydSeq.freezer.
+Require Import FloydSeq.canon.
 Import ListNotations.
 Import String.
 
-Definition body_lemma_of_funspec  {Espec: OracleKind} (ef: external_function) (f: funspec) :=
+(* Definition body_lemma_of_funspec  {Espec: OracleKind} (ef: external_function) (f: funspec) :=
   match f with mk_funspec sig _ A P Q _ _ =>
     semax_external (map fst (fst sig)) ef A P Q
-  end.
+  end. *)
 
 Definition try_spec  (name: string) (spec: funspec) : 
    list (ident * globdef Clight.fundef type) -> list (ident*funspec) :=
@@ -58,12 +59,12 @@ Definition exit_spec' :=
 
 Definition exit_spec := try_spec "exit" exit_spec'.
 
-Parameter body_exit:
+(* Parameter body_exit:
  forall {Espec: OracleKind},
   body_lemma_of_funspec
     (EF_external "exit"
        {| sig_args := AST.Tint :: nil; sig_res := None; sig_cc := cc_default |})
-   exit_spec'.
+   exit_spec'. *)
 
 Parameter mem_mgr: globals -> mpred.
 Axiom create_mem_mgr: forall gv, emp |-- mem_mgr gv.
@@ -112,9 +113,9 @@ Definition malloc_spec'  {cs: compspecs} :=
              if eq_dec p nullval then emp
             else (malloc_token Ews t p * data_at_ Ews t p)).
 
-Parameter body_malloc:
+(* Parameter body_malloc:
  forall {Espec: OracleKind} {cs: compspecs} ,
-  body_lemma_of_funspec EF_malloc malloc_spec'.
+  body_lemma_of_funspec EF_malloc malloc_spec'. *)
 
 Definition free_spec'  {cs: compspecs} :=
    WITH t: type, p:val, gv: globals
@@ -129,9 +130,9 @@ Definition free_spec'  {cs: compspecs} :=
        LOCAL ()
        SEP (mem_mgr gv).
 
-Parameter body_free:
+(* Parameter body_free:
  forall {Espec: OracleKind} {cs: compspecs} ,
-  body_lemma_of_funspec EF_free free_spec'.
+  body_lemma_of_funspec EF_free free_spec'. *)
 
 Definition library_G  {cs: compspecs} prog :=
  let defs := prog_defs prog in 
