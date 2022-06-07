@@ -4,11 +4,8 @@ Require Import compcert.cfrontend.Clight.
 Require Import CSplit.AClightFunc.
 Require Import compcert.common.AST.
 
-(* Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 
-Locate fundef.
-Print AST.fundef.
-Print function. *)
 
 (* Require Import FloydSeq.forward. *)
 (** ** Functions *)
@@ -62,7 +59,7 @@ Definition program := Ctypes.program function.
 
 (** Generate VST funcspec from annotation funcspec *)
 
-(* Ltac move_let_inside v :=
+Ltac move_let_inside v :=
   lazymatch goal with
   | v := let (a, b) := _ in _ |- _ =>
     lazymatch goal with
@@ -124,7 +121,7 @@ Ltac make_funcspec name funsig spec :=
   | fun x:?T => (?P, ?Q) =>
     exact (name, NDmk_funspec funsig cc_default T (fun x => P) (fun x => Q))
   | _ => fail 0 spec "is not in valid form of funcspec"
-  end. *)
+  end.
 
 
 Global Arguments Cifthenelse _ {_ _} _ _.

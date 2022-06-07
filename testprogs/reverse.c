@@ -27,7 +27,7 @@ struct list *reverse (struct list *p) {
   while (v) {
     /*@ Assert
          (EX t x l2',
-	    PROP  (l2 = x :: l2')
+	    PROP  (l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
 	    LOCAL (temp _w w; temp _v v)
 	    SEP   (data_at sh t_struct_list (x, t) v;
 	           listrep sh l1 w; listrep sh l2' t))%assert
