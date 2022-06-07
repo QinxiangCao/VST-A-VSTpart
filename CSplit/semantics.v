@@ -1,6 +1,6 @@
 Require Export CSplit.AClight.
 
-Require Import VST.floyd.proofauto.
+(* Require Import VST.floyd.proofauto. *)
 Require Import CSplit.strong.
 
 Open Scope aclight_scope.
@@ -347,11 +347,21 @@ Definition split_Semax (P: assert) (Q: ret_assert) {s_res: S_result} : (C_result
       end
   end.
 
+End Semantics.
+
+Section SemanticsProofs.
+
+Require Import VST.floyd.proofauto.
+Require Import CSplit.strong.
+
+Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
+
+
 Lemma pre_to_semax_derives: forall P Q s_pre 
   (c_pre: C_partial_pre s_pre),
   ENTAIL Delta, ((allp_fun_id Delta) && Q) |--  P ->
-  pre_to_semax P c_pre ->
-  pre_to_semax Q c_pre.
+  pre_to_semax Delta P c_pre ->
+  pre_to_semax Delta Q c_pre.
 Proof.
   intros.
   induction c_pre.
@@ -363,8 +373,8 @@ Qed.
 Lemma pre_to_semax_derives_weak: forall P Q s_pre 
   (c_pre: C_partial_pre s_pre),
   Q |--  P ->
-  pre_to_semax P c_pre ->
-  pre_to_semax Q c_pre.
+  pre_to_semax Delta P c_pre ->
+  pre_to_semax Delta Q c_pre.
 Proof.
   intros.
   eapply pre_to_semax_derives;[|apply H0].
@@ -374,8 +384,8 @@ Qed.
 Lemma post_to_semax_derives: forall P Q s_post
   (c_post: C_partial_post s_post),
   ENTAIL Delta, Q |--  P ->
-  post_to_semax Q c_post ->
-  post_to_semax P c_post.
+  post_to_semax Delta Q c_post ->
+  post_to_semax Delta P c_post.
 Proof.
   intros. induction c_post.
   + simpl in H0. simpl.
@@ -389,8 +399,8 @@ Qed.
 Lemma post_ret_to_semax_derives: forall P Q s_post
   (c_post: C_partial_post_ret s_post),
   (forall v, ENTAIL Delta, Q v |--  P v) ->
-  post_ret_to_semax Q c_post ->
-  post_ret_to_semax P c_post.
+  post_ret_to_semax Delta Q c_post ->
+  post_ret_to_semax Delta P c_post.
 Proof.
   intros. induction c_post.
   + simpl in H0. simpl.
@@ -404,8 +414,8 @@ Qed.
 Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
   P2 |-- P1 ->
   ENTAIL Delta, Q1 |-- Q2 ->
-  atom_to_semax P1 Q1 a ->
-  atom_to_semax P2 Q2 a.
+  atom_to_semax Delta P1 Q1 a ->
+  atom_to_semax Delta P2 Q2 a.
 Proof.
   intros. destruct a;simpl.
   eapply semax_conseq with (P':=P1)(R':=normal_split_assert Q1);auto;
@@ -418,8 +428,8 @@ Qed.
 Lemma atom_return_to_semax_derives: forall P1 P2 Q1 Q2 a,
   P2 |-- P1 ->
   (forall v, ENTAIL Delta, Q1 v  |-- Q2 v ) ->
-  atom_ret_to_semax P1 Q1 a ->
-  atom_ret_to_semax P2 Q2 a.
+  atom_ret_to_semax Delta P1 Q1 a ->
+  atom_ret_to_semax Delta P2 Q2 a.
 Proof.
   intros. destruct a as [p r].
   eapply semax_conseq with (P':=P1)(R':=return_split_assert Q1);
@@ -432,9 +442,9 @@ Qed.
 
 Lemma pre_to_semax_sem: forall (s_pre: S_partial_pre)
   (c_pre: C_partial_pre s_pre),
-  (pre_to_semax
+  (pre_to_semax Delta
         (EX Q : assert,
-          !! (pre_to_semax Q c_pre) && Q)) 
+          !! (pre_to_semax Delta Q c_pre) && Q)) 
       c_pre.
 Proof.
   intros.
@@ -454,8 +464,8 @@ Qed.
 
 Lemma post_to_semax_reverse: forall { s_post }
   (c_post: C_partial_post s_post) atom R,
-  post_to_semax R (Cpost_conn_atom c_post atom) ->
-  post_to_semax (EX Q, Q && !! ( atom_to_semax Q R atom)) c_post.
+  post_to_semax Delta R (Cpost_conn_atom c_post atom) ->
+  post_to_semax Delta (EX Q, Q && !! ( atom_to_semax Delta Q R atom)) c_post.
 Proof.
   intros. destruct atom.
   induction c_post.
@@ -474,8 +484,8 @@ Qed.
 
 Lemma path_conn_to_semax_reverse_simple: forall { s_pre }
   (c_pre: C_partial_pre s_pre) a1,
-  path_to_semax (add_P_to_Cpre a1 c_pre) ->
-    pre_to_semax a1 c_pre.
+  path_to_semax Delta (add_P_to_Cpre a1 c_pre) ->
+    pre_to_semax Delta a1 c_pre.
 Proof.
   intros.
   induction c_pre.
@@ -492,8 +502,8 @@ Qed.
 
 Lemma atom_return_to_semax_derives_pre: forall p P1 P2 Q,
 P1 |-- P2 ->
-atom_ret_to_semax P2 Q p ->
-atom_ret_to_semax P1 Q p.
+atom_ret_to_semax Delta P2 Q p ->
+atom_ret_to_semax Delta P1 Q p.
 Proof.
  intros.
  eapply atom_return_to_semax_derives.
@@ -504,8 +514,8 @@ Qed.
 
 Lemma atom_return_to_semax_derives_post: forall p P Q1 Q2,
 (forall v, ENTAIL Delta, Q1 v |-- Q2 v) ->
-atom_ret_to_semax P Q1 p ->
-atom_ret_to_semax P Q2 p.
+atom_ret_to_semax Delta P Q1 p ->
+atom_ret_to_semax Delta P Q2 p.
 Proof.
  intros.
  eapply atom_return_to_semax_derives.
@@ -516,8 +526,8 @@ Qed.
 
 Lemma atom_return_to_semax_derives_pre_group: forall P1 P2 Q atoms,
   P1 |-- P2 ->
-  Forall (atom_ret_to_semax P2 Q) atoms ->
-  Forall (atom_ret_to_semax P1 Q) atoms.
+  Forall (atom_ret_to_semax Delta P2 Q) atoms ->
+  Forall (atom_ret_to_semax Delta P1 Q) atoms.
 Proof. 
   intros.
   induction H0.
@@ -529,8 +539,8 @@ Qed.
 Lemma pre_to_semax_derives_group_weak: forall P1 P2 
   s_pres (c_pres : C_partial_pres s_pres),
   P1 |-- P2 ->
-  CForall (@pre_to_semax P2) c_pres ->
-  CForall (@pre_to_semax P1) c_pres.
+  CForall (@pre_to_semax CS Espec Delta P2) c_pres ->
+  CForall (@pre_to_semax CS Espec Delta P1) c_pres.
 Proof. 
   intros.
   induction c_pres.
@@ -543,8 +553,8 @@ Qed.
 Lemma pre_to_semax_derives_group: forall P1 P2
   s_pres (c_pres : C_partial_pres s_pres),
   ENTAIL Delta, ((allp_fun_id Delta) && P1) |--  P2 ->
-  CForall (@pre_to_semax P2) c_pres ->
-  CForall (@pre_to_semax P1) c_pres.
+  CForall (@pre_to_semax CS Espec Delta P2) c_pres ->
+  CForall (@pre_to_semax CS Espec Delta P1) c_pres.
 Proof. 
   intros.
   induction c_pres.
@@ -556,8 +566,8 @@ Qed.
 Lemma post_to_semax_derives_group: forall Q1 Q2
   s_posts (c_posts : C_partial_posts s_posts),
   ENTAIL Delta, Q1 |-- Q2  ->
-  CForall (@post_to_semax Q1) c_posts ->
-  CForall (@post_to_semax Q2) c_posts.
+  CForall (@post_to_semax CS Espec Delta Q1) c_posts ->
+  CForall (@post_to_semax CS Espec Delta Q2) c_posts.
 Proof. 
   intros.
   induction c_posts.
@@ -570,8 +580,8 @@ Qed.
 Lemma post_ret_to_semax_derives_group: forall Q1 Q2
   s_posts (c_posts : C_partial_post_rets s_posts),
   (forall v, ENTAIL Delta, Q1 v |-- Q2 v) ->
-  CForall (@post_ret_to_semax Q1) c_posts ->
-  CForall (@post_ret_to_semax Q2) c_posts.
+  CForall (@post_ret_to_semax CS Espec Delta Q1) c_posts ->
+  CForall (@post_ret_to_semax CS Espec Delta Q2) c_posts.
 Proof. 
   intros.
   induction c_posts.
@@ -583,8 +593,8 @@ Qed.
 
 Lemma atom_to_semax_derives_pre: forall p P1 P2 Q,
   P1 |-- P2 ->
-  atom_to_semax P2 Q p ->
-  atom_to_semax P1 Q p.
+  atom_to_semax Delta P2 Q p ->
+  atom_to_semax Delta P1 Q p.
 Proof.
   intros.
   eapply atom_to_semax_derives.
@@ -595,8 +605,8 @@ Qed.
 
 Lemma atom_to_semax_derives_pre_group: forall P1 P2 Q atoms,
   P1 |-- P2 ->
-  Forall (atom_to_semax P2 Q) atoms ->
-  Forall (atom_to_semax P1 Q) atoms.
+  Forall (atom_to_semax Delta P2 Q) atoms ->
+  Forall (atom_to_semax Delta P1 Q) atoms.
 Proof. 
   intros.
   eapply Forall_forall.
@@ -606,8 +616,8 @@ Qed.
 
 Lemma atom_to_semax_derives_post: forall p P Q1 Q2,
   ENTAIL Delta, Q1 |-- Q2 ->
-  atom_to_semax P Q1 p ->
-  atom_to_semax P Q2 p.
+  atom_to_semax Delta P Q1 p ->
+  atom_to_semax Delta P Q2 p.
 Proof.
   intros.
   eapply atom_to_semax_derives.
@@ -618,8 +628,8 @@ Qed.
 
 Lemma atom_to_semax_derives_post_group: forall p P Q1 Q2,
   ENTAIL Delta, Q1 |-- Q2 ->
-  Forall (atom_to_semax P Q1) p ->
-  Forall (atom_to_semax P Q2) p.
+  Forall (atom_to_semax Delta P Q1) p ->
+  Forall (atom_to_semax Delta P Q2) p.
 Proof.
   intros. induction p.
   - constructor.
@@ -632,8 +642,8 @@ Qed.
 Lemma atom_return_to_semax_derives_post_group: 
 forall p P Q1 Q2,
   (forall v, ENTAIL Delta, Q1 v|-- Q2 v) ->
-  Forall (atom_ret_to_semax P Q1) p ->
-  Forall (atom_ret_to_semax P Q2) p.
+  Forall (atom_ret_to_semax Delta P Q1) p ->
+  Forall (atom_ret_to_semax Delta P Q2) p.
 Proof.
   intros. induction p.
   - constructor.
@@ -653,9 +663,9 @@ Qed.
 
 Lemma post_to_semax_conj_rule: forall Q1 Q2 s_post
   (c_post : C_partial_post s_post),
-post_to_semax Q1 c_post ->
-post_to_semax Q2 c_post ->
-post_to_semax (Q1 && Q2) c_post.
+post_to_semax Delta Q1 c_post ->
+post_to_semax Delta Q2 c_post ->
+post_to_semax Delta (Q1 && Q2) c_post.
 Proof.
   intros.
   induction c_post.
@@ -675,9 +685,9 @@ Qed.
 
 
 Lemma atom_to_semax_conj_rule: forall P Q1 Q2 atom,
-  atom_to_semax P Q1 atom ->
-  atom_to_semax P Q2 atom ->
-  atom_to_semax P (Q1 && Q2) atom.
+  atom_to_semax Delta P Q1 atom ->
+  atom_to_semax Delta P Q2 atom ->
+  atom_to_semax Delta P (Q1 && Q2) atom.
 Proof.
   intros. destruct atom. unfold atom_to_semax in *.
   eapply semax_conseq.
@@ -697,9 +707,9 @@ Qed.
 
 Lemma post_to_semax_conj_rule_group: forall Q1 Q2 s_posts
   (c_posts : C_partial_posts s_posts),
-CForall (@post_to_semax Q1) c_posts ->
-CForall (@post_to_semax Q2) c_posts ->
-CForall (@post_to_semax (Q1 && Q2)) c_posts.
+CForall (@post_to_semax  CS Espec Delta Q1) c_posts ->
+CForall (@post_to_semax  CS Espec Delta Q2) c_posts ->
+CForall (@post_to_semax  CS Espec Delta (Q1 && Q2)) c_posts.
 Proof.
   intros.
   induction c_posts.
@@ -712,9 +722,9 @@ Qed.
 
 
 Lemma atom_to_semax_conj_rule_group: forall P Q1 Q2 atoms,
-  Forall (atom_to_semax P Q1) atoms ->
-  Forall (atom_to_semax P Q2) atoms ->
-  Forall (atom_to_semax P (Q1 && Q2)) atoms.
+  Forall (atom_to_semax Delta P Q1) atoms ->
+  Forall (atom_to_semax Delta P Q2) atoms ->
+  Forall (atom_to_semax Delta P (Q1 && Q2)) atoms.
 Proof.
   intros. induction atoms;auto.
   inversion H;subst.
@@ -731,8 +741,8 @@ Qed.
 
 Lemma pre_to_semax_sem_group: forall (s_pres: S_partial_pres)
   (c_pres: C_partial_pres s_pres),
-  (CForall (@pre_to_semax
-        (EX Q, Q && !! (CForall (@pre_to_semax Q) c_pres))) 
+  (CForall (@pre_to_semax  CS Espec Delta
+        (EX Q, Q && !! (CForall (@pre_to_semax  CS Espec Delta Q) c_pres))) 
       c_pres).
 Proof.
   intros.
@@ -750,9 +760,9 @@ Qed.
 
 
 Lemma atom_to_semax_sem: forall x  R,
- (atom_to_semax 
+ (atom_to_semax Delta
         (EX Q : assert,
-          !! (atom_to_semax Q R x) && Q)) R
+          !! (atom_to_semax Delta Q R x) && Q)) R
       x.
 Proof.
   intros. destruct x.
@@ -762,9 +772,9 @@ Proof.
 Qed.
   
 Lemma atom_return_to_semax_sem: forall x R,
- (atom_ret_to_semax 
+ (atom_ret_to_semax Delta
         (EX Q : assert,
-          !! (atom_ret_to_semax Q R x) && Q)) R
+          !! (atom_ret_to_semax Delta Q R x) && Q)) R
       x.
 Proof.
   intros. destruct x as [p v].
@@ -775,7 +785,7 @@ Qed.
 
 
 Lemma atom_to_semax_sem_group: forall xs R,
- Forall (atom_to_semax (EX Q : assert, !! Forall (atom_to_semax Q R) xs && Q) R) xs.
+ Forall (atom_to_semax Delta (EX Q : assert, !! Forall (atom_to_semax Delta Q R) xs && Q) R) xs.
 Proof.
   intros. induction xs;auto.
   - pose proof atom_to_semax_sem a R.
@@ -790,8 +800,8 @@ Qed.
 
 
 Lemma atom_return_to_semax_sem_group: forall xs R,
- Forall (atom_ret_to_semax 
-  (EX Q : assert, !! Forall (atom_ret_to_semax Q R) xs && Q) R) xs.
+ Forall (atom_ret_to_semax Delta
+  (EX Q : assert, !! Forall (atom_ret_to_semax Delta Q R) xs && Q) R) xs.
 Proof.
   intros. induction xs;auto.
   - pose proof atom_return_to_semax_sem a R.
@@ -813,8 +823,8 @@ Lemma post_conn_pre_to_semax_inv:
 forall 
 {s_pre} (c_pre: C_partial_pre s_pre)
 {s_post} (c_post: C_partial_post s_post),
-  path_to_semax (Cpost_conn_Cpre c_post c_pre) ->
-  post_to_semax (EX R, R && !! pre_to_semax R c_pre) c_post.
+  path_to_semax Delta (Cpost_conn_Cpre c_post c_pre) ->
+  post_to_semax Delta (EX R, R && !! pre_to_semax Delta R c_pre) c_post.
 Proof.
   intros.
   induction c_post.
@@ -833,8 +843,8 @@ Qed.
 
 
 Lemma atom_conn_Cpre_nil: forall P s_pre (c_pre: C_partial_pre s_pre),
-  pre_to_semax P (atom_conn_Cpre (mk_atom []) c_pre) 
-  <-> pre_to_semax P c_pre.
+  pre_to_semax Delta P (atom_conn_Cpre (mk_atom []) c_pre) 
+  <-> pre_to_semax Delta P c_pre.
 Proof.
   intros. induction c_pre.
   - simpl. tauto.
@@ -842,8 +852,8 @@ Qed.
 
 Lemma atom_conn_pre_to_semax_inv:
 forall P atom {s_pre} (c_pre: C_partial_pre s_pre),
-  pre_to_semax P (atom_conn_Cpre atom c_pre) ->
-  atom_to_semax P (EX Q, Q && !! pre_to_semax Q c_pre) atom.
+  pre_to_semax Delta P (atom_conn_Cpre atom c_pre) ->
+  atom_to_semax Delta P (EX Q, Q && !! pre_to_semax Delta Q c_pre) atom.
 Proof.
   intros P atom s_pre. destruct atom as [path]. 
   
@@ -859,9 +869,9 @@ Qed.
 
 Lemma post_conn_atom_to_semax_inv: forall Q s_post 
 (c_post: C_partial_post s_post) atom,
-post_to_semax Q (Cpost_conn_atom c_post atom) ->
-post_to_semax
-  (EX R, R && !! atom_to_semax R Q atom) c_post.
+post_to_semax Delta Q (Cpost_conn_atom c_post atom) ->
+post_to_semax Delta
+  (EX R, R && !! atom_to_semax Delta R Q atom) c_post.
 Proof.
   intros.
   induction c_post.
@@ -881,9 +891,9 @@ Qed.
 
 
 Lemma atom_conn_return_to_semax_inv: forall s_atom1 s_atom2 P R,
-(atom_ret_to_semax P R) (atom_conn_return s_atom1 s_atom2) ->
-(atom_to_semax P 
-  (EX Q, Q && !! (atom_ret_to_semax Q R) s_atom2)) s_atom1.
+(atom_ret_to_semax Delta P R) (atom_conn_return s_atom1 s_atom2) ->
+(atom_to_semax Delta P 
+  (EX Q, Q && !! (atom_ret_to_semax Delta Q R) s_atom2)) s_atom1.
 Proof.
   intros.
   destruct s_atom2, s_atom1. unfold atom_to_semax.
@@ -914,9 +924,9 @@ Qed.
 
 Lemma post_conn_return_to_semax_inv: forall Q s_post 
 (c_post: C_partial_post s_post) atom,
-post_ret_to_semax Q (Cpost_conn_return c_post atom) ->
-post_to_semax
-  (EX R, R && !! atom_ret_to_semax R Q atom) c_post.
+post_ret_to_semax Delta Q (Cpost_conn_return c_post atom) ->
+post_to_semax Delta
+  (EX R, R && !! atom_ret_to_semax Delta R Q atom) c_post.
 Proof.
   intros.
   induction c_post.
@@ -948,9 +958,9 @@ Qed.
 
 
 Lemma atom_conn_atom_to_semax_inv: forall s_atom1 s_atom2 P R,
-(atom_to_semax P R) (atom_conn_atom s_atom1 s_atom2) ->
-(atom_to_semax P 
-  (EX Q, Q && !! (atom_to_semax Q R) s_atom2)) s_atom1.
+(atom_to_semax Delta P R) (atom_conn_atom s_atom1 s_atom2) ->
+(atom_to_semax Delta P 
+  (EX Q, Q && !! (atom_to_semax Delta Q R) s_atom2)) s_atom1.
 Proof.
   intros.
   destruct s_atom2, s_atom1. unfold atom_to_semax.
@@ -965,8 +975,8 @@ Qed.
 
 Lemma add_Q_to_Cposts_inv: forall P 
   s_post (c_post: C_partial_posts s_post),
-CForall (@path_to_semax) (add_Q_to_Cposts FF c_post) ->
-CForall (@post_to_semax P) c_post.
+CForall (@path_to_semax  CS Espec Delta) (add_Q_to_Cposts FF c_post) ->
+CForall (@post_to_semax  CS Espec Delta P) c_post.
 Proof.
   induction c_post;auto.
   intros. destruct H.
@@ -986,11 +996,11 @@ Qed.
 (* Rewriting Lemmas *)
 Lemma atoms_conn_Cpres_distrib:
   forall P s_atoms s_pre c_pre s_pres' c_pres',
-  CForall (@pre_to_semax P) 
+  CForall (@pre_to_semax CS Espec Delta P) 
       (atoms_conn_Cpres s_atoms
          (list_binded_cons s_pre c_pre s_pres' c_pres')) <->
-  CForall (@pre_to_semax P) (atoms_conn_Cpres s_atoms { c_pre }) /\
-  CForall (@pre_to_semax P) (atoms_conn_Cpres s_atoms c_pres').
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms { c_pre }) /\
+  CForall (@pre_to_semax CS Espec Delta P) (atoms_conn_Cpres s_atoms c_pres').
 Proof.
   intros. induction s_atoms.
   - simpl. tauto.
@@ -1031,12 +1041,12 @@ Qed.
 
 Lemma Cposts_atoms_conn_distrib:
   forall P s_atoms s_post c_post s_posts' c_posts',
-  CForall (@post_to_semax P) 
+  CForall (@post_to_semax CS Espec Delta P) 
       (Cposts_conn_atoms 
          (list_binded_cons s_post c_post s_posts' c_posts')
          s_atoms) <->
-  CForall (@post_to_semax P) (Cposts_conn_atoms { c_post } s_atoms ) /\
-  CForall (@post_to_semax P) (Cposts_conn_atoms c_posts' s_atoms).
+  CForall (@post_to_semax CS Espec Delta P) (Cposts_conn_atoms { c_post } s_atoms ) /\
+  CForall (@post_to_semax CS Espec Delta P) (Cposts_conn_atoms c_posts' s_atoms).
 Proof.
   intros. induction s_atoms.
   - simpl. tauto.
@@ -1063,12 +1073,12 @@ Qed.
 
 Lemma Cposts_returns_conn_distrib:
   forall P s_atoms s_post c_post s_posts' c_posts',
-  CForall (@post_ret_to_semax P) 
+  CForall (@post_ret_to_semax CS Espec Delta P) 
       (Cposts_conn_returns 
          (list_binded_cons s_post c_post s_posts' c_posts')
          s_atoms) <->
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns { c_post }s_atoms ) /\
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns c_posts' s_atoms).
+  CForall (@post_ret_to_semax CS Espec Delta P) (Cposts_conn_returns { c_post }s_atoms ) /\
+  CForall (@post_ret_to_semax CS Espec Delta P) (Cposts_conn_returns c_posts' s_atoms).
 Proof.
   intros. induction s_atoms.
   - simpl. tauto.
@@ -1126,7 +1136,7 @@ Qed.
 
 
 Lemma atoms_conn_nil_Spres_sem: forall Q atoms,
-CForall (@pre_to_semax Q) (atoms_conn_Cpres atoms {}).
+CForall (@pre_to_semax CS Espec Delta Q) (atoms_conn_Cpres atoms {}).
 Proof.
   induction atoms;auto.
   simpl. tauto.
@@ -1138,12 +1148,12 @@ Lemma Cposts_returns_conn_app_distrib:
   forall P s_atoms s_post1 
     (c_post1: C_partial_posts s_post1) s_post2 
     (c_post2: C_partial_posts s_post2),
-  CForall (@post_ret_to_semax P) 
+  CForall (@post_ret_to_semax CS Espec Delta P) 
       (Cposts_conn_returns 
          (c_post1 +++ c_post2)
          s_atoms) <->
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns c_post1 s_atoms ) /\
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns c_post2 s_atoms).
+  CForall (@post_ret_to_semax CS Espec Delta P) (Cposts_conn_returns c_post1 s_atoms ) /\
+  CForall (@post_ret_to_semax CS Espec Delta P) (Cposts_conn_returns c_post2 s_atoms).
 Proof.
   intros.
   induction c_post1.
@@ -1168,10 +1178,10 @@ Lemma Cposts_atoms_conn_app_distrib:
   forall P s_atoms s_post1 
     (c_post1: C_partial_posts s_post1) s_post2 
     (c_post2: C_partial_posts s_post2),
-  CForall (@post_to_semax P) 
+  CForall (@post_to_semax CS Espec Delta P) 
       (Cposts_conn_atoms (c_post1 +++ c_post2) s_atoms) <->
-  CForall (@post_to_semax P) (Cposts_conn_atoms c_post1 s_atoms ) /\
-  CForall (@post_to_semax P) (Cposts_conn_atoms c_post2 s_atoms).
+  CForall (@post_to_semax  CS Espec Delta P) (Cposts_conn_atoms c_post1 s_atoms ) /\
+  CForall (@post_to_semax CS Espec Delta  P) (Cposts_conn_atoms c_post2 s_atoms).
 Proof.
   intros.
   induction c_post1.
@@ -1194,10 +1204,10 @@ Qed.
 Lemma Cposts_atoms_conn_app_distrib2:
   forall P s_atoms1 s_atoms2 s_post
     (c_post: C_partial_posts s_post),
-  CForall (@post_to_semax P) 
+  CForall (@post_to_semax CS Espec Delta P) 
       (Cposts_conn_atoms c_post (s_atoms1 ++ s_atoms2)) <->
-  CForall (@post_to_semax P) (Cposts_conn_atoms c_post s_atoms1) /\
-  CForall (@post_to_semax P) (Cposts_conn_atoms c_post s_atoms2).
+  CForall (@post_to_semax CS Espec Delta P) (Cposts_conn_atoms c_post s_atoms1) /\
+  CForall (@post_to_semax  CS Espec Delta P) (Cposts_conn_atoms c_post s_atoms2).
 Proof.
   intros.
   induction s_atoms1.
@@ -1220,10 +1230,10 @@ Qed.
 Lemma Cposts_returns_conn_app_distrib2:
   forall P s_atoms1 s_atoms2 s_post
     (c_post: C_partial_posts s_post),
-  CForall (@post_ret_to_semax P) 
+  CForall (@post_ret_to_semax  CS Espec Delta P) 
       (Cposts_conn_returns c_post (s_atoms1 ++ s_atoms2)) <->
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns c_post s_atoms1) /\
-  CForall (@post_ret_to_semax P) (Cposts_conn_returns c_post s_atoms2).
+  CForall (@post_ret_to_semax  CS Espec Delta P) (Cposts_conn_returns c_post s_atoms1) /\
+  CForall (@post_ret_to_semax  CS Espec Delta P) (Cposts_conn_returns c_post s_atoms2).
 Proof.
   intros.
   induction s_atoms1.
@@ -1244,8 +1254,8 @@ Qed.
 
 Lemma post_conn_atom_conn_return_assoc: forall Q s_post1
   (post1 :C_partial_post s_post1) atom2 atom1,
-post_ret_to_semax Q (Cpost_conn_return post1 (atom_conn_return atom1 atom2)) <->
-post_ret_to_semax Q (Cpost_conn_return (Cpost_conn_atom post1 atom1) atom2).
+post_ret_to_semax Delta Q (Cpost_conn_return post1 (atom_conn_return atom1 atom2)) <->
+post_ret_to_semax Delta Q (Cpost_conn_return (Cpost_conn_atom post1 atom1) atom2).
 Proof.
   intros. destruct atom2, atom1. induction post1.
   + simpl. rewrite app_assoc. tauto.
@@ -1256,8 +1266,8 @@ Qed.
 
 Lemma post_conn_atom_conn_atom_assoc: forall Q s_post1
   (post1 :C_partial_post s_post1) atom2 atom1,
-post_to_semax Q (Cpost_conn_atom post1 (atom_conn_atom atom1 atom2)) <->
-post_to_semax Q (Cpost_conn_atom (Cpost_conn_atom post1 atom1) atom2).
+post_to_semax Delta Q (Cpost_conn_atom post1 (atom_conn_atom atom1 atom2)) <->
+post_to_semax Delta Q (Cpost_conn_atom (Cpost_conn_atom post1 atom1) atom2).
 Proof.
   intros. destruct atom2, atom1. induction post1.
   + simpl. rewrite app_assoc. tauto.
@@ -1269,9 +1279,9 @@ Qed.
 
 Lemma posts_conn_atom_conn_returns_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
-CForall (@post_ret_to_semax Q)
+CForall (@post_ret_to_semax CS Espec Delta Q)
 (Cposts_conn_returns post1 (atom_conn_returns atom2 atom1)) <->
-CForall (@post_ret_to_semax Q)
+CForall (@post_ret_to_semax CS Espec Delta Q)
   (Cposts_conn_returns (Cposts_conn_atom post1 atom2) atom1).
 Proof.
   intros.
@@ -1302,9 +1312,9 @@ Qed.
 
 Lemma posts_conn_atom_conn_atoms_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
-CForall (@post_to_semax Q)
+CForall (@post_to_semax CS Espec Delta Q)
 (Cposts_conn_atoms post1 (atom_conn_atoms atom2 atom1)) <->
-CForall (@post_to_semax Q)
+CForall (@post_to_semax  CS Espec Delta Q)
   (Cposts_conn_atoms (Cposts_conn_atom post1 atom2) atom1).
 Proof.
   intros.
@@ -1336,9 +1346,9 @@ Qed.
 (* Rewriting distr semax rules *)
 Lemma posts_conn_atoms_conn_returns_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
-CForall (@post_ret_to_semax Q)
+CForall (@post_ret_to_semax  CS Espec Delta Q)
 (Cposts_conn_returns post1 (atoms_conn_returns atom2 atom1)) <->
-CForall (@post_ret_to_semax Q)
+CForall (@post_ret_to_semax  CS Espec Delta Q)
   (Cposts_conn_returns (Cposts_conn_atoms post1 atom2) atom1).
 Proof.
   intros.
@@ -1362,9 +1372,9 @@ Qed.
 
 Lemma posts_conn_atoms_conn_atoms_assoc: forall Q s_post1
   (post1 :C_partial_posts s_post1) atom2 atom1,
-CForall (@post_to_semax Q)
+CForall (@post_to_semax CS Espec Delta Q)
 (Cposts_conn_atoms post1 (atoms_conn_atoms atom2 atom1)) <->
-CForall (@post_to_semax Q)
+CForall (@post_to_semax CS Espec Delta Q)
   (Cposts_conn_atoms (Cposts_conn_atoms post1 atom2) atom1).
 Proof.
   intros.
@@ -1391,11 +1401,11 @@ Lemma Cposts_Cpres_conn_distrib:
   forall s_posts (c_posts: C_partial_posts s_posts)
     s_pre (c_pre: C_partial_pre s_pre)
     s_pres' (c_pres': C_partial_pres s_pres'),
-  CForall (@path_to_semax) 
+  CForall (@path_to_semax CS Espec Delta) 
       (Cposts_conn_Cpres c_posts 
          (list_binded_cons s_pre c_pre s_pres' c_pres')) <->
-  CForall (@path_to_semax)  (Cposts_conn_Cpres c_posts { c_pre } ) /\
-  CForall (@path_to_semax)  (Cposts_conn_Cpres c_posts c_pres').
+  CForall (@path_to_semax  CS Espec Delta)  (Cposts_conn_Cpres c_posts { c_pre } ) /\
+  CForall (@path_to_semax  CS Espec Delta)  (Cposts_conn_Cpres c_posts c_pres').
 Proof.
   intros. induction c_posts.
   - simpl. tauto.
@@ -1418,10 +1428,10 @@ Lemma Cposts_Cpres_conn_app_distrib1:
   forall s_pres (c_pres: C_partial_pres s_pres) 
     s_post1 (c_post1: C_partial_posts s_post1)
     s_post2 (c_post2: C_partial_posts s_post2), 
-  CForall (@path_to_semax) 
+  CForall (@path_to_semax CS Espec Delta) 
       (Cposts_conn_Cpres (c_post1 +++ c_post2) c_pres) <->
-  CForall (@path_to_semax) (Cposts_conn_Cpres c_post1 c_pres) /\
-  CForall (@path_to_semax) (Cposts_conn_Cpres c_post2 c_pres).
+  CForall (@path_to_semax CS Espec Delta) (Cposts_conn_Cpres c_post1 c_pres) /\
+  CForall (@path_to_semax CS Espec Delta) (Cposts_conn_Cpres c_post2 c_pres).
 Proof.
   intros.
   induction c_post1.
@@ -1443,10 +1453,10 @@ Lemma Cposts_Cpres_conn_app_distrib2:
   forall s_pres1 (c_pres1: C_partial_pres s_pres1) 
     s_pres2 (c_pres2: C_partial_pres s_pres2) s_post
     (c_post: C_partial_posts s_post),
-  CForall (@path_to_semax) 
+  CForall (@path_to_semax CS Espec Delta) 
       (Cposts_conn_Cpres c_post (c_pres1 +++ c_pres2)) <->
-  CForall (@path_to_semax) (Cposts_conn_Cpres c_post c_pres1) /\
-  CForall (@path_to_semax) (Cposts_conn_Cpres c_post c_pres2).
+  CForall (@path_to_semax CS Espec Delta) (Cposts_conn_Cpres c_post c_pres1) /\
+  CForall (@path_to_semax CS Espec Delta) (Cposts_conn_Cpres c_post c_pres2).
 Proof.
   intros.
   induction c_pres1.
@@ -1471,9 +1481,9 @@ Qed.
 Lemma post_conn_atom_conn_pre_assoc: forall 
   s_post (post1: C_partial_post s_post)  
   atom2 s_pre (pre1: C_partial_pre s_pre),
-path_to_semax
+path_to_semax Delta
 (Cpost_conn_Cpre (Cpost_conn_atom post1 atom2) pre1) <->
-path_to_semax
+path_to_semax Delta
 (Cpost_conn_Cpre post1 (atom_conn_Cpre atom2 pre1)).
 Proof.
   intros. destruct atom2. 
@@ -1489,9 +1499,9 @@ Qed.
 Lemma post_conn_atom_conn_pres_assoc: forall 
   s_post (post1: C_partial_post s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cpost_conn_Cpres (Cpost_conn_atom post1 atom2) pre1) <->
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cpost_conn_Cpres post1 (atom_conn_Cpres atom2 pre1)).
 Proof.
   intros.
@@ -1507,9 +1517,9 @@ Qed.
 Lemma posts_conn_atom_conn_pres_assoc: forall 
   s_post (post1: C_partial_posts s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cposts_conn_Cpres (Cposts_conn_atom post1 atom2) pre1) <->
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cposts_conn_Cpres post1 (atom_conn_Cpres atom2 pre1)).
 Proof.
   intros.
@@ -1530,9 +1540,9 @@ Qed.
 Lemma posts_conn_atoms_conn_pres_assoc: forall 
   s_post (post1: C_partial_posts s_post)  
   atom2 s_pre (pre1: C_partial_pres s_pre),
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cposts_conn_Cpres (Cposts_conn_atoms post1 atom2) pre1) <->
-CForall (@path_to_semax)
+CForall (@path_to_semax CS Espec Delta)
 (Cposts_conn_Cpres post1 (atoms_conn_Cpres atom2 pre1)).
 Proof.
   intros. induction atom2.
@@ -1554,10 +1564,10 @@ Qed.
 (* Single-Grouped Inversion Lemmas *)
 Lemma atoms_conn_pre_to_semax_inv: forall P s_atoms s_pre
   (c_pre: C_partial_pre s_pre),
-CForall (@pre_to_semax P) (atoms_conn_Cpres s_atoms {c_pre})
--> Forall (atom_to_semax P
+CForall (@pre_to_semax  CS Espec Delta P) (atoms_conn_Cpres s_atoms {c_pre})
+-> Forall (atom_to_semax Delta P
    (EX Q, Q &&
-    !! CForall (@pre_to_semax Q) { c_pre })) s_atoms.
+    !! CForall (@pre_to_semax  CS Espec Delta Q) { c_pre })) s_atoms.
 Proof.
   intros.
   induction s_atoms.
@@ -1577,12 +1587,12 @@ Qed.
 Lemma post_conn_pres_group_inv: forall s_post 
 (c_post: C_partial_post s_post) s_pres
 (c_pres: C_partial_pres s_pres),
-CForall (@path_to_semax) 
+CForall (@path_to_semax CS Espec Delta) 
         (Cpost_conn_Cpres c_post c_pres) ->
 s_pres = [] \/
-(@post_to_semax  
+(@post_to_semax   CS Espec Delta
   (EX Q, Q && !! 
-      CForall (@pre_to_semax  Q) c_pres) _ c_post).
+      CForall (@pre_to_semax CS Espec Delta  Q) c_pres) _ c_post).
 Proof.
   intros.
   induction c_pres.
@@ -1615,10 +1625,10 @@ Qed.
 
 Lemma posts_conn_atom_group_inv: forall s_posts
   (c_posts: C_partial_posts s_posts) atom Q,
-CForall (@post_to_semax  Q)
+CForall (@post_to_semax  CS Espec Delta Q)
         (Cposts_conn_atom c_posts atom) ->
-CForall (@post_to_semax  
-  (EX R, R && !! atom_to_semax R Q atom)) c_posts.
+CForall (@post_to_semax   CS Espec Delta
+  (EX R, R && !! atom_to_semax Delta R Q atom)) c_posts.
 Proof.
   intros.
   induction c_posts;auto.
@@ -1631,10 +1641,10 @@ Qed.
   
 
 Lemma atom_conn_returns_to_semax_inv: forall s_atom1 s_atoms2 P R,
-Forall (atom_ret_to_semax P R) (atom_conn_returns s_atom1 s_atoms2) ->
+Forall (atom_ret_to_semax Delta P R) (atom_conn_returns s_atom1 s_atoms2) ->
 s_atoms2 = [] \/
-(atom_to_semax P 
-  (EX Q, Q && !! Forall (atom_ret_to_semax Q R) s_atoms2)) s_atom1.
+(atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_ret_to_semax Delta Q R) s_atoms2)) s_atom1.
 Proof.
   intros.
   induction s_atoms2.
@@ -1662,10 +1672,10 @@ Qed.
 
 
 Lemma atom_conn_atoms_to_semax_inv: forall s_atom1 s_atoms2 P R,
-Forall (atom_to_semax P R) (atom_conn_atoms s_atom1 s_atoms2) ->
+Forall (atom_to_semax Delta P R) (atom_conn_atoms s_atom1 s_atoms2) ->
 s_atoms2 = [] \/
-(atom_to_semax P 
-  (EX Q, Q && !! Forall (atom_to_semax Q R) s_atoms2)) s_atom1.
+(atom_to_semax Delta P 
+  (EX Q, Q && !! Forall (atom_to_semax Delta Q R) s_atoms2)) s_atom1.
 Proof.
   intros.
   induction s_atoms2.
@@ -1694,10 +1704,10 @@ Qed.
 
 Lemma posts_conn_return_group_inv: forall s_posts
   (c_posts: C_partial_posts s_posts) atom Q,
-CForall (@post_ret_to_semax  Q)
+CForall (@post_ret_to_semax   CS Espec Delta Q)
         (Cposts_conn_return c_posts atom) ->
-CForall (@post_to_semax  
-  (EX R, R && !! atom_ret_to_semax R Q atom)) c_posts.
+CForall (@post_to_semax   CS Espec Delta
+  (EX R, R && !! atom_ret_to_semax Delta R Q atom)) c_posts.
 Proof.
   intros.
   induction c_posts;auto.
@@ -1712,11 +1722,11 @@ Qed.
 
 Lemma atoms_conn_pres_group_inv: forall P s_atoms 
   s_pres {c_pres: C_partial_pres s_pres},
-CForall (@pre_to_semax  P)
+CForall (@pre_to_semax  CS Espec Delta P)
   (atoms_conn_Cpres s_atoms c_pres) ->
 (s_pres = []) \/
-Forall (@atom_to_semax  P
-  (EX Q, Q && !! CForall (@pre_to_semax  Q) c_pres))
+Forall (@atom_to_semax  CS Espec Delta P
+  (EX Q, Q && !! CForall (@pre_to_semax  CS Espec Delta Q) c_pres))
   s_atoms.
 Proof with auto.
   intros P s_atoms s_pres.
@@ -1750,10 +1760,10 @@ Qed.
 Lemma posts_conn_pres_group_inv: forall s_posts
   (c_posts: C_partial_posts s_posts) s_pres
   (c_pres: C_partial_pres s_pres),
-CForall (@path_to_semax ) (Cposts_conn_Cpres c_posts c_pres) ->
+CForall (@path_to_semax CS Espec Delta ) (Cposts_conn_Cpres c_posts c_pres) ->
 s_pres = [] \/
-CForall (@post_to_semax  
-  (EX Q, Q && !! CForall (@pre_to_semax  Q) c_pres))
+CForall (@post_to_semax   CS Espec Delta
+  (EX Q, Q && !! CForall (@pre_to_semax  CS Espec Delta Q) c_pres))
  c_posts.
 Proof.
   intros. induction c_posts.
@@ -1769,11 +1779,11 @@ Qed.
 
 Lemma posts_conn_atoms_group_inv: forall s_posts
   (c_posts: C_partial_posts s_posts) atoms Q,
-CForall (@post_to_semax  Q)
+CForall (@post_to_semax  CS Espec Delta Q)
         (Cposts_conn_atoms c_posts atoms) ->
 atoms = [] \/
-CForall (@post_to_semax  
-  (EX R, R && !! Forall (atom_to_semax R Q) atoms)) c_posts.
+CForall (@post_to_semax   CS Espec Delta 
+  (EX R, R && !! Forall (atom_to_semax  Delta R Q) atoms)) c_posts.
 Proof.
   intros. induction atoms.
   - auto.
@@ -1790,9 +1800,9 @@ Proof.
     }
     { apply posts_conn_atom_group_inv in H_.
       eapply CForall_impl with (P:=
-      (@post_to_semax 
-        ((EX R1, R1 && !! (atom_to_semax R1 Q a))
-        && EX R2, R2 && !! Forall (atom_to_semax R2 Q) atoms))).
+      (@post_to_semax CS Espec Delta 
+        ((EX R1, R1 && !! (atom_to_semax Delta  R1 Q a))
+        && EX R2, R2 && !! Forall (atom_to_semax Delta  R2 Q) atoms))).
       { intros. eapply post_to_semax_derives;[..|apply H0].
       Intros Q1 Q2. Exists (Q1 && Q2).
       apply andp_right. solve_andp. apply prop_right. constructor.
@@ -1813,11 +1823,11 @@ Qed.
 
 Lemma posts_conn_returns_group_inv: forall s_posts
   (c_posts: C_partial_posts s_posts) atoms Q,
-CForall (@post_ret_to_semax  Q)
+CForall (@post_ret_to_semax  CS Espec Delta Q)
         (Cposts_conn_returns c_posts atoms) ->
 atoms = [] \/
-CForall (@post_to_semax  
-  (EX R, R && !! Forall (atom_ret_to_semax R Q) atoms)) c_posts.
+CForall (@post_to_semax   CS Espec Delta
+  (EX R, R && !! Forall (atom_ret_to_semax Delta  R Q) atoms)) c_posts.
 Proof.
   intros. induction atoms.
   - auto.
@@ -1834,9 +1844,9 @@ Proof.
     }
     { apply posts_conn_return_group_inv in H_.
       eapply CForall_impl with (P:=
-      (@post_to_semax 
-        ((EX R1, R1 && !! (atom_ret_to_semax R1 Q a))
-        && EX R2, R2 && !! Forall (atom_ret_to_semax R2 Q) atoms))).
+      (@post_to_semax CS Espec Delta
+        ((EX R1, R1 && !! (atom_ret_to_semax  Delta R1 Q a))
+        && EX R2, R2 && !! Forall (atom_ret_to_semax  Delta R2 Q) atoms))).
       { intros. eapply post_to_semax_derives;[..|apply H0].
       Intros Q1 Q2. Exists (Q1 && Q2).
       apply andp_right. solve_andp. apply prop_right. constructor.
@@ -1854,10 +1864,10 @@ Qed.
 
 
 Lemma atoms_conn_atoms_group_inv: forall s_atoms1 s_atoms2 P R,
-Forall (atom_to_semax P R) (atoms_conn_atoms s_atoms1 s_atoms2) ->
+Forall (atom_to_semax Delta  P R) (atoms_conn_atoms s_atoms1 s_atoms2) ->
 s_atoms2 = [] \/
-Forall (atom_to_semax P 
-  (EX Q, Q && !! Forall (atom_to_semax Q R) s_atoms2)) s_atoms1.
+Forall (atom_to_semax Delta  P 
+  (EX Q, Q && !! Forall (atom_to_semax  Delta Q R) s_atoms2)) s_atoms1.
 Proof.
   intros. induction s_atoms1.
   - right. constructor.
@@ -1872,10 +1882,10 @@ Qed.
 
 
 Lemma atoms_conn_returns_group_inv: forall s_atoms1 s_atoms2 P R,
-Forall (atom_ret_to_semax P R) (atoms_conn_returns s_atoms1 s_atoms2) ->
+Forall (atom_ret_to_semax  Delta P R) (atoms_conn_returns s_atoms1 s_atoms2) ->
 s_atoms2 = [] \/
-Forall (atom_to_semax P 
-  (EX Q, Q && !! Forall (atom_ret_to_semax Q R) s_atoms2)) s_atoms1.
+Forall (atom_to_semax  Delta P 
+  (EX Q, Q && !! Forall (atom_ret_to_semax Delta  Q R) s_atoms2)) s_atoms1.
 Proof.
   intros. induction s_atoms1.
   - right. constructor.
@@ -1889,10 +1899,10 @@ Qed.
 
 (* If tc expr *)
 Lemma add_exp_to_pre_tc: forall P a b s_pre (pre':C_partial_pre s_pre), 
-  pre_to_semax P (add_exp_to_Cpre b a pre') ->
+  pre_to_semax  Delta P (add_exp_to_Cpre b a pre') ->
   ENTAIL Delta, allp_fun_id Delta && P
   |-- !! (bool_type (typeof a) = true) && 
-    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+    tc_expr Delta (Eunop Onotbool a (Ctypes.Tint I32 Signed noattr)).
 Proof.
   intros.
   destruct pre', b. simpl in H.
@@ -1908,10 +1918,10 @@ Qed.
 
 
 Lemma add_exp_to_atom_tc: forall P Q b a normal_atom',
-  atom_to_semax P Q (add_exp_to_atom b a normal_atom') ->
+  atom_to_semax Delta P Q (add_exp_to_atom b a normal_atom') ->
   ENTAIL Delta, allp_fun_id Delta && P
   |-- !! (bool_type (typeof a) = true) && 
-    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+    tc_expr Delta (Eunop Onotbool a (Ctypes.Tint I32 Signed noattr)).
 Proof.
   intros. destruct normal_atom', b.
   - apply semax_seq_inv in H. destruct H as [Q' [? ?]].
@@ -1926,10 +1936,10 @@ Qed.
 
 
 Lemma add_exp_to_return_tc: forall P Q b a return_atom',
-  atom_ret_to_semax P Q (add_exp_to_ret_atom b a return_atom') ->
+  atom_ret_to_semax Delta P Q (add_exp_to_ret_atom b a return_atom') ->
   ENTAIL Delta, allp_fun_id Delta && P
   |-- !! (bool_type (typeof a) = true) && 
-    tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)).
+    tc_expr Delta (Eunop Onotbool a (Ctypes.Tint I32 Signed noattr)).
 Proof.
   intros. destruct return_atom', b.
   - simpl in H.
@@ -1949,14 +1959,14 @@ Qed.
 Lemma if_gen_tc:
   forall b e P Q s_pre1 (c_pre1: C_partial_pres s_pre1) s_atom_normal1 s_atom_break1 s_atom_continue1 s_atom_return1,
   ~ (s_pre1 = [] /\ s_atom_normal1 = [] /\ s_atom_break1 = [] /\ s_atom_continue1 = [] /\ s_atom_return1 = []) -> 
-  CForall (@pre_to_semax P) (add_exp_to_Cpres b e c_pre1) ->
-  Forall (atom_to_semax P (RA_normal Q)) (add_exp_to_atoms b e s_atom_normal1) ->
-  Forall (atom_to_semax P (RA_break Q)) (add_exp_to_atoms b e s_atom_break1) ->
-  Forall (atom_to_semax P (RA_continue Q)) (add_exp_to_atoms b e s_atom_continue1) ->
-  Forall (atom_ret_to_semax P (RA_return Q))
+  CForall (@pre_to_semax CS Espec Delta P) (add_exp_to_Cpres b e c_pre1) ->
+  Forall (atom_to_semax Delta P (RA_normal Q)) (add_exp_to_atoms b e s_atom_normal1) ->
+  Forall (atom_to_semax Delta P (RA_break Q)) (add_exp_to_atoms b e s_atom_break1) ->
+  Forall (atom_to_semax Delta P (RA_continue Q)) (add_exp_to_atoms b e s_atom_continue1) ->
+  Forall (atom_ret_to_semax Delta P (RA_return Q))
           (add_exp_to_ret_atoms b e s_atom_return1) ->
 ENTAIL Delta, allp_fun_id Delta && P
-|-- !! (bool_type (typeof e) = true) && tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr)).
+|-- !! (bool_type (typeof e) = true) && tc_expr Delta (Eunop Onotbool e (Ctypes.Tint I32 Signed noattr)).
 Proof.
   intros.
   destruct c_pre1 as [|s_pre' c_pre' s_pre1 c_pre1].
@@ -1976,7 +1986,7 @@ Qed.
 
 Lemma typed_true_or_typed_false': forall a,
   bool_type (typeof a) = true ->
-  ENTAIL Delta, (tc_expr Delta (Eunop Onotbool a (Tint I32 Signed noattr)))
+  ENTAIL Delta, (tc_expr Delta (Eunop Onotbool a (Ctypes.Tint I32 Signed noattr)))
   |-- (local (liftx (typed_true (typeof a)) (eval_expr a))) ||
   (local (liftx (typed_false (typeof a)) (eval_expr a))).
 Proof.
@@ -2052,8 +2062,8 @@ Proof.
 
 
 Lemma pre_to_semax_if_true_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
-CForall (@pre_to_semax P) (add_exp_to_Cpres true e c_pre) ->
-CForall (@pre_to_semax
+CForall (@pre_to_semax  CS Espec Delta P) (add_exp_to_Cpres true e c_pre) ->
+CForall (@pre_to_semax CS Espec Delta
      (P && local (liftx (typed_true (typeof e)) (eval_expr e)))) c_pre.
 Proof.
   intros.
@@ -2090,8 +2100,8 @@ Proof.
 Qed.
 
 Lemma pre_to_semax_if_false_inv_group: forall P e s_pre (c_pre: C_partial_pres s_pre),
-CForall (@pre_to_semax P) (add_exp_to_Cpres false e c_pre) ->
-CForall (@pre_to_semax
+CForall (@pre_to_semax  CS Espec Delta P) (add_exp_to_Cpres false e c_pre) ->
+CForall (@pre_to_semax CS Espec Delta
      (P && local (liftx (typed_false (typeof e)) (eval_expr e)))) c_pre.
 Proof.
   intros.
@@ -2130,8 +2140,8 @@ Qed.
 
 
 Lemma atom_to_semax_if_true_inv_group: forall P Q e atoms,
-Forall (@atom_to_semax P Q) (add_exp_to_atoms true (e) atoms) ->
-Forall (@atom_to_semax 
+Forall (@atom_to_semax  CS Espec Delta P Q) (add_exp_to_atoms true (e) atoms) ->
+Forall (@atom_to_semax  CS Espec Delta
     (P && local (liftx (typed_true (typeof e)) (eval_expr e)))
   Q) (atoms).
 Proof.
@@ -2169,8 +2179,8 @@ Proof.
 Qed.
 
 Lemma atom_to_semax_if_false_inv_group: forall P Q e atoms,
-Forall (@atom_to_semax P Q) (add_exp_to_atoms false e atoms) ->
-Forall (@atom_to_semax 
+Forall (@atom_to_semax  CS Espec Delta P Q) (add_exp_to_atoms false e atoms) ->
+Forall (@atom_to_semax  CS Espec Delta
     (P && local (liftx (typed_false (typeof e)) (eval_expr e)))
   Q) (atoms).
 Proof.
@@ -2209,8 +2219,8 @@ Proof.
 Qed.
 
 Lemma atom_ret_to_semax_if_true_inv_group: forall P Q e atoms,
-Forall (@atom_ret_to_semax P Q) (add_exp_to_ret_atoms true (e) atoms) ->
-Forall (@atom_ret_to_semax 
+Forall (@atom_ret_to_semax CS Espec Delta P Q) (add_exp_to_ret_atoms true (e) atoms) ->
+Forall (@atom_ret_to_semax CS Espec Delta 
     (P && local (liftx (typed_true (typeof e)) (eval_expr e)))
   Q) (atoms).
 Proof.
@@ -2256,8 +2266,8 @@ Qed.
 
 
 Lemma atom_ret_to_semax_if_false_inv_group: forall P Q e atoms,
-Forall (@atom_ret_to_semax P Q) (add_exp_to_ret_atoms false e atoms) ->
-Forall (@atom_ret_to_semax 
+Forall (@atom_ret_to_semax  CS Espec Delta P Q) (add_exp_to_ret_atoms false e atoms) ->
+Forall (@atom_ret_to_semax  CS Espec Delta
     (P && local (liftx (typed_false (typeof e)) (eval_expr e)))
   Q) (atoms).
 Proof.
@@ -2301,5 +2311,5 @@ Proof.
     }
 Qed.
 
-End Semantics.
+End SemanticsProofs.
 
