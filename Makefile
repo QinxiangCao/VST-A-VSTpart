@@ -23,7 +23,8 @@ CPROGS=append mytest sgn reverse # reverse #sumarray2  min  leap_year bst linked
 
 # CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v \
- semantics_lemmas.v soundness.v AClightFunc.v semanticsFunc.v AClightNotations.v strongFacts.v strongSoundness.v
+ semantics_lemmas.v soundness.v AClightFunc.v semanticsFunc.v strongFacts.v strongSoundness.v \
+ AClightNotations.v 
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 #  jmeq_lemmas.v \

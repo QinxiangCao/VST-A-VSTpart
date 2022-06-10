@@ -1,0 +1,23 @@
+FloydSeq
+- `hoist_pre`
+- [+] data_at ...
+
+
+
+
+CSplit
+- current split tactic is slow [check simpl]
+- evaluation with other tools
+  - [+] Verifast 
+  - [?] refinedC
+
+Frontend
+- loop with no invaraint not implemented
+- [+] extract Espec, Delta (VST start_function)
+
+
+- interface with funspec (append pre/post to AClight, exgiven)
+- more examples (and assertions need rewriting (prop))
+- auto list tactics
+- semax_call (with precise) is admitted
+- AClight -> split results printing
