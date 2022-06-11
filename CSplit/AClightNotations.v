@@ -161,141 +161,6 @@ Notation "!!"  := semax_lemmas.Cnot.
 Notation "{ x ; y ; .. ; z }" := (list_binded_cons x (list_binded_cons y .. (list_binded_cons z list_binded_nil) ..)) : list_scope.
 End AClightNotations.
 
-(* 
-int sgn (int x) {
-  //@ With x:Z,
-  //@ Require PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _x  (Vint (Int.repr x))) SEP ()
-  //@ Ensure PROP () LOCAL (temp ret_temp  (Vint (Int.repr (sgn x)))) SEP ()
-  int ret;
-  if (x <= 0) {
-    if(x == 0)
-      ret = 0;
-    else
-      ret = -1;
-  }
-  else
-    ret = 1;
-  return ret;
-} 
-*)
-
-(* Require Import CSplit.AClightFunc.
-
-
-Ltac cbv_conns := cbv [
-  atom_conn_return
-  atom_conn_returns
-  atoms_conn_returns
-  atom_conn_atom
-  atom_conn_atoms
-  atoms_conn_atoms
-  atom_conn_Spre
-  atom_conn_Spres
-  atoms_conn_Spres
-  Spost_conn_atom
-  Sposts_conn_atom
-  Spost_conn_return
-  Sposts_conn_return
-  Sposts_conn_atoms
-  Sposts_conn_returns
-  Spost_conn_Spre
-  Sposts_conn_Spres
-  add_exp_to_Spre
-  add_exp_to_Spres
-  add_exp_to_atom
-  add_exp_to_atoms
-  add_exp_to_ret_atom
-  add_exp_to_ret_atoms
-  add_P_to_Spre
-  add_P_to_atom
-  add_P_to_atom_ret
-  add_Q_to_Spost
-  add_Q_to_atom
-  add_Q_to_atoms
-
-  atom_conn_Cpre
-  atom_conn_Cpres
-  atoms_conn_Cpres
-  Cpost_conn_atom
-  Cposts_conn_atom
-  Cposts_conn_atoms
-  Cpost_conn_return
-  Cposts_conn_return
-  Cposts_conn_returns
-  Cpost_conn_Cpre_aux
-  Cpost_conn_Cpre
-  Cpost_conn_Cpres
-  Cposts_conn_Cpres
-  add_exp_to_Cpre
-  add_exp_to_Cpres
-  add_P_to_Cpre
-  add_P_to_Cpres
-  add_P_to_Catoms
-  add_P_to_Catom_rets
-  add_Q_to_Cpost
-  add_Q_to_Cposts
-  add_Q_to_Catoms
-
-  Smap Sconcat Sapp Capp Cmap
-].
-
-Ltac unfold_split := cbv [
-  S_split_sequence
-  S_split_ifthenelse
-  S_split_loop
-  S_split_loop_refined
-  S_split_assert
-  S_split_skip
-  S_split_assign
-  S_split_call
-  S_split_set
-  S_split_break
-  S_split_continue
-  S_split_return
-
-  S_split
-
-  C_split_assert
-  C_split_sequence
-  C_split_skip
-  C_split_assign
-  C_split_call
-  C_split_set
-  C_split_break
-  C_split_continue
-  C_split_return
-  C_split_ifthenelse
-  C_split_loop
-  C_split_loop_refined
-
-  C_split
-].
-
-Ltac unfold_ex := cbv [
-  hd_of
-  tl_of
-  flatten_binds
-  hd_assert_of_pre
-  flatten_partial_pres_binds
-  flatten_partial_posts_binds
-  flatten_partial_post_rets_binds
-  flatten_full_paths_binds
-  C_split_exgiven
-  add_exP_to_Cpre
-
-  
-  
-C_result_proj_C_pre
-C_result_proj_C_post_normal
-C_result_proj_C_post_break
-C_result_proj_C_post_continue
-C_result_proj_C_post_return
-C_result_proj_C_path
-].
-
-Arguments C_split {_} _.
-*)
-
 
 Ltac compute_split c_stm :=
 (* let res0a := eval unfold s_stm in  in *)
@@ -463,11 +328,115 @@ let res4 :=  eval cbv [
 
   Smap Sconcat Sapp Capp Cmap
 ] in res3 in
-let res5 := eval simpl in res4 in    
-    exact res5.
+(* let res5 := eval simpl in res4 in     *)
+    exact res4.
+
+    Import AClightNotations.
+
+
+    Require Import cprogs.reverse_prog.
+    Require Import cprogs.reverse_def.
+
+Parameter (sh:share) (p:val) (l: list val).
+
+Definition f_reverse_hint :=
+(
+  (Csequence
+    Cskip
+    (Csequence
+      Cskip
+      (Csequence
+        (Cset _w (Ecast (Econst_int (Int.repr 0) tint) (tptr tvoid)))
+        (Csequence
+          (Cset _v (Etempvar _p (tptr (Tstruct _list noattr))))
+          (Csequence
+            (Cloop
+              (Csequence
+                (Cassert (
+        (EX w v l1 l2,
+          PROP  (l = rev l1 ++ l2)
+    LOCAL (temp _w w; temp _v v)
+    SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
+                (EXGIVEN w
+                  [[((EX v l1 l2,
+          PROP  (l = rev l1 ++ l2)
+    LOCAL (temp _w w; temp _v v)
+    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
+                  (EXGIVEN v
+                    [[((EX l1 l2,
+          PROP  (l = rev l1 ++ l2)
+    LOCAL (temp _w w; temp _v v)
+    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
+                    (EXGIVEN l1
+                      [[((EX l2,
+          PROP  (l = rev l1 ++ l2)
+    LOCAL (temp _w w; temp _v v)
+    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
+                      (EXGIVEN l2
+                        [[((PROP  (l = rev l1 ++ l2)
+    LOCAL (temp _w w; temp _v v)
+    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
+                        (Csequence
+                          (Cifthenelse (Etempvar _v (tptr (Tstruct _list noattr)))
+                            Cskip
+                            (Csequence Cbreak Cskip))
+                          (Csequence
+                            (Cassert (
+          (EX t x l2',
+      PROP  (l2 = x :: l2')
+      LOCAL (temp _w w; temp _v v)
+      SEP   (data_at sh t_struct_list (x, t) v;
+              listrep sh l1 w; listrep sh l2' t))%assert))
+                            (EXGIVEN t
+                              [[((EX x l2',
+      PROP  (l2 = x :: l2')
+      LOCAL (temp _w w; temp _v v)
+      SEP   (data_at sh t_struct_list (x, t) v;
+              listrep sh l1 w; listrep sh l2' t))%assert)]] 
+                              (EXGIVEN x
+                                [[((EX l2',
+      PROP  (l2 = x :: l2')
+      LOCAL (temp _w w; temp _v v)
+      SEP   (data_at sh t_struct_list (x, t) v;
+              listrep sh l1 w; listrep sh l2' t))%assert)]] 
+                                (EXGIVEN l2'
+                                  [[((PROP  (l2 = x :: l2')
+      LOCAL (temp _w w; temp _v v)
+      SEP   (data_at sh t_struct_list (x, t) v;
+              listrep sh l1 w; listrep sh l2' t))%assert)]] 
+                                  (Csequence
+                                    (Cset _t
+                                      (Efield
+                                        (Ederef
+                                          (Etempvar _v (tptr (Tstruct _list noattr)))
+                                          (Tstruct _list noattr)) _tail
+                                        (tptr (Tstruct _list noattr))))
+                                    (Csequence
+                                      (Cassign
+                                        (Efield
+                                          (Ederef
+                                            (Etempvar _v (tptr (Tstruct _list noattr)))
+                                            (Tstruct _list noattr)) _tail
+                                          (tptr (Tstruct _list noattr)))
+                                        (Etempvar _w (tptr (Tstruct _list noattr))))
+                                      (Csequence
+                                        (Cset _w
+                                          (Etempvar _v (tptr (Tstruct _list noattr))))
+                                        (Csequence
+                                          (Cset _v
+                                            (Etempvar _t (tptr (Tstruct _list noattr))))
+                                          Cskip))))))))))))))
+              Cskip)
+            (Csequence
+              (Creturn (Some (Etempvar _w (tptr (Tstruct _list noattr)))))
+              Cskip))))))).
 
 
 
+Definition f_reverse_hint_split :=
+  ltac:(compute_split f_reverse_hint).
+
+Print f_reverse_hint_split. 
 (* Goal C_split f_append_hint = C_split f_append_hint.
 unfold f_append_hint.
 cbv_conns.

@@ -23,33 +23,18 @@ Require Import VST.veric.SeparationLogic.
 Import ListNotations.
 
 
-Definition Sconcat :=
-  fun {A : Type} =>
-  fix Sconcat (l : list (list A)) : list A :=
-    match l with
-    | [] => []
-    | x :: l0 => x ++ Sconcat l0
-    end.
-
-Definition Smap :=
-  fun {A B : Type} (f : A -> B) =>
-  fix Smap (l : list A) : list B :=
-  match l with
-  | [] => []
-  | a :: t => f a :: Smap t
-  end.
-
 Definition Sapp :=
   fun {A : Type} =>
   fix Sapp (l m : list A) {struct l} : list A :=
     match l with
-    | [] => m
+    | nil => m
     | a :: l1 => a :: Sapp l1 m
     end.
 
+
+
 (* Higher Order Auxiliary Definitions and Functions
    on dependent results *)
-
 Inductive list_binded_of {R : Type} {binder: R -> Type} : list R -> Type :=
 | list_binded_nil : list_binded_of []
 | list_binded_cons (r:R) (r': binder r) (l: list R)
@@ -58,13 +43,51 @@ Inductive list_binded_of {R : Type} {binder: R -> Type} : list R -> Type :=
 Fixpoint Capp {A:Type} {binder: A -> Type} 
   {sl1: list A} (cl1 : @list_binded_of A binder sl1)
   {sl2: list A} (cl2 : @list_binded_of A binder sl2)
-  : @list_binded_of A binder (sl1 ++ sl2) :=
+  : @list_binded_of A binder (Sapp sl1  sl2) :=
 match cl1 in list_binded_of sl1'
-return list_binded_of (sl1' ++ sl2) with
+return list_binded_of (Sapp sl1'  sl2) with
 | list_binded_nil => cl2
 | list_binded_cons sx cx sl1' cl1' =>
   list_binded_cons sx cx (app sl1' sl2) (Capp cl1' cl2)
 end.
+
+
+Declare Scope aclight_scope.
+Local Close Scope list_scope.
+
+
+Infix "::" := cons (at level 60, right associativity) : aclight_scope.
+Notation "[ ]" := nil (format "[ ]") : aclight_scope.
+Notation "[ x ]" := (cons x nil) : aclight_scope.
+Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)) : aclight_scope.
+Infix "+/+" := Sapp (right associativity, at level 60) : aclight_scope.
+Infix "+++" := Capp (right associativity, at level 60) : aclight_scope.
+
+Open Scope aclight_scope.
+
+Delimit Scope aclight_scope with aclight.
+
+Bind Scope aclight_scope with list.
+
+
+Definition Sconcat :=
+  fun {A : Type} =>
+  fix Sconcat (l : list (list A)) : list A :=
+    match l with
+    | nil => nil
+    | x :: l0 => x +/+ Sconcat l0
+    end.
+
+
+Definition Smap :=
+  fun {A B : Type} (f : A -> B) =>
+  fix Smap (l : list A) : list B :=
+  match l with
+  | nil => nil
+  | a :: t => f a :: Smap t
+  end.
+
+
 
 Fixpoint Cmap {A B:Type} {binder_a: A -> Type} {binder_b: B -> Type} 
   (f: A -> B ) (binder_f: forall a, binder_a a -> binder_b (f a)) 
@@ -77,15 +100,6 @@ return list_binded_of (Smap f sl') with
   list_binded_cons (f sx) (binder_f sx cx)
                    (Smap f sl') (Cmap f binder_f cl')
 end.
-
-
-Declare Scope aclight_scope.
-
-
-Infix "++" := Sapp (right associativity, at level 60) : aclight_scope.
-Infix "+++" := Capp (right associativity, at level 60) : aclight_scope.
-
-Open Scope aclight_scope.
 
 
 
@@ -328,43 +342,44 @@ Inductive C_result : S_result -> Type :=
 Definition atom_conn_return atom1 atom2 :=
   match atom1, atom2 with
   | mk_atom path1, mk_atom_ret path2 retval =>
-      mk_atom_ret (path1 ++ path2) retval
+      mk_atom_ret (path1 +/+ path2) retval
   end.
 
+
 Definition atom_conn_returns atom1 atoms2 :=
-  map (atom_conn_return atom1) atoms2.
+  Smap (atom_conn_return atom1) atoms2.
 
 Definition atoms_conn_returns atoms1 atoms2 :=
-  concat (map (fun atom1 => atom_conn_returns atom1 atoms2) atoms1).
+  Sconcat (Smap (fun atom1 => atom_conn_returns atom1 atoms2) atoms1).
 
 Definition atom_conn_atom atom1 atom2 :=
   match atom1, atom2 with
   | mk_atom path1, mk_atom path2 =>
-      mk_atom (path1 ++ path2)
+      mk_atom (path1 +/+ path2)
   end.
 
 Definition atom_conn_atoms atom1 atoms2 :=
-  map (atom_conn_atom atom1) atoms2.
+  Smap (atom_conn_atom atom1) atoms2.
 
 Definition atoms_conn_atoms atoms1 atoms2 :=
-  concat (map (fun atom1 => atom_conn_atoms atom1 atoms2) atoms1).
+  Sconcat (Smap (fun atom1 => atom_conn_atoms atom1 atoms2) atoms1).
 
 Definition atom_conn_Spre atom1 s_pre2 :=
   match atom1, s_pre2 with
   | mk_atom path1, mk_S_partial_pre path2 =>
-      mk_S_partial_pre (path1 ++ path2)
+      mk_S_partial_pre (path1 +/+ path2)
   end.
 
 
 Definition atom_conn_Spres atom1 s_pres2 :=
-    map (atom_conn_Spre atom1) s_pres2.
+    Smap (atom_conn_Spre atom1) s_pres2.
 
 
 Fixpoint atoms_conn_Spres atoms1 s_pres2 :=
   match atoms1 with
   | [] => []
   | atom1 :: atoms1' =>
-    atom_conn_Spres atom1 s_pres2 ++ atoms_conn_Spres atoms1' s_pres2
+    atom_conn_Spres atom1 s_pres2 +/+ atoms_conn_Spres atoms1' s_pres2
   end.
 
 Definition Spost_conn_atom s_post1 atom2 :=
@@ -372,12 +387,12 @@ Definition Spost_conn_atom s_post1 atom2 :=
   | mk_S_partial_post path1 =>
     match atom2 with
     | mk_atom path2 =>
-        mk_S_partial_post (path1 ++ path2)
+        mk_S_partial_post (path1 +/+ path2)
     end
   end.
 
 Definition Sposts_conn_atom s_posts1 atom2 :=
-  map (fun s_post1 => Spost_conn_atom s_post1 atom2) s_posts1.
+  Smap (fun s_post1 => Spost_conn_atom s_post1 atom2) s_posts1.
 
 
 Definition Spost_conn_return s_post1 atom2 :=
@@ -385,20 +400,20 @@ Definition Spost_conn_return s_post1 atom2 :=
   | mk_S_partial_post path1 =>
     match atom2 with
     | mk_atom_ret path2 retval =>
-        mk_S_partial_post_ret (path1 ++ path2) retval
+        mk_S_partial_post_ret (path1 +/+ path2) retval
     end
   end.
 
   
 Definition Sposts_conn_return s_posts1 atom2 :=
-  map (fun s_post1 => Spost_conn_return s_post1 atom2) s_posts1.
+  Smap (fun s_post1 => Spost_conn_return s_post1 atom2) s_posts1.
 
 
 Fixpoint Sposts_conn_atoms s_posts1 atoms2 :=
   match atoms2 with
   | [] => []
   | atom2 :: atoms2' =>
-    Sposts_conn_atom s_posts1 atom2 ++ Sposts_conn_atoms s_posts1 atoms2'
+    Sposts_conn_atom s_posts1 atom2 +/+ Sposts_conn_atoms s_posts1 atoms2'
   end.
 
 
@@ -406,7 +421,7 @@ Fixpoint Sposts_conn_returns s_posts1 atoms2 :=
   match atoms2 with
   | [] => []
   | atom2 :: atoms2' =>
-    Sposts_conn_return s_posts1 atom2 ++ Sposts_conn_returns s_posts1 atoms2'
+    Sposts_conn_return s_posts1 atom2 +/+ Sposts_conn_returns s_posts1 atoms2'
   end.
 
 
@@ -417,12 +432,12 @@ match s_post1 with
 | mk_S_partial_post path1 =>
   match s_pre2 with
   | mk_S_partial_pre path2 =>
-      mk_S_full_path (path1 ++ path2)
+      mk_S_full_path (path1 +/+ path2)
   end
 end.
 
 Notation Spost_conn_Spres s_post1 s_pres2 :=
-(map (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2) s_pres2).
+(Smap (fun s_pre2 => Spost_conn_Spre s_post1 s_pre2) s_pres2).
 
 Fixpoint Sposts_conn_Spres 
   (s_posts1: S_partial_posts)
@@ -430,7 +445,7 @@ Fixpoint Sposts_conn_Spres
   match s_posts1 with
   | [] => []
   | s_post1 :: s_posts1' =>
-    Spost_conn_Spres s_post1 s_pres2 ++ 
+    Spost_conn_Spres s_post1 s_pres2 +/+ 
     Sposts_conn_Spres s_posts1' s_pres2
   end.
 
@@ -442,7 +457,7 @@ match s_pre with
 end.
 
 Definition add_exp_to_Spres b e s_pres :=
-map (add_exp_to_Spre b e) s_pres.
+Smap (add_exp_to_Spre b e) s_pres.
 
 Definition add_exp_to_atom b e (atom: atom) :=
 match atom with
@@ -451,7 +466,7 @@ match atom with
 end.
 
 Definition add_exp_to_atoms b e atoms :=
-map (add_exp_to_atom b e) atoms.
+Smap (add_exp_to_atom b e) atoms.
 
 
 Definition add_exp_to_ret_atom b e (atom: atom_ret) :=
@@ -461,7 +476,7 @@ match atom with
 end.
 
 Definition add_exp_to_ret_atoms b e atoms :=
-map (add_exp_to_ret_atom b e) atoms.
+Smap (add_exp_to_ret_atom b e) atoms.
 
 Definition add_P_to_Spre s_pre :=
 match s_pre with
@@ -469,7 +484,7 @@ match s_pre with
     mk_S_full_path path
 end.
 
-Notation add_P_to_Spres := (map add_P_to_Spre).
+Notation add_P_to_Spres := (Smap add_P_to_Spre).
 
 Definition add_P_to_atom s_atom :=
 match s_atom with
@@ -477,7 +492,7 @@ match s_atom with
     mk_S_partial_post path
 end.
 
-Notation add_P_to_atoms := (map add_P_to_atom).
+Notation add_P_to_atoms := (Smap add_P_to_atom).
 
 Definition add_P_to_atom_ret s_atom :=
 match s_atom with
@@ -485,7 +500,7 @@ match s_atom with
     mk_S_partial_post_ret path retval
 end.
 
-Notation add_P_to_atom_rets := (map add_P_to_atom_ret).
+Notation add_P_to_atom_rets := (Smap add_P_to_atom_ret).
 
 Definition add_Q_to_Spost s_post :=
 match s_post with
@@ -493,7 +508,7 @@ match s_post with
     mk_S_full_path path
 end.
 
-Notation add_Q_to_Sposts := (map add_Q_to_Spost).
+Notation add_Q_to_Sposts := (Smap add_Q_to_Spost).
 
 Definition add_Q_to_atom s_atom :=
 match s_atom with
@@ -508,7 +523,7 @@ Fixpoint add_Q_to_atoms s_atoms :=
     (add_Q_to_atom s_atom) :: add_Q_to_atoms s_atoms'
   end.
 
-(* Notation add_Q_to_atoms := (map add_Q_to_atom). *)
+(* Notation add_Q_to_atoms := (Smap add_Q_to_atom). *)
 
 (***********************************)
 (** Dependent Operations on split results *)
@@ -520,7 +535,7 @@ match s_atom1 with
   match c_pre2 in C_partial_pre s_pre2'
   return C_partial_pre (atom_conn_Spre (mk_atom path1) s_pre2') with
   | mk_C_partial_pre path2 post2 =>
-      mk_C_partial_pre (path1 ++ path2) post2
+      mk_C_partial_pre (path1 +/+ path2) post2
   (* | bind_C_partial_pre A HA s_pre2 c_pre2' =>
       bind_C_partial_pre A HA (atom_conn_Spre (mk_atom path1) s_pre2)
         (fun a => atom_conn_Cpre (mk_atom path1) (c_pre2' a)) *)
@@ -552,7 +567,7 @@ Fixpoint Cpost_conn_atom { s_post1 }
   match c_post1 in C_partial_post s_post1'
   return C_partial_post (Spost_conn_atom s_post1' (mk_atom path2)) with
   | mk_C_partial_post pre1 path1 =>
-      mk_C_partial_post pre1 (path1 ++ path2)
+      mk_C_partial_post pre1 (path1 +/+ path2)
   | bind_C_partial_post A s_post1 c_post1' =>
       bind_C_partial_post A (Spost_conn_atom s_post1 (mk_atom path2))
         (fun a => Cpost_conn_atom (c_post1' a) (mk_atom path2))
@@ -589,7 +604,7 @@ Fixpoint Cpost_conn_return { s_post1 }
   match c_post1 in C_partial_post s_post1'
   return C_partial_post_ret (Spost_conn_return s_post1' (mk_atom_ret path2 retval)) with
   | mk_C_partial_post pre1 path1 =>
-      mk_C_partial_post_ret pre1 (path1 ++ path2) retval
+      mk_C_partial_post_ret pre1 (path1 +/+ path2) retval
   | bind_C_partial_post A s_post1 c_post1' =>
       bind_C_partial_post_ret A (Spost_conn_return s_post1 (mk_atom_ret path2 retval))
         (fun a => Cpost_conn_return (c_post1' a) (mk_atom_ret path2 retval))
@@ -626,7 +641,7 @@ Definition Cpost_conn_Cpre_aux
 match c_pre2 in C_partial_pre s_pre2'
 return C_full_path (Spost_conn_Spre (mk_S_partial_post path1) s_pre2') with
 | mk_C_partial_pre path2 post =>
-    mk_C_full_path pre (path1 ++ path2) post
+    mk_C_full_path pre (path1 +/+ path2) post
 (* | bind_C_partial_pre A HA s_pre2 c_pre2' =>
     bind_C_full_path A HA 
       (Spost_conn_Spre (mk_S_partial_post path1) s_pre2)
@@ -791,37 +806,38 @@ Definition S_split_sequence res1 res2 :=
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) =>
       Some (mk_S_result_rec
       (* S_pre *)
-        (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2)
+        (Sapp (s_pre1)  (atoms_conn_Spres s_atom_normal1 s_pre2))
       (* S_path *)
-        (s_path1 ++ s_path2 ++ 
+        (s_path1 +/+ s_path2 +/+ 
           Sposts_conn_Spres s_post_normal1 s_pre2)
       (* S_post_normal *)
-        (s_post_normal2 ++ 
+        (s_post_normal2 +/+ 
           Sposts_conn_atoms s_post_normal1 s_atom_normal2)
       (* S_post_break *)
-        (s_post_break1 ++ s_post_break2 ++ 
+        (s_post_break1 +/+ s_post_break2 +/+ 
           Sposts_conn_atoms s_post_normal1 s_atom_break2)
       (* S_post_continue *)
-        (s_post_continue1 ++ s_post_continue2 ++ 
+        (s_post_continue1 +/+ s_post_continue2 +/+ 
           Sposts_conn_atoms s_post_normal1 s_atom_continue2)
       (* S_post_return *)
-        (s_post_return1 ++ s_post_return2 ++ 
+        (s_post_return1 +/+ s_post_return2 +/+ 
           Sposts_conn_returns s_post_normal1 s_atom_return2)
       (* S_atom_normal *)
         (atoms_conn_atoms s_atom_normal1 s_atom_normal2)
       (* S_atom_break *)
-        (s_atom_break1 ++
+        (s_atom_break1 +/+
           atoms_conn_atoms s_atom_normal1 s_atom_break2)
       (* S_atom_continue *)
-        (s_atom_continue1 ++
+        (s_atom_continue1 +/+
           atoms_conn_atoms s_atom_normal1 s_atom_continue2)
       (* S_atom_return *)
-        (s_atom_return1 ++
-          atoms_conn_returns s_atom_normal1 s_atom_return2))
+        (s_atom_return1 +/+
+          atoms_conn_returns s_atom_normal1 s_atom_return2))%aclight
     | None => None
     end
   | None => None
   end.
+
 
 
 Definition S_split_ifthenelse (e: expr) res1 res2 := 
@@ -835,28 +851,28 @@ Definition S_split_ifthenelse (e: expr) res1 res2 :=
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) =>
       Some (mk_S_result_rec 
       (* S_pre *)
-        (add_exp_to_Spres true e s_pre1 ++ add_exp_to_Spres false e s_pre2)
+        (add_exp_to_Spres true e s_pre1 +/+ add_exp_to_Spres false e s_pre2)
       (* S_path *)
-        (s_path1 ++ s_path2)
+        (s_path1 +/+ s_path2)
       (* S_post_normal *)
-        (s_post_normal1 ++ s_post_normal2)
+        (s_post_normal1 +/+ s_post_normal2)
       (* S_post_break *)
-        (s_post_break1 ++ s_post_break2)
+        (s_post_break1 +/+ s_post_break2)
       (* S_post_continue *)
-        (s_post_continue1 ++ s_post_continue2)
+        (s_post_continue1 +/+ s_post_continue2)
       (* S_post_return *)
-        (s_post_return1 ++ s_post_return2)
+        (s_post_return1 +/+ s_post_return2)
       (* S_atom_normal *)
-        (add_exp_to_atoms true e s_atom_normal1 ++
+        (add_exp_to_atoms true e s_atom_normal1 +/+
           add_exp_to_atoms false e s_atom_normal2)
       (* S_atom_break *)
-        (add_exp_to_atoms true e s_atom_break1 ++
+        (add_exp_to_atoms true e s_atom_break1 +/+
           add_exp_to_atoms false e s_atom_break2)     
       (* S_atom_continue *)
-        (add_exp_to_atoms true e s_atom_continue1 ++
+        (add_exp_to_atoms true e s_atom_continue1 +/+
           add_exp_to_atoms false e s_atom_continue2)
       (* S_atom_return *)
-        (add_exp_to_ret_atoms true e s_atom_return1 ++
+        (add_exp_to_ret_atoms true e s_atom_return1 +/+
         add_exp_to_ret_atoms false e s_atom_return2))
     | None => None
     end
@@ -875,79 +891,79 @@ Definition S_split_loop res1 res2 :=
           s_atom_normal2 s_atom_break2 s_atom_continue2 s_atom_return2) =>
       Some (mk_S_result_rec 
       (* S_pre *)
-        (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-          atoms_conn_Spres s_atom_continue1 s_pre2 ++
+        (s_pre1 +/+ atoms_conn_Spres s_atom_normal1 s_pre2 +/+ 
+          atoms_conn_Spres s_atom_continue1 s_pre2 +/+ 
           atoms_conn_Spres s_atom_normal1
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
           atoms_conn_Spres s_atom_continue1
             (add_Q_to_atoms s_atom_continue2))
       (* S_path *)
-        (s_path1 ++ s_path2 ++ 
-          Sposts_conn_Spres s_post_normal1 s_pre2 ++
-          Sposts_conn_Spres s_post_continue1 s_pre2 ++
-          Sposts_conn_Spres s_post_normal2 s_pre1 ++
+        (s_path1 +/+ s_path2 +/+ 
+          Sposts_conn_Spres s_post_normal1 s_pre2 +/+ 
+          Sposts_conn_Spres s_post_continue1 s_pre2 +/+ 
+          Sposts_conn_Spres s_post_normal2 s_pre1 +/+ 
           Sposts_conn_Spres s_post_normal1
-            (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+            (atoms_conn_Spres s_atom_normal2 s_pre1) +/+ 
           Sposts_conn_Spres s_post_continue1
-            (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+            (atoms_conn_Spres s_atom_normal2 s_pre1) +/+ 
           Sposts_conn_Spres 
             (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-            s_pre2 ++
+            s_pre2 +/+ 
           Sposts_conn_Spres 
             (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-            s_pre2 ++
+            s_pre2 +/+ 
           Sposts_conn_Spres
             (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
           Sposts_conn_Spres
             (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
           Sposts_conn_Spres s_post_normal1
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
           Sposts_conn_Spres s_post_continue1
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
           add_Q_to_Sposts s_post_continue2)
       (* S_post_normal *)
-        (s_post_break1 ++ s_post_break2 ++ 
-          Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
-          Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
-          Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
+        (s_post_break1 +/+ s_post_break2 +/+ 
+          Sposts_conn_atoms s_post_normal1 s_atom_break2 +/+ 
+          Sposts_conn_atoms s_post_normal2 s_atom_break1 +/+ 
+          Sposts_conn_atoms s_post_continue1 s_atom_break2 +/+ 
           Sposts_conn_atoms
             (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-            s_atom_break2 ++
+            s_atom_break2 +/+ 
           Sposts_conn_atoms 
             (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-            s_atom_break2 ++
+            s_atom_break2 +/+ 
           Sposts_conn_atoms s_post_normal1
-            (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
+            (atoms_conn_atoms s_atom_normal2 s_atom_break1) +/+ 
           Sposts_conn_atoms s_post_continue1
             (atoms_conn_atoms s_atom_normal2 s_atom_break1))
       (* S_post_break *)    []
       (* S_post_continue *) []
       (* S_post_return *)
-        (s_post_return1 ++ s_post_return2 ++ 
-          Sposts_conn_returns s_post_normal1 s_atom_return2 ++
-          Sposts_conn_returns s_post_continue1 s_atom_return2 ++
-          Sposts_conn_returns s_post_normal2 s_atom_return1 ++
+        (s_post_return1 +/+ s_post_return2 +/+ 
+          Sposts_conn_returns s_post_normal1 s_atom_return2 +/+ 
+          Sposts_conn_returns s_post_continue1 s_atom_return2 +/+ 
+          Sposts_conn_returns s_post_normal2 s_atom_return1 +/+ 
           Sposts_conn_returns 
             (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-            s_atom_return2 ++
+            s_atom_return2 +/+ 
           Sposts_conn_returns 
             (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-            s_atom_return2 ++
+            s_atom_return2 +/+ 
           Sposts_conn_returns s_post_normal1 
-            (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
+            (atoms_conn_returns s_atom_normal2 s_atom_return1) +/+ 
           Sposts_conn_returns s_post_continue1 
             (atoms_conn_returns s_atom_normal2 s_atom_return1))
       (* S_atom_normal *)
-        (s_atom_break1 ++
-          atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
+        (s_atom_break1 +/+
+          atoms_conn_atoms s_atom_normal1 s_atom_break2 +/+
           atoms_conn_atoms s_atom_continue1 s_atom_break2)
       (* S_atom_break *)    []
       (* S_atom_continue *) []
       (* S_atom_return *)
-        (s_atom_return1 ++
-          atoms_conn_returns s_atom_normal1 s_atom_return2 ++
+        (s_atom_return1 +/+
+          atoms_conn_returns s_atom_normal1 s_atom_return2 +/+ 
           atoms_conn_returns s_atom_continue1 s_atom_return2 ))
       (* ) else None *)
       (* end *)
@@ -1366,32 +1382,32 @@ match res1, res2 with
       c_post_break2 c_post_continue2 c_post_return2 =>
     mk_C_result_rec
     (* S_pre *)
-      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2)
+      (s_pre1 +/+ atoms_conn_Spres s_atom_normal1 s_pre2)
       (* S_path *)
-      (s_path1 ++ s_path2 ++ 
+      (s_path1 +/+ s_path2 +/+ 
       Sposts_conn_Spres s_post_normal1 s_pre2)
       (* S_post_normal *)
-      (s_post_normal2 ++ 
+      (s_post_normal2 +/+ 
       Sposts_conn_atoms s_post_normal1 s_atom_normal2)
       (* S_post_break *)
-      (s_post_break1 ++ s_post_break2 ++ 
+      (s_post_break1 +/+ s_post_break2 +/+ 
       Sposts_conn_atoms s_post_normal1 s_atom_break2)
       (* S_post_continue *)
-      (s_post_continue1 ++ s_post_continue2 ++ 
+      (s_post_continue1 +/+ s_post_continue2 +/+ 
       Sposts_conn_atoms s_post_normal1 s_atom_continue2)
       (* S_post_return *)
-      (s_post_return1 ++ s_post_return2 ++ 
+      (s_post_return1 +/+ s_post_return2 +/+ 
       Sposts_conn_returns s_post_normal1 s_atom_return2)
     (* S_atom_normal *)
       (atoms_conn_atoms s_atom_normal1 s_atom_normal2)
     (* S_atom_break *)
-      (s_atom_break1 ++
+      (s_atom_break1 +/+ 
         atoms_conn_atoms s_atom_normal1 s_atom_break2)
     (* S_atom_continue *)
-      (s_atom_continue1 ++
+      (s_atom_continue1 +/+ 
         atoms_conn_atoms s_atom_normal1 s_atom_continue2)
     (* S_atom_return *)
-      (s_atom_return1 ++
+      (s_atom_return1 +/+ 
         atoms_conn_returns s_atom_normal1 s_atom_return2)
       (* C_pre *)
       (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2)
@@ -1481,20 +1497,20 @@ mk_C_result_rec
 (* S_pre *)
   ( [ mk_S_partial_pre nil ])
 (* S_path *)
-  (s_path ++ 
+  (s_path +/+ 
     (* add_P_to_Spres s_pre) *)
     Sposts_conn_Spres [ass_post_normal_S] s_pre)
 (* S_post_normal *)
-  (s_post_normal ++ 
+  (s_post_normal +/+ 
     Sposts_conn_atoms [ass_post_normal_S] s_atom_normal)
 (* S_post_break *)
-  (s_post_break ++ 
+  (s_post_break +/+ 
     Sposts_conn_atoms [ass_post_normal_S] s_atom_break)
 (* S_post_continue *)
-  (s_post_continue ++ 
+  (s_post_continue +/+ 
     Sposts_conn_atoms [ass_post_normal_S] s_atom_continue)
 (* S_post_return *)
-  ( s_post_return ++ 
+  ( s_post_return +/+ 
     Sposts_conn_returns [ass_post_normal_S] s_atom_return)
 (* S_atom_normal *)   []
 (* S_atom_break *)    []
@@ -1684,28 +1700,28 @@ match res1, res2 with
       c_post_break2 c_post_continue2 c_post_return2 =>
     mk_C_result_rec
     (* S_pre *)
-      (add_exp_to_Spres true e s_pre1 ++ add_exp_to_Spres false e s_pre2)
+      (add_exp_to_Spres true e s_pre1 +/+ add_exp_to_Spres false e s_pre2)
     (* S_path *)
-      (s_path1 ++ s_path2)
+      (s_path1 +/+ s_path2)
     (* S_post_normal *)
-      (s_post_normal1 ++ s_post_normal2)
+      (s_post_normal1 +/+ s_post_normal2)
     (* S_post_break *)
-      (s_post_break1 ++ s_post_break2)
+      (s_post_break1 +/+ s_post_break2)
     (* S_post_continue *)
-      (s_post_continue1 ++ s_post_continue2)
+      (s_post_continue1 +/+ s_post_continue2)
     (* S_post_return *)
-      (s_post_return1 ++ s_post_return2)
+      (s_post_return1 +/+ s_post_return2)
     (* S_atom_normal *)
-      (add_exp_to_atoms true e s_atom_normal1 ++
+      (add_exp_to_atoms true e s_atom_normal1 +/+ 
         add_exp_to_atoms false e s_atom_normal2)
     (* S_atom_break *)
-      (add_exp_to_atoms true e s_atom_break1 ++
+      (add_exp_to_atoms true e s_atom_break1 +/+ 
         add_exp_to_atoms false e s_atom_break2)     
     (* S_atom_continue *)
-      (add_exp_to_atoms true e s_atom_continue1 ++
+      (add_exp_to_atoms true e s_atom_continue1 +/+ 
         add_exp_to_atoms false e s_atom_continue2)
     (* S_atom_return *)
-      (add_exp_to_ret_atoms true e s_atom_return1 ++
+      (add_exp_to_ret_atoms true e s_atom_return1 +/+ 
       add_exp_to_ret_atoms false e s_atom_return2)
     (* C_pre *)
       (add_exp_to_Cpres true e c_pre1 +++ add_exp_to_Cpres false e c_pre2)
@@ -1743,79 +1759,79 @@ match res1, res2 with
 
     mk_C_result_rec 
     (* S_pre *)
-      (s_pre1 ++ atoms_conn_Spres s_atom_normal1 s_pre2 ++
-        atoms_conn_Spres s_atom_continue1 s_pre2 ++
+      (s_pre1 +/+ atoms_conn_Spres s_atom_normal1 s_pre2 +/+ 
+        atoms_conn_Spres s_atom_continue1 s_pre2 +/+ 
         atoms_conn_Spres s_atom_normal1
-            (add_Q_to_atoms s_atom_continue2) ++
+            (add_Q_to_atoms s_atom_continue2) +/+ 
         atoms_conn_Spres s_atom_continue1
           (add_Q_to_atoms s_atom_continue2))
     (* S_path *)
-      (s_path1 ++ s_path2 ++ 
-        Sposts_conn_Spres s_post_normal1 s_pre2 ++
-        Sposts_conn_Spres s_post_continue1 s_pre2 ++
-        Sposts_conn_Spres s_post_normal2 s_pre1 ++
+      (s_path1 +/+ s_path2 +/+ 
+        Sposts_conn_Spres s_post_normal1 s_pre2 +/+ 
+        Sposts_conn_Spres s_post_continue1 s_pre2 +/+ 
+        Sposts_conn_Spres s_post_normal2 s_pre1 +/+ 
         Sposts_conn_Spres s_post_normal1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+          (atoms_conn_Spres s_atom_normal2 s_pre1) +/+ 
         Sposts_conn_Spres s_post_continue1
-          (atoms_conn_Spres s_atom_normal2 s_pre1) ++
+          (atoms_conn_Spres s_atom_normal2 s_pre1) +/+ 
         Sposts_conn_Spres 
           (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-          s_pre2 ++
+          s_pre2 +/+ 
         Sposts_conn_Spres 
           (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-          s_pre2 ++
+          s_pre2 +/+ 
         Sposts_conn_Spres
           (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-          (add_Q_to_atoms s_atom_continue2) ++
+          (add_Q_to_atoms s_atom_continue2) +/+ 
         Sposts_conn_Spres
           (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-          (add_Q_to_atoms s_atom_continue2) ++
+          (add_Q_to_atoms s_atom_continue2) +/+ 
         Sposts_conn_Spres s_post_normal1
-          (add_Q_to_atoms s_atom_continue2) ++
+          (add_Q_to_atoms s_atom_continue2) +/+ 
         Sposts_conn_Spres s_post_continue1
-          (add_Q_to_atoms s_atom_continue2) ++
+          (add_Q_to_atoms s_atom_continue2) +/+ 
         add_Q_to_Sposts s_post_continue2)
     (* S_post_normal *)
-      (s_post_break1 ++ s_post_break2 ++
-        Sposts_conn_atoms s_post_normal1 s_atom_break2 ++
-        Sposts_conn_atoms s_post_normal2 s_atom_break1 ++
-        Sposts_conn_atoms s_post_continue1 s_atom_break2 ++
+      (s_post_break1 +/+ s_post_break2 +/+ 
+        Sposts_conn_atoms s_post_normal1 s_atom_break2 +/+ 
+        Sposts_conn_atoms s_post_normal2 s_atom_break1 +/+ 
+        Sposts_conn_atoms s_post_continue1 s_atom_break2 +/+ 
         Sposts_conn_atoms
           (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-          s_atom_break2 ++
+          s_atom_break2 +/+ 
         Sposts_conn_atoms 
           (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-          s_atom_break2 ++
+          s_atom_break2 +/+ 
         Sposts_conn_atoms s_post_normal1
-          (atoms_conn_atoms s_atom_normal2 s_atom_break1) ++
+          (atoms_conn_atoms s_atom_normal2 s_atom_break1) +/+ 
         Sposts_conn_atoms s_post_continue1
           (atoms_conn_atoms s_atom_normal2 s_atom_break1))
     (* S_post_break *)    []
     (* S_post_continue *) []
     (* S_post_return *)
-      (s_post_return1 ++ s_post_return2 ++ 
-        Sposts_conn_returns s_post_normal1 s_atom_return2 ++
-        Sposts_conn_returns s_post_continue1 s_atom_return2 ++
-        Sposts_conn_returns s_post_normal2 s_atom_return1 ++
+      (s_post_return1 +/+ s_post_return2 +/+ 
+        Sposts_conn_returns s_post_normal1 s_atom_return2 +/+ 
+        Sposts_conn_returns s_post_continue1 s_atom_return2 +/+ 
+        Sposts_conn_returns s_post_normal2 s_atom_return1 +/+ 
         Sposts_conn_returns 
           (Sposts_conn_atoms s_post_normal2 s_atom_normal1)
-          s_atom_return2 ++
+          s_atom_return2 +/+ 
         Sposts_conn_returns 
           (Sposts_conn_atoms s_post_normal2 s_atom_continue1)
-          s_atom_return2 ++
+          s_atom_return2 +/+ 
         Sposts_conn_returns s_post_normal1 
-          (atoms_conn_returns s_atom_normal2 s_atom_return1) ++
+          (atoms_conn_returns s_atom_normal2 s_atom_return1) +/+ 
         Sposts_conn_returns s_post_continue1 
           (atoms_conn_returns s_atom_normal2 s_atom_return1))
     (* S_atom_normal *)
-      (s_atom_break1 ++
-        atoms_conn_atoms s_atom_normal1 s_atom_break2 ++
+      (s_atom_break1 +/+ 
+        atoms_conn_atoms s_atom_normal1 s_atom_break2 +/+ 
         atoms_conn_atoms s_atom_continue1 s_atom_break2)
     (* S_atom_break *)    []
     (* S_atom_continue *) []
     (* S_atom_return *)
-      (s_atom_return1 ++
-        atoms_conn_returns s_atom_normal1 s_atom_return2 ++
+      (s_atom_return1 +/+ 
+        atoms_conn_returns s_atom_normal1 s_atom_return2 +/+ 
         atoms_conn_returns s_atom_continue1 s_atom_return2 )
     (* C_pre *)
       (c_pre1 +++ atoms_conn_Cpres s_atom_normal1 c_pre2 +++
@@ -1964,3 +1980,4 @@ end.
 
 
 Close Scope aclight_scope.
+Bind Scope list_scope with list.
