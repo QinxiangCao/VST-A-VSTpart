@@ -1102,7 +1102,7 @@ Ltac after_forward_call :=
     end;
     repeat (apply semax_extract_PROP; intro); 
     cleanup_no_post_exists; 
-    abbreviate_semax; 
+    (* abbreviate_semax;  *)
     try fwd_skip.
 
 Ltac clear_MORE_POST :=
@@ -2688,13 +2688,13 @@ match goal with
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
        repeat apply -> semax_skip_seq;
-       abbreviate_semax
+       try abbreviate_semax
      | clear HRE; subst v; apply semax_extract_PROP; intro HRE;
        do_repr_inj HRE;
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
        repeat apply -> semax_skip_seq;
-       abbreviate_semax
+       try abbreviate_semax
      ]
 | |- semax ?Delta (PROPx ?P (LOCALx ?Q (SEPx ?R))) (Ssequence (Sifthenelse ?e ?c1 ?c2) _) _ =>
     tryif (unify (orb (quickflow c1 nofallthrough) (quickflow c2 nofallthrough)) true)
@@ -2736,7 +2736,9 @@ Hint Extern 0 (ENTAIL _, _ |-- _) =>
 
 Ltac forward_if_tac post :=
   check_Delta; check_POSTCONDITION;
-  repeat (apply -> seq_assoc; abbreviate_semax);
+  repeat (apply -> seq_assoc;
+   try abbreviate_semax
+   );
   repeat apply -> semax_seq_skip;
 first [ignore (post: environ->mpred)
       | fail 1 "Invariant (first argument to forward_if) must have type (environ->mpred)"];
@@ -2765,7 +2767,7 @@ match goal with
    | |- semax _ _ (Ssequence (Sifthenelse _ _ _) _) _ =>
      apply semax_seq with post;
       [forward_if'_new 
-      | abbreviate_semax; 
+      (* | abbreviate_semax;  *)
         simpl_ret_assert (*autorewrite with ret_assert*)]
    | |- semax _ _ (Ssequence (Sswitch _ _) _) _ =>
      (* apply semax_seq with post;
@@ -2970,9 +2972,9 @@ Ltac check_cast_assignment :=
 
 Ltac forward_setx :=
   ensure_normal_ret_assert;
-  hoist_later_in_pre;
+  (* hoist_later_in_pre; *)
  match goal with
- | |- semax ?Delta (|> (PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
+ | |- semax ?Delta ((PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
         eapply semax_PTree_set;
         [ reflexivity
         | reflexivity
@@ -3228,7 +3230,7 @@ Ltac entailer_for_store_tac := default_entailer_for_store_tac.
 
 Ltac load_tac :=
  ensure_normal_ret_assert;
- hoist_later_in_pre;
+ (* hoist_later_in_pre; *)
  first [sc_set_load_store.cast_load_tac | sc_set_load_store.load_tac].
 
 Ltac simpl_proj_reptype :=
@@ -3247,7 +3249,7 @@ end.
 
 Ltac store_tac :=
 ensure_open_normal_ret_assert;
-hoist_later_in_pre;
+(* hoist_later_in_pre; *)
 sc_set_load_store.store_tac.
 
 (* END new semax_load and semax_store tactics *************************)
@@ -3751,7 +3753,8 @@ Ltac forward :=
       clean_up_stackframe; entailer_for_return
  | |- _ =>
   try apply semax_ff;
-  check_Delta; check_POSTCONDITION;
+  (* check_Delta;  *)
+  check_POSTCONDITION;
   repeat rewrite <- seq_assoc;
   lazymatch goal with 
   | |- semax _ _ (Ssequence (Sreturn _) _) _ =>
@@ -3777,7 +3780,7 @@ Ltac forward :=
       [ forward1 c
       | fwd_result;
         Intros;
-        abbreviate_semax;
+        (* abbreviate_semax; *)
         try (fwd_skip; try_clean_up_stackframe) ]
     end
   end

@@ -2218,7 +2218,7 @@ Ltac load_tac_no_hint LOCAL2PTREE :=
 
 Ltac load_tac :=
   match goal with
-  | |- semax ?Delta (|> (PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
+  | |- semax ?Delta ((PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
     let T1 := fresh "T1" in evar (T1: PTree.t val);
     let T2 := fresh "T2" in evar (T2: PTree.t (type * val));
     let G := fresh "GV" in evar (G: option globals);
@@ -2279,7 +2279,7 @@ Ltac cast_load_tac_no_hint LOCAL2PTREE :=
 
 Ltac cast_load_tac :=
   match goal with
-  | |- semax ?Delta (|> (PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ (Ecast ?e _)) _ =>
+  | |- semax ?Delta ((PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ (Ecast ?e _)) _ =>
     let T1 := fresh "T1" in evar (T1: PTree.t val);
     let T2 := fresh "T2" in evar (T2: PTree.t (type * val));
     let G := fresh "GV" in evar (G: option globals);
@@ -2387,7 +2387,7 @@ Ltac check_expression_by_value e :=
 
 Ltac store_tac :=
   match goal with
-  | |- semax ?Delta (|> (PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sassign ?e1 ?e2) _ =>
+  | |- semax ?Delta ((PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sassign ?e1 ?e2) _ =>
     check_expression_by_value e1;
     let T1 := fresh "T1" in evar (T1: PTree.t val);
     let T2 := fresh "T2" in evar (T2: PTree.t (type * val));

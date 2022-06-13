@@ -23,8 +23,7 @@ CPROGS=append mytest sgn reverse # reverse #sumarray2  min  leap_year bst linked
 
 # CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v \
- semantics_lemmas.v soundness.v AClightFunc.v semanticsFunc.v strongFacts.v strongSoundness.v \
- AClightNotations.v 
+ semantics_lemmas.v soundness.v AClightFunc.v semanticsFunc.v strongFacts.v strongSoundness.v 
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 #  jmeq_lemmas.v \
@@ -76,11 +75,14 @@ CPROG_FILES = $(addprefix cprogs/, $(CPROG_FILE_NAMES))
 CDEF_FILE_NAMES = $(addsuffix _def.v, $(CPROGS))
 CDEF_FILES = $(addprefix cprogs/, $(CDEF_FILE_NAMES))
 
+UTIL_FILE_NAMES = AClightNotations.v
+UTIL_FILES = $(addprefix utils/, $(UTIL_FILE_NAMES))
 
 INCLUDE_ACLIGHT = -Q CSplit CSplit -Q floyd-seq FloydSeq -Q cprogs cprogs
 INCLUDE_COMPCERT = -R $(COMPCERTDIR) compcert
 INCLUDE_VST = $(foreach d, $(VST_DIRS), -Q $(VSTDIR)/$(d) VST.$(d))
-NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT)
+INCLUDE_UTIL = -Q utils utils
+NORMAL_FLAG = $(INCLUDE_ACLIGHT) $(INCLUDE_VST) $(INCLUDE_COMPCERT) $(INCLUDE_UTIL)
 
 
 ifneq (, $(RAMIFYCOQDIR))
@@ -110,8 +112,6 @@ ACLIGHTGEN=$(wildcard ./aclightgen*)
 ifneq (, $(ACLIGHTGEN)) # the following rules are only applicable when $(ACLIGHTGEN) exists
 
 # .PHONY: depend
-# depend .depend: cprogs
-# 	@$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES) > .depend
 
 
 $(CPROGSDIR)/%_prog.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
@@ -122,7 +122,6 @@ $(CPROGSDIR)/%_annot.v: $(CPROGSDIR)/%.c $(ACLIGHTGEN)
 
 cprogs: $(foreach c, $(CPROGS), $(CPROGSDIR)/$(c)_prog.v $(CPROGSDIR)/$(c)_annot.v)
 
-# include .depend
 
 #ifneq (, $(wildcard .depend)) # the following rules are only applicable when .depend exists
 
@@ -146,11 +145,17 @@ $(CDEF_FILES:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
 	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
 
+
+$(UTIL_FILES:%.v=%.vo): %.vo: %.v
+	@echo COQC $*.v
+	@$(COQC) $(NORMAL_FLAG) $(CURRENT_DIR)$*.v
+
 all: frontend \
   $(CSPLIT_FILES:%.v=%.vo) \
   $(FLOYD_FILES:%.v=%.vo) \
-  $(CPROG_FILES:%.v=%.vo) \
-  $(CDEF_FILES:%.v=%.vo)
+  $(CDEF_FILES:%.v=%.vo) \
+  $(UTIL_FILES:%.v=%.vo) \
+  $(CPROG_FILES:%.v=%.vo)
 
 
 # endif # if .depend exists
@@ -174,4 +179,16 @@ clean:
 	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
 	@rm -f floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
-	@rm -f $(CPROGDIR)/*.vo $(CPROGDIR)/*.glob $(CPROGDIR)/*.aux
+	@rm -f utils/*.vo utils/*.glob utils/*.aux
+	@rm -f $(CPROGSDIR)/*.vo $(CPROGSDIR)/*.glob $(CPROGSDIR)/*.aux
+
+
+cleanprogs:
+	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
+	@rm -f $(CPROGSDIR)/*.vo $(CPROGSDIR)/*.glob $(CPROGSDIR)/*.aux
+
+# depend .depend:
+#   @echo ?
+#   @$(COQDEP) $(NORMAL_FLAG) $(CSPLIT_FILES)  > .depend
+
+# include .depend
