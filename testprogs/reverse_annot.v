@@ -154,6 +154,8 @@ Definition f_reverse_hint_split :=
 
 Print f_reverse_hint_split. 
 
+
+
 Parameter (Delta_specs: PTree.t funspec).
 
 Definition reverse_delta :=
@@ -247,7 +249,11 @@ Parameter Espec : OracleKind.
 
 Instance CS : compspecs. make_compspecs prog. Defined.
 
-Require Import FloydSeq.client_lemmas. (* Intros tactic *)
+Require Import FloydSeq.client_lemmas. 
+(* Intros tactic *)
+
+
+
 
 Goal @path_to_semax CS Espec reverse_delta _
 (GIVEN (a a0 : val) (a1 a2 : list val) (a3 a4 : val)

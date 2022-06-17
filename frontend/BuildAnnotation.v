@@ -10,6 +10,8 @@ Open Scope list_scope.
 
 Parameter get_binder_list : assert ->  list (binder * assert).
 
+Parameter make_binder_list : binder  -> assert ->  list (binder * assert).
+
 Definition add_binder_list (s: statement) (c: assert) : statement :=
   match s with
   | Sskip => Sskip
@@ -313,11 +315,17 @@ with annotate_lblstmt (ls: ClightC.labeled_statements) : res labeled_statements 
 Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
       : option (binder * assert * assert) * statement :=
   match funcspec with (binder, pre, post) =>
+    let binder_list := make_binder_list binder pre in
     (Some funcspec,
-      Sgiven2 binder (
+      let fun_body := Ssequence s (Sassert post) in
+        fold_right (fun binder_ass s' => 
+          Sexgiven (fst binder_ass) (snd binder_ass) s'
+        ) fun_body binder_list
+      (* Sgiven2 binder (
         Ssequence (Sdummyassert pre) (
           Ssequence (Sdummyassert post)
-            s)))
+            s))) *)
+    )
   end.
 
 Definition annotate_body (s: ClightC.statement) : res (option (binder * assert * assert) * statement) :=

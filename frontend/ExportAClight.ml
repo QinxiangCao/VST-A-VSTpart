@@ -520,7 +520,10 @@ let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
 Require Import CSplit.AClightFunc.\n\
-Require Import FloydSeq.AClight.\n\
+Require Import CSplit.semanticsFunc.\n\
+Require Import utils.AClightNotations.\n\
+Require Import FloydSeq.proofauto.\n\
+Require Import FloydSeq.client_lemmas.\n\
 Local Open Scope Z_scope.\n\
 Import AClightNotations.\n"
 

@@ -21,6 +21,7 @@ Extraction Inline Errors.bind Errors.bind2.
 Extract Inlined Constant Comment.string => "string".
 
 Extract Constant BuildAnnotation.get_binder_list => "CommentParser.get_binder_list".
+Extract Constant BuildAnnotation.make_binder_list => "CommentParser.make_binder_list".
 Extract Constant ClassifyComment.parse_comment => "CommentParser.parse_comment".
 
 Load extractionMachdep.
