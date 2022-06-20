@@ -1,7 +1,7 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.type_induction.
 Require Export FloydSeq.compact_prod_sum.
-Require Import FloydSeq.fieldlist.
+Require Import VST.floyd.fieldlist.
 Require Import VST.floyd.sublist.
 
 Definition

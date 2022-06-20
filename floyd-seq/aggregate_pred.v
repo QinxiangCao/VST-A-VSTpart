@@ -1,7 +1,7 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.type_induction.
-(*Require Import FloydSeq.fieldlist.*)
+Require Import VST.floyd.fieldlist.
 Require Import FloydSeq.compact_prod_sum.
 (*Require Import FloydSeq.aggregate_type.*)
 Require Import FloydSeq.mapsto_memory_block.
@@ -9,7 +9,6 @@ Require Import FloydSeq.nested_pred_lemmas.
 Require Import VST.floyd.jmeq_lemmas.
 Require Import VST.floyd.sublist.
 
-Require Export FloydSeq.fieldlist.
 Require Export FloydSeq.aggregate_type.
 
 Open Scope Z.

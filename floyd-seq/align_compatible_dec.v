@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import FloydSeq.fieldlist.
+Require Import VST.floyd.fieldlist.
 Require Import FloydSeq.type_induction.
 Require Import FloydSeq.nested_pred_lemmas.
 Open Scope Z.

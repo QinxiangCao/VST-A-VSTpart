@@ -2,7 +2,7 @@ Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.nested_pred_lemmas.
 Require Import FloydSeq.nested_field_lemmas.
-Require Import FloydSeq.fieldlist.
+Require Import VST.floyd.fieldlist.
 Import LiftNotation.
 Local Open Scope logic.
 

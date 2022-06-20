@@ -8,7 +8,6 @@ Require Import FloydSeq.forward_lemmas.
 Require Import FloydSeq.entailer.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
-Require Import FloydSeq.const_only_eval.
 
 Require Import CSplit.strong.
 Require Import CSplit.strongFacts.

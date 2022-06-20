@@ -1,10 +1,10 @@
 Require Export FloydSeq.base.
-Require Export FloydSeq.typecheck_lemmas.
+Require Export VST.floyd.typecheck_lemmas.
 Require Export VST.floyd.functional_base.
-Require Export FloydSeq.seplog_tactics.
-Require Export FloydSeq.const_only_eval.
+Require Export VST.floyd.seplog_tactics.
+Require Export VST.floyd.const_only_eval.
 Require Export compcert.cfrontend.Ctypes.
-Require Export FloydSeq.computable_functions.
+Require Export VST.floyd.computable_functions.
 
 Fixpoint delete_id {A: Type} i (al: list (ident*A)) : option (A * list (ident*A)) :=
  match al with

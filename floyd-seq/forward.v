@@ -2836,14 +2836,14 @@ Ltac normalize :=
  try match goal with |- context[ret_assert] =>  autorewrite with ret_assert typeclass_instances end;
  match goal with
  | |- semax _ _ _ _ =>
-  FloydSeq.seplog_tactics.normalize;
+  seplog_tactics.normalize;
   repeat
   (first [ simpl_tc_expr
          | simple apply semax_extract_PROP; fancy_intros true
          | move_from_SEP
          ]; cbv beta; msl.log_normalize.normalize)
   | |- _  =>
-  FloydSeq.seplog_tactics.normalize
+  seplog_tactics.normalize
   end.
 
 Ltac renormalize :=

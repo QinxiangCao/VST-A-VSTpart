@@ -8,7 +8,7 @@ Import FloydSeq.aggregate_pred.auxiliary_pred.
 Require Import FloydSeq.reptype_lemmas.
 Require Import VST.floyd.jmeq_lemmas.
 Require Import VST.floyd.sublist.
-Require Export FloydSeq.fieldlist.
+Require Export VST.floyd.fieldlist.
 Require Export FloydSeq.aggregate_type.
 
 Opaque alignof.

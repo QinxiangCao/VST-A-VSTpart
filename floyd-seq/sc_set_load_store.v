@@ -138,7 +138,7 @@ Proof.
       unfold local, lift1.
       apply neutral_isCastResultType, H0.
   }
-  eapply canon.semax_pre_simple.
+  eapply FloydSeq.canon.semax_pre_simple.
   {
     hoist_later_left.
     rewrite (add_andp _ _ H3).

@@ -255,7 +255,7 @@ simpl. subst. reflexivity.
 apply (semax_fun_id' id fs (tc_exprlist Delta (argtypes argsig) bl) Espec Delta); auto.
 subst.
 
-eapply canon.semax_pre_simple; [ | apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost ts x argsig _ cc _ bl P Q R Hsub); auto].
+eapply FloydSeq.canon.semax_pre_simple; [ | apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost ts x argsig _ cc _ bl P Q R Hsub); auto].
 (*
 rewrite later_andp.
 apply andp_right; [apply andp_right | ].
@@ -380,7 +380,7 @@ assert (Cop.classify_fun (typeof (Evar id (Tfunction (type_of_params argsig) ret
 subst; reflexivity.
 apply (semax_fun_id' id fs); auto.
 subst.
-eapply canon.semax_pre_simple; [ | apply (semax_call1 Espec Delta fs A Pre Post NEPre NEPost ts x ret argsig retty cc _ bl P Q R Hsub H1 H0); auto].
+eapply FloydSeq.canon.semax_pre_simple; [ | apply (semax_call1 Espec Delta fs A Pre Post NEPre NEPost ts x ret argsig retty cc _ bl P Q R Hsub H1 H0); auto].
 apply andp_right.
 { rewrite <- andp_assoc. apply andp_left1. apply andp_right;[apply andp_right|].
   * intro rho; unfold tc_expr, local,lift1; simpl.
@@ -1303,7 +1303,7 @@ rewrite ! andp_assoc.
 apply semax_extract_prop; intros. 
 apply semax_extract_prop; intros. 
 rewrite andp_comm.
-eapply canon.semax_pre_post'; [ | |
+eapply FloydSeq.canon.semax_pre_post'; [ | |
    apply (@semax_call0 Espec cs Delta fs A Pre Post NEPre NEPost 
               ts witness argsig retty cc a bl P Q Frame Hsub)].
 *

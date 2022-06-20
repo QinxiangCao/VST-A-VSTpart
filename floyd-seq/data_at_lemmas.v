@@ -4,7 +4,7 @@ Require Import FloydSeq.base2.
 Require Import VST.floyd.functional_base.
 Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.compare_lemmas.
-Require Import FloydSeq.nested_pred_lemmas.
+Require Import VST.floyd.nested_pred_lemmas.
 Require Import FloydSeq.nested_field_lemmas.
 Require Import FloydSeq.efield_lemmas.
 Require Import FloydSeq.mapsto_memory_block.

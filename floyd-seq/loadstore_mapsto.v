@@ -253,7 +253,7 @@ Lemma semax_store_nth_ram:
         (PROPx P (LOCALx Q (SEPx (replace_nth n R Post))))).
 Proof.
   intros.
-  eapply canon.semax_pre_simple; [| eapply canon.semax_post'; [| apply semax_store_forward; eauto]].
+  eapply FloydSeq.canon.semax_pre_simple; [| eapply FloydSeq.canon.semax_post'; [| apply semax_store_forward; eauto]].
   + apply later_left2.
     apply andp_right;  [subst; auto |].
     simpl lifted.

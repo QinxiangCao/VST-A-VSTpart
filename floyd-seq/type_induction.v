@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
-Require Import FloydSeq.fieldlist.
-Require Import FloydSeq.computable_theorems.
+Require Import VST.floyd.fieldlist.
+Require Import VST.floyd.computable_theorems.
 Open Scope nat.
 
 Inductive ListType: list Type -> Type :=

@@ -29,13 +29,10 @@ CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 #  jmeq_lemmas.v \
 #  find_nth_tactic.v  sublist.v functional_base.v  val_lemmas.v \
 #  assert_lemmas.v  
-FLOYD_FILE_NAMES = coqlib3.v \
-   SeparationLogicFacts.v SeparationLogicAsLogic.v SeparationLogicAsLogicSoundness.v \
-   base.v seplog_tactics.v typecheck_lemmas.v const_only_eval.v \
-   computable_theorems.v computable_functions.v \
+FLOYD_FILE_NAMES = \
+   base.v \
    base2.v \
    canon.v client_lemmas.v closed_lemmas.v canonicalize.v  \
-   fieldlist.v \
    type_induction.v \
    nested_pred_lemmas.v \
    align_compatible_dec.v compact_prod_sum.v \
