@@ -53,6 +53,72 @@ open ClightC
   print_endline (snd res);
   res *)
 
+  let rec make_binder_list_rec (binder: string list) (ass : string) : (string * string) list =
+  match binder with
+  | [] -> []
+  | b :: bs -> match bs with
+      | [] -> [(b, ass)]
+      | _ ->
+        (* print_string b;
+        print_endline( "EX " ^ String.concat " " bs ^ ", " ^ ass); *)
+        (b, "EX " ^ String.concat " " bs ^ ", " ^ ass) :: make_binder_list_rec bs ass
+
+
+let make_binder_list (s : string) ass : (string * string) list =
+  let s = trim s in
+  (* print_endline s; *)
+  let res =
+    let l = length s in
+    let i = ref 0 in
+    let is_whitespace c =
+      c = '\n' || c = '\r' || c = ' ' || c = '\t'
+    in
+    let has_next_char () =
+      !i < l
+    in
+    let next_char () =
+      if !i < l then
+        let c = s.[!i] in
+        i := !i+1; c
+      else 
+        (* '@' *)
+        failwith "Unexpected end of assertion"
+    in
+    let rec loop tokening start cnt acc =
+      let c = next_char () in
+      (* print_char c; print_char ' '; print_int start; print_char ' '; print_int cnt; print_char ' ';
+      print_string (string_of_bool tokening); print_char ' ';
+      print_endline (String.concat "," acc); *)
+      if tokening then
+          match c with
+          | '(' -> loop true start (cnt+1) acc
+          | ')' -> loop true start (cnt-1) acc
+          | ',' when cnt = 0 -> (sub s start (!i - start - 1) :: acc) (* -1 to remove "," *)
+          | c ->
+            if cnt = 0 && is_whitespace c then
+              loop false !i cnt (sub s start (!i - start) :: acc)
+            else
+              loop true start cnt acc
+      else
+        if is_whitespace c then
+          loop false (!i+1) cnt acc
+        else
+          match c with
+          | '(' -> loop true (!i-1) (cnt+1) acc
+          | ',' when cnt = 0 -> acc
+          | c ->
+              loop true (!i-1) cnt acc        
+      in
+          (* print_int !i; *)
+     List.map trim (loop false (!i) 0 []) in
+          (* print_endline res;
+          print_int !i;
+          print_newline (); *)
+  (* print_int (List.length res); *)
+  (* List.iter print_endline (res); *)
+  (* List.map (fun v -> (v, ass)) res *)
+  make_binder_list_rec res ass
+
 
 let get_binder_list (s : string) : (string * string) list =
   (* print_endline s; *)

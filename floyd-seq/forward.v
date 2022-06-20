@@ -1,44 +1,42 @@
-Require Import VST.floyd.base2.
-Require Import VST.floyd.client_lemmas.
-Require Import VST.floyd.go_lower.
-Require Import VST.floyd.closed_lemmas.
-Require Import VST.floyd.subsume_funspec.
-Require Import VST.floyd.forward_lemmas VST.floyd.call_lemmas.
-Require Import VST.floyd.extcall_lemmas.
+Require Import FloydSeq.base2.
+Require Import FloydSeq.client_lemmas.
+Require Import FloydSeq.go_lower.
+Require Import FloydSeq.closed_lemmas.
+Require Import FloydSeq.subsume_funspec.
+Require Import FloydSeq.forward_lemmas FloydSeq.call_lemmas.
+Require Import FloydSeq.extcall_lemmas.
 Require Import VST.floyd.nested_field_lemmas.
 Require Import VST.floyd.efield_lemmas.
 Require Import VST.floyd.type_induction.
 Require Import VST.floyd.mapsto_memory_block.
 Require Import VST.floyd.data_at_rec_lemmas.
 Require Import VST.floyd.field_at.
-Require Import VST.floyd.loadstore_mapsto.
-Require Import VST.floyd.loadstore_field_at.
-Require Import VST.floyd.nested_loadstore.
-Require Import VST.floyd.sc_set_load_store.
+Require Import FloydSeq.loadstore_mapsto.
+Require Import FloydSeq.loadstore_field_at.
+Require Import FloydSeq.nested_loadstore.
+Require Import FloydSeq.sc_set_load_store.
 Require Import VST.floyd.stronger.
-Require Import VST.floyd.local2ptree_denote.
-Require Import VST.floyd.local2ptree_eval.
+Require Import FloydSeq.local2ptree_denote.
+Require Import FloydSeq.local2ptree_eval.
 Require Import VST.floyd.reptype_lemmas.
-Require Import VST.floyd.proj_reptype_lemmas.
-Require Import VST.floyd.replace_refill_reptype_lemmas.
+Require Import FloydSeq.proj_reptype_lemmas.
+Require Import FloydSeq.replace_refill_reptype_lemmas.
 Require Import VST.floyd.aggregate_type.
-Require Import VST.floyd.entailer.
-Require Import VST.floyd.globals_lemmas.
-Require Import VST.floyd.semax_tactics.
-Require Import VST.floyd.for_lemmas.
-Require Import VST.floyd.diagnosis.
-Require Import VST.floyd.simpl_reptype.
+Require Import FloydSeq.entailer.
+Require Import FloydSeq.globals_lemmas.
+Require Import FloydSeq.semax_tactics.
+Require Import FloydSeq.for_lemmas.
+Require Import FloydSeq.diagnosis.
+Require Import FloydSeq.simpl_reptype.
 Require Import VST.floyd.nested_pred_lemmas.
-Require Import VST.floyd.freezer.
+Require Import FloydSeq.freezer.
+Require Import CSplit.strong.
 Import Cop.
 Import Cop2.
 Import Clight_Cop2.
 Import LiftNotation.
 
 Global Opaque denote_tc_test_eq.
-
-Require Import CSplit.strong.
-
 
 Hint Rewrite @sem_add_pi_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
 Hint Rewrite @sem_add_pl_ptr_special' using (solve [try reflexivity; auto with norm]) : norm.
@@ -143,7 +141,7 @@ apply Coq.Init.Logic.I.
 split; auto.
 rewrite memory_block_isptr; normalize.
 rewrite memory_block_isptr; normalize.
-apply semax_extract_exists. apply H3.
+apply extract_exists_pre.  apply H3.
 Qed.
 
 Lemma var_block_lvar0
@@ -286,7 +284,8 @@ Ltac semax_func_skipn :=
 Ltac LookupID := first [ cbv;reflexivity | fail "Lookup for a function identifier in Genv failed" ].
 Ltac LookupB := first [ cbv;reflexivity | fail "Lookup for a function pointer block in Genv failed" ].
 
-Lemma semax_body_subsumption' cs cs' V V' F F' f spec
+(* [litao] semaxbody removed *)
+(* Lemma semax_body_subsumption' cs cs' V V' F F' f spec
       (SF: @semax_body V F cs f spec)
       (CSUB: cspecs_sub cs cs')
       (COMPLETE : Forall (fun it : ident * type => complete_type (@cenv_cs cs) (snd it) = true) (fn_vars f))
@@ -296,7 +295,7 @@ Proof.
   intros.
   apply (@semax_body_cenv_sub _ _ CSUB); auto.
   eapply semax_body_subsumption; try eassumption.
-Qed.
+Qed. *)
 
 Lemma sub_option_get' {A: Type} (s t: PTree.t A) B (f:A -> option B):
   Forall (fun x => PTree.get (fst x) t = Some (snd x)) (PTree.elements s) ->
@@ -438,7 +437,7 @@ eapply (@semax_body_subsumption' _ _ _ _ _ _ _ _ L);
  | simple apply tycontext_sub_refl ||
   (apply tycontext_sub_i99; assumption)].
 *)
-Ltac apply_semax_body L := 
+(* Ltac apply_semax_body L := 
 eapply (@semax_body_subsumption' _ _ _ _ _ _ _ _ L);
   [ first [ apply cspecs_sub_refl
           | split3; red; apply @sub_option_get; 
@@ -479,7 +478,7 @@ Ltac semax_func_cons L :=
              ]
         ];
  repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | LookupID | LookupB |]);
- try apply semax_func_nil.
+ try apply semax_func_nil. *)
 
 (* This is a better way of finding an element in a long list. *)
 Lemma from_elements_In : forall {A} l i (v : A), (pTree_from_elements l) ! i = Some v ->
@@ -509,7 +508,7 @@ intros.
  apply prop_right; auto.
 Qed.
 
-Ltac semax_func_cons_ext :=
+(* Ltac semax_func_cons_ext :=
  repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | LookupID | LookupB | ]);
   eapply semax_func_cons_ext;
     [ reflexivity | reflexivity | reflexivity | reflexivity | reflexivity
@@ -527,7 +526,7 @@ Ltac semax_func_cons_ext :=
               "Make sure that the Espec declared using 'Existing Instance'
                is defined as 'add_funspecs NullExtension.Espec Gprog.'"
     |
-    ].
+    ]. *)
 
 Tactic Notation "forward_seq" :=
   first [eapply semax_seq'; [  | abbreviate_semax ]
@@ -1103,7 +1102,7 @@ Ltac after_forward_call :=
     end;
     repeat (apply semax_extract_PROP; intro); 
     cleanup_no_post_exists; 
-    abbreviate_semax; 
+    (* abbreviate_semax;  *)
     try fwd_skip.
 
 Ltac clear_MORE_POST :=
@@ -1328,6 +1327,7 @@ Ltac prove_call_setup ts subsumes witness :=
  end;
  prove_call_setup_aux ts witness].
 
+
 Ltac fwd_call' ts subsumes witness :=
 lazymatch goal with
 | |- semax _ _ (Ssequence (Scall _ _ _) _) _ =>
@@ -1510,31 +1510,6 @@ lazymatch goal with |- @semax ?CS _ ?Delta _ (Ssequence ?C _) _ =>
 end.
 
 Tactic Notation "forward_call"  := new_fwd_call.
-
-
-Theorem seq_assoc:
-  forall {CS: compspecs} {Espec: OracleKind},
-   forall Delta P s1 s2 s3 R,
-        @semax CS Espec Delta P (Ssequence s1 (Ssequence s2 s3)) R <->
-        @semax CS Espec Delta P (Ssequence (Ssequence s1 s2) s3) R.
-Proof.
-  intros.
-  split; intros.
-  + apply semax_seq_inv in H.
-    destruct H as [? [? ?]].
-    apply semax_seq_inv in H0.
-    destruct H0 as [? [? ?]].
-    eapply semax_seq; eauto.
-    eapply semax_seq; eauto.
-    destruct R; auto.
-  + apply semax_seq_inv in H.
-    destruct H as [? [? ?]].
-    apply semax_seq_inv in H.
-    destruct H as [? [? ?]].
-    eapply semax_seq with x0; [destruct R; exact H |].
-    eapply semax_seq; eauto.
-Qed.
-
 
 Lemma seq_assoc2:
   forall (Espec: OracleKind) {cs: compspecs}  Delta P c1 c2 c3 c4 Q,
@@ -1756,8 +1731,8 @@ intros.
 destruct Archi.ptr64 eqn:Hp; simpl in H;
 destruct p; inversion H;
 unfold strict_bool_val in H1.
-(* destruct (Int64.eq i Int64.zero) eqn:?; inv H1.
-apply int64_eq_e in Heqb. subst; reflexivity. *)
+destruct (Int64.eq i Int64.zero) eqn:?; inv H1.
+apply int64_eq_e in Heqb. subst; reflexivity.
 destruct (Int.eq i Int.zero) eqn:?; inv H1.
 apply int_eq_e in Heqb. subst; reflexivity.
 Qed.
@@ -2093,7 +2068,7 @@ Proof.
 intros. apply pred_ext. Exists tt. auto. Intros u; auto.
 Qed.
 
-Tactic Notation "forward_while" constr(Inv) :=
+(* Tactic Notation "forward_while" constr(Inv) :=
   repeat (apply -> seq_assoc; abbreviate_semax);
   lazymatch goal with |- semax _ _ (Ssequence _ _) _ => idtac | _ => apply <- semax_seq_skip end;
   first [ignore (Inv: environ->mpred)
@@ -2128,7 +2103,7 @@ Tactic Notation "forward_while" constr(Inv) :=
              int main(){int i=0; while(i);}
 
              (* verif_example.v file (+you have to Require Import the example.v file produced by clightgen) *)
-             Require Import VST.floyd.proofauto.
+             Require Import FloydSeq.proofauto.
              Instance CompSpecs : compspecs. Proof. make_compspecs prog. Defined.
              Local Open Scope logic.
 
@@ -2163,7 +2138,7 @@ Loop test expression:" e
          normalize in HRE
        ]
     ]; abbreviate_semax; 
-    simpl_ret_assert (*autorewrite with ret_assert*).
+    simpl_ret_assert (*autorewrite with ret_assert*). *)
 
 
 Inductive Type_of_invariant_in_forward_for_should_be_environ_arrow_mpred_but_is : Type -> Prop := .
@@ -2180,7 +2155,7 @@ Ltac check_type_forward_for_simple_bound :=
          end
      end.
 
-Ltac forward_for_simple_bound n Pre :=
+(* Ltac forward_for_simple_bound n Pre :=
   check_Delta; check_POSTCONDITION;
  repeat match goal with |-
       semax _ _ (Ssequence (Ssequence (Ssequence _ _) _) _) _ =>
@@ -2242,7 +2217,7 @@ Ltac forward_for3 Inv PreInc Postcond :=
             end ]
        | abbreviate_semax;
          repeat (apply semax_extract_PROP; fancy_intro true)
-      ].
+      ]. *)
 
 Fixpoint no_breaks (s: statement) : bool :=
  match s with
@@ -2253,7 +2228,7 @@ Fixpoint no_breaks (s: statement) : bool :=
  | _ => true
  end.
 
-Ltac forward_for2 Inv PreInc :=
+(* Ltac forward_for2 Inv PreInc :=
  repeat  match goal with P := @abbreviate ret_assert _ |- semax _ _ _ ?P' =>
                          constr_eq P P'; unfold abbreviate in P; subst P
            end;
@@ -2278,26 +2253,16 @@ Ltac forward_for2 Inv PreInc :=
             repeat (apply semax_extract_PROP; fancy_intro true);
             do_repr_inj HRE
         ]    
-  end.
+  end. *)
 
 Lemma seq_assoc1: 
    forall (Espec: OracleKind) (CS : compspecs) (Delta : tycontext) (P : environ -> mpred)
          (s1 s2 s3 : statement) (R : ret_assert),
        semax Delta P (Ssequence s1 (Ssequence s2 s3)) R ->
        semax Delta P (Ssequence (Ssequence s1 s2) s3) R.
-Proof. intros. apply -> seq_assoc; auto. Qed.
+Proof. intros. 
+apply -> seq_assoc; auto. Qed.
 
-
-Lemma semax_post_flipped:
-  forall (R' : ret_assert) Espec {cs: compspecs} (Delta : tycontext) (R : ret_assert)
-         (P : environ->mpred) (c : statement),
-   @semax cs Espec Delta P c R' ->
-   ENTAIL Delta, RA_normal R' |-- RA_normal R ->
-   ENTAIL Delta, RA_break R' |-- RA_break R ->
-   ENTAIL Delta, RA_continue R' |-- RA_continue R ->
-   (forall vl, ENTAIL Delta, RA_return R' vl |-- RA_return R vl) ->
-       @semax cs Espec Delta P c R.
-Proof. intros; eapply semax_post; eassumption. Qed.
 
 Lemma semax_loop_noincr :
   forall {Espec: OracleKind}{CS: compspecs} ,
@@ -2451,19 +2416,19 @@ Ltac check_nocontinue s :=
  | _ => fail 100 "applied forward_loop to something that is not a loop"
 end.
 
-Ltac forward_loop_nocontinue2 Inv :=
-  apply semax_loop_nocontinue; delete_skip; abbreviate_semax.
+(* Ltac forward_loop_nocontinue2 Inv :=
+  apply semax_loop_nocontinue; delete_skip; abbreviate_semax. *)
 
-Ltac forward_loop_nocontinue1 Inv :=
+(* Ltac forward_loop_nocontinue1 Inv :=
   lazymatch goal with
   | |- semax _ _ (Sfor _ _ _ _) _ => apply semax_seq' with Inv; [abbreviate_semax | forward_loop_nocontinue2 Inv]
   | |- semax _ _ (Sloop _ _) _ => apply semax_pre with Inv; [ | forward_loop_nocontinue2 Inv]
   | |- semax _ _ (Swhile ?E ?B) _ => 
           let x := fresh "x" in set (x := Swhile E B); unfold Swhile at 1 in x; subst x;
           apply semax_pre with Inv; [ | forward_loop_nocontinue2 Inv]
- end.
+ end. *)
 
-Ltac forward_loop_nocontinue Inv Post :=
+(* Ltac forward_loop_nocontinue Inv Post :=
   repeat simple apply seq_assoc1;
   repeat apply -> semax_seq_skip;
   match goal with
@@ -2472,9 +2437,9 @@ Ltac forward_loop_nocontinue Inv Post :=
   | |- semax _ _ _ ?Post' => 
             tryif (unify Post Post') then forward_loop_nocontinue1 Inv
            else (apply (semax_post1_flipped Post); [ forward_loop_nocontinue1 Inv  | ])
-  end.
+  end. *)
 
-Ltac forward_loop_nocontinue_nobreak Inv :=
+(* Ltac forward_loop_nocontinue_nobreak Inv :=
  repeat apply -> semax_seq_skip;
   lazymatch goal with
   | |- semax _ _ (Ssequence (Swhile _ ?S) _) _ =>
@@ -2490,9 +2455,9 @@ Ltac forward_loop_nocontinue_nobreak Inv :=
      forward_loop_nocontinue Inv Post
   | |- semax _ _ _ _ => fail 100 "forward_loop failed; try doing abbreviate_semax first"
   | |- _ => fail 100 "forward_loop applicable only to a semax goal"
-end.
+end. *)
 
-Tactic Notation "forward_loop" constr(Inv)  := 
+(* Tactic Notation "forward_loop" constr(Inv)  := 
  repeat simple apply seq_assoc1;
  repeat apply -> semax_seq_skip;
   lazymatch goal with
@@ -2505,9 +2470,9 @@ Tactic Notation "forward_loop" constr(Inv)  :=
   tryif (check_nocontinue c)
    then forward_loop_nocontinue_nobreak Inv
   else (check_no_incr c; forward_loop Inv continue: Inv)
- end.
+ end. *)
 
-Tactic Notation "forward_loop" constr(Inv) "break:" constr(Post) :=
+(* Tactic Notation "forward_loop" constr(Inv) "break:" constr(Post) :=
  repeat simple apply seq_assoc1;
  repeat apply -> semax_seq_skip;
   lazymatch goal with
@@ -2520,9 +2485,9 @@ Tactic Notation "forward_loop" constr(Inv) "break:" constr(Post) :=
   tryif (check_nocontinue c)
    then forward_loop_nocontinue Inv Post
   else (check_no_incr c; forward_loop Inv continue: Inv break: Post)
- end.
+ end. *)
 
-Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) :=
+(* Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) :=
   check_Delta; check_POSTCONDITION;
   repeat simple apply seq_assoc1;
   lazymatch type of Inv with
@@ -2556,9 +2521,9 @@ Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) :=
      apply semax_pre with (exp Inv);
       [ unfold_function_derives_right | forward_for2 Inv PreInc ]
   | |- _ => fail "forward_for2x cannot recognize the loop"
-  end.
+  end. *)
 
-Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) "break:" constr(Postcond) :=
+(* Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) "break:" constr(Postcond) :=
   check_Delta; check_POSTCONDITION;
   repeat simple apply seq_assoc1;
   lazymatch type of Inv with
@@ -2581,10 +2546,10 @@ Tactic Notation "forward_for" constr(Inv) "continue:" constr(PreInc) "break:" co
   | |- semax _ _ (Sloop (Ssequence (Sifthenelse _ Sskip Sbreak) _) _) _ =>
      apply semax_pre with (exp Inv);
       [ unfold_function_derives_right | forward_for3 Inv PreInc Postcond ]
-  end.
+  end. *)
 
-Tactic Notation "forward_for" constr(Inv) "break:" constr(Postcond) "continue:" constr(PreInc) :=
-   forward_for Inv continue: PreInc break: Postcond.
+(* Tactic Notation "forward_for" constr(Inv) "break:" constr(Postcond) "continue:" constr(PreInc) :=
+   forward_for Inv continue: PreInc break: Postcond. *)
 
 Tactic Notation "forward_for" constr(Inv) constr(PreInc) :=
   fail "Usage of the forward_for tactic:
@@ -2600,16 +2565,15 @@ forward_for Inv continue: PreInc break:Post (* where Post: environ->mpred is an 
   @semax CS Espec Delta Pre (Sfor s1 e2 s4 s3) Post.
 Proof.
 intros.
-Locate semax_extract_prop.
 pose proof (semax_convert_for_while' CS Espec Delta Pre s1 e2 s3 s4 Sskip Post H).
 spec H2; auto.
 apply -> semax_seq_skip in H1; auto.
 apply seq_assoc in H1; auto.
 apply <- semax_seq_skip.
 apply H2; auto.
-Qed.
+Qed. *)
 
-Tactic Notation "forward_for" constr(Inv) :=
+(* Tactic Notation "forward_for" constr(Inv) :=
   check_Delta; check_POSTCONDITION;
   repeat simple apply seq_assoc1;
   lazymatch type of Inv with
@@ -2673,7 +2637,7 @@ match goal with
 end.
 
 
-Ltac forward_switch' := 
+(* Ltac forward_switch' := 
 match goal with
 | |- semax ?Delta (PROPx ?P (LOCALx ?Q (SEPx ?R))) (Sswitch ?e _) _ =>
    let sign := constr:(signof e) in let sign := eval hnf in sign in
@@ -2698,7 +2662,7 @@ match goal with
              try match goal with H := @abbreviate statement _ |- _ => clear H end;
              process_cases sign ]
 ]
-end.
+end. *)
 
 
 Definition nofallthrough ek :=
@@ -2724,13 +2688,13 @@ match goal with
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
        repeat apply -> semax_skip_seq;
-       abbreviate_semax
+       try abbreviate_semax
      | clear HRE; subst v; apply semax_extract_PROP; intro HRE;
        do_repr_inj HRE;
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
        repeat apply -> semax_skip_seq;
-       abbreviate_semax
+       try abbreviate_semax
      ]
 | |- semax ?Delta (PROPx ?P (LOCALx ?Q (SEPx ?R))) (Ssequence (Sifthenelse ?e ?c1 ?c2) _) _ =>
     tryif (unify (orb (quickflow c1 nofallthrough) (quickflow c2 nofallthrough)) true)
@@ -2739,7 +2703,8 @@ match goal with
 | |- semax _ (@exp _ _ _ _) _ _ =>
       fail "First use Intros ... to take care of the EXistentially quantified variables in the precondition"
 | |- semax _ _ (Sswitch _ _) _ =>
-  forward_switch'
+  (* forward_switch' *)
+  fail "no support in VST-A"
 | |- semax _ _ (Ssequence (Sifthenelse _ _ _) _) _ => 
      fail "forward_if failed for some unknown reason, perhaps your precondition is not in canonical form"
 | |- semax _ _ (Ssequence (Sswitch _ _) _) _ => 
@@ -2771,7 +2736,9 @@ Hint Extern 0 (ENTAIL _, _ |-- _) =>
 
 Ltac forward_if_tac post :=
   check_Delta; check_POSTCONDITION;
-  repeat (apply -> seq_assoc; abbreviate_semax);
+  repeat (apply -> seq_assoc;
+   try abbreviate_semax
+   );
   repeat apply -> semax_seq_skip;
 first [ignore (post: environ->mpred)
       | fail 1 "Invariant (first argument to forward_if) must have type (environ->mpred)"];
@@ -2779,7 +2746,9 @@ match goal with
  | |- semax _ _ (Sifthenelse _ _ _) (overridePost post _) =>
        forward_if'_new
  | |- semax _ _ (Sswitch _ _) _ =>
-       forward_switch'
+       (* forward_switch' *)
+
+       fail "not support switch in VST-A"
  | |- semax _ _ (Sifthenelse _ _ _) ?P =>
       apply (semax_post_flipped (overridePost post P));
       [ forward_if'_new
@@ -2798,13 +2767,14 @@ match goal with
    | |- semax _ _ (Ssequence (Sifthenelse _ _ _) _) _ =>
      apply semax_seq with post;
       [forward_if'_new 
-      | abbreviate_semax; 
+      (* | abbreviate_semax;  *)
         simpl_ret_assert (*autorewrite with ret_assert*)]
    | |- semax _ _ (Ssequence (Sswitch _ _) _) _ =>
-     apply semax_seq with post;
+     (* apply semax_seq with post;
       [forward_switch' 
       | abbreviate_semax; 
-        simpl_ret_assert (*autorewrite with ret_assert*)]
+        simpl_ret_assert (*autorewrite with ret_assert*)] *)
+        fail "not support switch in VST-A"
 end.
 
 Ltac remove_LOCAL name Q :=
@@ -2866,14 +2836,14 @@ Ltac normalize :=
  try match goal with |- context[ret_assert] =>  autorewrite with ret_assert typeclass_instances end;
  match goal with
  | |- semax _ _ _ _ =>
-  floyd.seplog_tactics.normalize;
+  seplog_tactics.normalize;
   repeat
   (first [ simpl_tc_expr
          | simple apply semax_extract_PROP; fancy_intros true
          | move_from_SEP
          ]; cbv beta; msl.log_normalize.normalize)
   | |- _  =>
-    floyd.seplog_tactics.normalize
+  seplog_tactics.normalize
   end.
 
 Ltac renormalize :=
@@ -2930,14 +2900,6 @@ Ltac warn s :=
    assert_ (Warning s
                IGNORE_THIS_WARNING_USING_THE_ack_TACTIC_IF_YOU_WISH).
 
-
-Lemma semax_post': forall R' Espec {cs: compspecs} Delta R P c,
-ENTAIL Delta, R' |-- R ->
-@semax cs Espec Delta P c (normal_ret_assert R') ->
-@semax cs Espec Delta P c (normal_ret_assert R).
-Proof. intros. eapply semax_post; eauto.
-simpl RA_normal; auto.
-Qed.
 
 Lemma semax_post3:
   forall R' Espec {cs: compspecs} Delta P c R,
@@ -3010,9 +2972,9 @@ Ltac check_cast_assignment :=
 
 Ltac forward_setx :=
   ensure_normal_ret_assert;
-  hoist_later_in_pre;
+  (* hoist_later_in_pre; *)
  match goal with
- | |- semax ?Delta (|> (PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
+ | |- semax ?Delta ((PROPx ?P (LOCALx ?Q (SEPx ?R)))) (Sset _ ?e) _ =>
         eapply semax_PTree_set;
         [ reflexivity
         | reflexivity
@@ -3268,7 +3230,7 @@ Ltac entailer_for_store_tac := default_entailer_for_store_tac.
 
 Ltac load_tac :=
  ensure_normal_ret_assert;
- hoist_later_in_pre;
+ (* hoist_later_in_pre; *)
  first [sc_set_load_store.cast_load_tac | sc_set_load_store.load_tac].
 
 Ltac simpl_proj_reptype :=
@@ -3287,7 +3249,7 @@ end.
 
 Ltac store_tac :=
 ensure_open_normal_ret_assert;
-hoist_later_in_pre;
+(* hoist_later_in_pre; *)
 sc_set_load_store.store_tac.
 
 (* END new semax_load and semax_store tactics *************************)
@@ -3503,6 +3465,20 @@ unfold fold_right.
 rewrite sepcon_emp.
 auto.
 Qed.
+
+Ltac try_clean_up_stackframe :=
+  lazymatch goal with |-
+     ENTAIL _, PROPx _ (LOCALx _ (SEPx _)) |--
+        PROPx _ (LOCALx _ (SEPx _)) * stackframe_of _ =>
+     unfold stackframe_of;
+     simpl fn_vars;
+     repeat (
+     simple eapply fold_another_var_block;
+       [reflexivity | reflexivity | reflexivity | reflexivity | reflexivity 
+         | reflexivity | ]);
+     try simple apply no_more_var_blocks
+  | |- _ => idtac
+ end.
 
 Ltac clean_up_stackframe ::=
   lazymatch goal with |-
@@ -3777,7 +3753,8 @@ Ltac forward :=
       clean_up_stackframe; entailer_for_return
  | |- _ =>
   try apply semax_ff;
-  check_Delta; check_POSTCONDITION;
+  (* check_Delta;  *)
+  check_POSTCONDITION;
   repeat rewrite <- seq_assoc;
   lazymatch goal with 
   | |- semax _ _ (Ssequence (Sreturn _) _) _ =>
@@ -3803,8 +3780,8 @@ Ltac forward :=
       [ forward1 c
       | fwd_result;
         Intros;
-        abbreviate_semax;
-        try fwd_skip ]
+        (* abbreviate_semax; *)
+        try (fwd_skip; try_clean_up_stackframe) ]
     end
   end
  end.
@@ -4193,7 +4170,7 @@ split; simpl.
 Qed.
 
 
-Ltac start_function :=
+(* Ltac start_function :=
  leaf_function;
  match goal with |- semax_body ?V ?G ?F ?spec =>
     check_normalized F;
@@ -4286,7 +4263,7 @@ Ltac start_function :=
  try match goal with DS := @abbreviate (PTree.t funspec) PTree.Leaf |- _ =>
      clearbody DS
  end;
- start_function_hint.
+ start_function_hint. *)
 
 Opaque sepcon.
 Opaque emp.
@@ -4537,9 +4514,9 @@ Ltac with_library' p G :=
 Ltac with_library prog G :=
   let pr := eval unfold prog in prog in  with_library' pr G.
 
-Definition semax_prog {Espec} {CS} prog z V G :=
+(* Definition semax_prog {Espec} {CS} prog z V G :=
  @SeparationLogicAsLogicSoundness.MainTheorem.CSHL_MinimumLogic.CSHL_Defs.semax_prog
-  Espec CS prog z V (augment_funspecs prog G).
+  Espec CS prog z V (augment_funspecs prog G). *)
 
 Lemma mk_funspec_congr:
   forall a b c d e f g a' b' c' d' e' f' g',
@@ -4554,7 +4531,7 @@ subst d' e'.
 f_equal; apply proof_irr.
 Qed.
 
-Ltac prove_semax_prog_old :=
+(* Ltac prove_semax_prog_old :=
  split3; [ | | split3; [ | | split]];
  [ reflexivity || fail "duplicate identifier in prog_defs"
  | reflexivity || fail "unaligned initializer"
@@ -4571,7 +4548,7 @@ Ltac prove_semax_prog_old :=
         fail "Funspec of _main is not in the proper form"
     end
  ];
- repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | reflexivity | LookupID | LookupB | ]).
+ repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | reflexivity | LookupID | LookupB | ]). *)
 
 (**************MATERIAL FOR NEW TACTIC prove_semax_prog STARTS HERE ***************)
 
@@ -4698,7 +4675,7 @@ Ltac solve_cenvcs_goal :=
   solve [repeat f_equal; finish_composites])
  || (cbv; repeat f_equal; apply proof_irr).
 
-Ltac prove_semax_prog_aux tac :=
+(* Ltac prove_semax_prog_aux tac :=
   match goal with
     | |- semax_prog ?prog ?z ?Vprog ?Gprog =>
      let x := constr:(ltac:(old_with_library prog Gprog))
@@ -4724,11 +4701,11 @@ Ltac prove_semax_prog_aux tac :=
    pose (Gprog := @abbreviate _ G); 
   change (semax_func V Gprog g D G')
  end;
- tac.
+ tac. *)
 
-Ltac finish_semax_prog := repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | LookupID | LookupB | ]).
+(* Ltac finish_semax_prog := repeat (eapply semax_func_cons_ext_vacuous; [reflexivity | reflexivity | LookupID | LookupB | ]). *)
 
-Ltac prove_semax_prog := prove_semax_prog_aux finish_semax_prog.
+(* Ltac prove_semax_prog := prove_semax_prog_aux finish_semax_prog. *)
 
 (*******************************************)
 

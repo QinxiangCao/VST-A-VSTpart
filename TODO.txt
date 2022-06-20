@@ -1,0 +1,33 @@
+FloydSeq
+- `hoist_pre` [done]
+- [+] data_at ...
+
+
+
+
+CSplit
+- current split tactic is slow [check simpl, in progress]
+- evaluation with other tools
+  - [+] Verifast 
+  - [?] refinedC
+
+Frontend
+- loop with no invaraint not implemented
+- [+] extract Espec, Delta into a separate .v file (VST start_function)
+
+
+- interface with funspec (append pre/post to AClight, exgiven)
+- more examples (and assertions need rewriting (prop))
+- auto list tactics
+- semax_call (with precise) is admitted
+- AClight -> split results printing
+
+
+
+[CHANGELOG]
+? depend
+- in forward tactic:
+  - abbreviate_semax is removed
+  - check_Delta is removed
+- in frontend
+  - variables in WITH clause are separated by space (CommentParser.ml Line57)

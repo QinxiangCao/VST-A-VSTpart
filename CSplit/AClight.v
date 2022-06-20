@@ -22,8 +22,10 @@ Require Import Smallstep.
 Require Import Ctypes.
 Require Import Cop.
 Require Import Clight.
-Require Export VST.floyd.proofauto.
-
+Require Import VST.veric.mpred.
+Require Import VST.msl.seplog.
+Require Import VST.veric.SeparationLogic.
+Import ListNotations.
 
 (* Higher Order Auxiliary Definitions and Functions
    on dependent results *)
@@ -1293,6 +1295,7 @@ Fixpoint flatten_partial_pres_binds {A:Type}
      let c_pres := tl_of (mk_S_partial_pre path) s_pres' c_pres' in
      let c_pre_ass := hd_assert_of_pre c_pres' in
      let new_c_pre := mk_C_partial_pre path (exp c_pre_ass) in
+      (* (@exp assert (@LiftNatDed' mpred Nveric) A c_pre_ass) in *)
       list_binded_cons
         (mk_S_partial_pre path) new_c_pre
         s_pres' (flatten_partial_pres_binds s_pres' c_pres)

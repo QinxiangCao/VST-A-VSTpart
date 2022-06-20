@@ -1,11 +1,11 @@
-Require Import CSplit.AClight.
-
 Require Import VST.floyd.proofauto.
-Require Import CSplit.strong.
+Require Import CSplit.semantics_lemmas.
 Require Import CSplit.semantics.
+Require Import CSplit.strong.
 Require Import Coq.Program.Equality.
-
+Require Import CSplit.AClight.
 Open Scope aclight_scope.
+
 
 Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
   match s with

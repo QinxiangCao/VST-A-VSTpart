@@ -1,4 +1,4 @@
-Require Import VST.floyd.proofauto.
+Require Import FloydSeq.proofauto.
 Require Import cprogs.reverse_prog.
 
 Instance CompSpecs : compspecs. make_compspecs prog. Defined.
@@ -157,7 +157,7 @@ Lemma same_data_at_l_r: forall sh (p:val) (q:val) (x:val) (x':val) (q':val),x=x'
 Proof.
   intros. rewrite sepcon_emp. entailer!.
 Qed.
-
+(* 
 Ltac solve_data_at:=
 idtac;
 match goal with
@@ -287,6 +287,6 @@ data_at sh t_struct_list (x, q) p*emp |--
        data_at sh t_struct_list (x', q') p.
 intros.
 local_listrep_cancel.
-Qed.
+Qed. *)
 
 
