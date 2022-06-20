@@ -33,23 +33,15 @@ FLOYD_FILE_NAMES = \
    base.v \
    base2.v \
    canon.v client_lemmas.v closed_lemmas.v canonicalize.v  \
-   type_induction.v \
-   nested_pred_lemmas.v \
-   align_compatible_dec.v compact_prod_sum.v \
-   reptype_lemmas.v aggregate_type.v mapsto_memory_block.v aggregate_pred.v \
-   nested_field_lemmas.v \
-   efield_lemmas.v proj_reptype_lemmas.v \
-   data_at_rec_lemmas.v field_at.v \
+   proj_reptype_lemmas.v \
    local2ptree_denote.v local2ptree_eval.v local2ptree_typecheck.v \
    semax_tactics.v \
    go_lower.v \
    entailer.v \
-   loadstore_mapsto.v loadstore_field_at.v field_compat.v \
+   loadstore_mapsto.v loadstore_field_at.v \
    globals_lemmas.v \
-   stronger.v \
    replace_refill_reptype_lemmas.v \
    nested_loadstore.v \
-   field_at_wand.v \
    compare_lemmas.v \
    simple_reify.v \
    simpl_reptype.v \
@@ -60,8 +52,8 @@ FLOYD_FILE_NAMES = \
    diagnosis.v \
    freezer.v forward.v \
    library.v \
-   deadvars.v Clightnotations.v unfold_data_at.v hints.v reassoc_seq.v \
-   linking.v list_solver.v data_at_lemmas.v \
+   deadvars.v Clightnotations.v hints.v reassoc_seq.v \
+   linking.v \
    proofauto.v \
    extract_smt.v
 FLOYD_FILES = $(addprefix floyd-seq/, $(FLOYD_FILE_NAMES))

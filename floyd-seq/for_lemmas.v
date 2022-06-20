@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import FloydSeq.mapsto_memory_block.
+Require Import VST.floyd.mapsto_memory_block.
 Require Import FloydSeq.closed_lemmas.
 Require Import FloydSeq.compare_lemmas.
 Require Import FloydSeq.semax_tactics.

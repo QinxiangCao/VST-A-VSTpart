@@ -8,17 +8,17 @@ Require Import FloydSeq.forward.
 Require Import FloydSeq.call_lemmas.
 Require Import FloydSeq.forward_lemmas.
 Require Import FloydSeq.for_lemmas.
-Require Import FloydSeq.nested_pred_lemmas.
-Require Import FloydSeq.nested_field_lemmas.
-Require Import FloydSeq.efield_lemmas.
-Require Import FloydSeq.mapsto_memory_block.
-Require Import FloydSeq.aggregate_type.
-Require FloydSeq.aggregate_pred. Import FloydSeq.aggregate_pred.aggregate_pred.
-Require Import FloydSeq.reptype_lemmas.
-Require Import FloydSeq.data_at_rec_lemmas.
-Require Import FloydSeq.field_at.
-Require Import FloydSeq.field_compat.
-Require Import FloydSeq.stronger.
+Require Import VST.floyd.nested_pred_lemmas.
+Require Import VST.floyd.nested_field_lemmas.
+Require Import VST.floyd.efield_lemmas.
+Require Import VST.floyd.mapsto_memory_block.
+Require Import VST.floyd.aggregate_type.
+Require VST.floyd.aggregate_pred. Import VST.floyd.aggregate_pred.aggregate_pred.
+Require Import VST.floyd.reptype_lemmas.
+Require Import VST.floyd.data_at_rec_lemmas.
+Require Import VST.floyd.field_at.
+Require Import VST.floyd.field_compat.
+Require Import VST.floyd.stronger.
 Require Import FloydSeq.loadstore_mapsto.
 Require Import FloydSeq.loadstore_field_at.
 Require Import FloydSeq.nested_loadstore.

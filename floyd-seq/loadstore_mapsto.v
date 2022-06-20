@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import FloydSeq.mapsto_memory_block.
+Require Import VST.floyd.mapsto_memory_block.
 Require Import CSplit.strong.
 Require Import CSplit.strongFacts.
 Import LiftNotation.

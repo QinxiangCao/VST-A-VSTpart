@@ -13,19 +13,19 @@ Require Export FloydSeq.subsume_funspec.
 Require Export FloydSeq.call_lemmas.
 Require Export FloydSeq.forward_lemmas.
 Require Export FloydSeq.for_lemmas.
-Require Export FloydSeq.nested_pred_lemmas.
-Require Export FloydSeq.nested_field_lemmas.
-Require Export FloydSeq.efield_lemmas.
-Require Export FloydSeq.mapsto_memory_block.
-Require Export FloydSeq.aggregate_type.
-Require FloydSeq.aggregate_pred. Export FloydSeq.aggregate_pred.aggregate_pred.
-Require Export FloydSeq.reptype_lemmas.
+Require Export VST.floyd.nested_pred_lemmas.
+Require Export VST.floyd.nested_field_lemmas.
+Require Export VST.floyd.efield_lemmas.
+Require Export VST.floyd.mapsto_memory_block.
+Require Export VST.floyd.aggregate_type.
+Require VST.floyd.aggregate_pred. Export VST.floyd.aggregate_pred.aggregate_pred.
+Require Export VST.floyd.reptype_lemmas.
 Require Export FloydSeq.simpl_reptype.
-Require Export FloydSeq.data_at_rec_lemmas.
-Require Export FloydSeq.field_at.
-Require Export FloydSeq.field_at_wand.
-Require Export FloydSeq.field_compat.
-Require Export FloydSeq.stronger.
+Require Export VST.floyd.data_at_rec_lemmas.
+Require Export VST.floyd.field_at.
+Require Export VST.floyd.field_at_wand.
+Require Export VST.floyd.field_compat.
+Require Export VST.floyd.stronger.
 Require Export FloydSeq.loadstore_mapsto.
 Require Export FloydSeq.loadstore_field_at.
 Require Export FloydSeq.nested_loadstore.
@@ -35,15 +35,15 @@ Require Export FloydSeq.local2ptree_typecheck.
 Require Export FloydSeq.proj_reptype_lemmas.
 Require Export FloydSeq.replace_refill_reptype_lemmas.
 Require Export FloydSeq.sc_set_load_store.
-Require Export FloydSeq.unfold_data_at.
+Require Export VST.floyd.unfold_data_at.
 Require Export FloydSeq.globals_lemmas.
 Require Export FloydSeq.diagnosis.
 Require Export FloydSeq.freezer.
 Require Export FloydSeq.deadvars.
 Require Export FloydSeq.hints.
 Require Export FloydSeq.Clightnotations.
-Require Export FloydSeq.list_solver.
-Require Export FloydSeq.data_at_lemmas.
+Require Export VST.floyd.list_solver.
+Require Export VST.floyd.data_at_lemmas.
 Require VST.msl.iter_sepcon.
 Require VST.msl.wand_frame.
 Require VST.msl.wandQ_frame.

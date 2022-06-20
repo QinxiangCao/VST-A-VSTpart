@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import FloydSeq.efield_lemmas.
+Require Import VST.floyd.efield_lemmas.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 Require Import FloydSeq.local2ptree_typecheck.
