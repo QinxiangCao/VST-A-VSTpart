@@ -164,8 +164,7 @@ End AClightNotations.
 
 
 Ltac compute_split c_stm :=
-(* let res0a := eval unfold s_stm in  in *)
-let res0b := eval unfold c_stm in (C_split c_stm) in
+let res0 := eval unfold c_stm in (C_split c_stm) in
 let res1 := eval cbv [
   S_split_sequence
   S_split_ifthenelse
@@ -196,8 +195,9 @@ let res1 := eval cbv [
   C_split_loop_refined
 
   C_split
-] in res0b in
-let res2 := eval cbv [
+
+  (**************)
+
   atom_conn_return
   atom_conn_returns
   atoms_conn_returns
@@ -252,8 +252,9 @@ let res2 := eval cbv [
   add_Q_to_Catoms
 
   Smap Sconcat Sapp Capp Cmap
-] in res1 in
-let res3 := eval cbv [
+
+  (**************)
+
   hd_of
   tl_of
   flatten_binds
@@ -272,9 +273,9 @@ C_result_proj_C_post_continue
 C_result_proj_C_post_return
 C_result_proj_C_path
   
-] in res2 in
-let res4 :=  eval cbv [
-  atom_conn_return
+  (**************)
+
+atom_conn_return
   atom_conn_returns
   atoms_conn_returns
   atom_conn_atom
@@ -328,9 +329,8 @@ let res4 :=  eval cbv [
   add_Q_to_Catoms
 
   Smap Sconcat Sapp Capp Cmap
-] in res3 in
-(* let res5 := eval simpl in res4 in     *)
-    exact res4.
+] in res0 in
+    exact res1.
 
     Import AClightNotations.
 

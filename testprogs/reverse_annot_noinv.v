@@ -152,13 +152,11 @@ Definition f_reverse_hint :=
 	    PROP  ()
 	    LOCAL (temp ret_temp q)
 	    SEP   (listrep sh (rev l) q))))))).
-
+  
 Definition Gprog : funspecs :=
   ltac:(with_library prog [reverse_spec]).
 
-  Print f_reverse_hint.
-
-Definition f_reverse_hint_split :=
+Time Definition f_reverse_hint_split :=
   ltac:(compute_split f_reverse_hint).
 
 
