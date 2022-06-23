@@ -1,7 +1,7 @@
 From Coq Require Import String List ZArith.
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.
 Require Import CSplit.AClightFunc.
-Require Import CSplit.semanticsFunc.
+Require Import CSplit.semantics.
 Require Import utils.AClightNotations.
 Require Import FloydSeq.proofauto.
 Require Import FloydSeq.client_lemmas.

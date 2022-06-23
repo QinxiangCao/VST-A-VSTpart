@@ -130,8 +130,6 @@ Global Arguments Cifthenelse _ {_ _} _ _.
 Global Arguments Csequence {_ _ } _ _.
 Global Arguments Cloop {_ _} _ _.
 Global Arguments list_binded_cons {_ _ _} _ {_} _.
-Global Arguments bind_C_partial_post_ret {_ _} _.
-Global Arguments bind_C_partial_post {_ _} _.
 Global Arguments bind_C_full_path {_ _} _.
 
 Global Arguments C_split {_} _.
@@ -147,13 +145,7 @@ Notation "'ANNOTATION_WITH' x .. y , c " :=
 Infix "+++" := Capp (right associativity, at level 60) : aclight_scope. *)
 
 Notation "'GIVEN' x .. y , c " :=
-  (bind_C_partial_post (fun x => .. (bind_C_partial_post (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
-
-Notation "'GIVEN' x .. y , c " :=
   (bind_C_full_path (fun x => .. (bind_C_full_path (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
-
-Notation "'GIVEN' x .. y , c " :=
-  (bind_C_partial_post_ret (fun x => .. (bind_C_partial_post_ret (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
 
 Notation "'EXGIVEN' x  '[[' ass ']]'  c " :=
   (Cexgiven _ (fun x => ass) _ (fun x => c)) (at level 65) : logic.

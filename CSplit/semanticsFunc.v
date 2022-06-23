@@ -3,7 +3,7 @@ Require Export CSplit.AClightFunc.
 
 (* Require Import VST.floyd.proofauto. *)
 Require Import CSplit.strong.
-
+(*
 Open Scope aclight_scope.
 
 Definition normal_split_assert Q := {|
@@ -349,3 +349,4 @@ Definition split_Semax (P: assert) (Q: ret_assert) {s_res: S_result} : (C_result
   end.
 
 End Semantics.
+*)
