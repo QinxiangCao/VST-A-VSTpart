@@ -167,6 +167,7 @@ clean:
 	@rm -f .depend
 	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
+	@rm -f CSplit/*.vo CSplit/*.glob CSplit/*.aux
 	@rm -f floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
 	@rm -f utils/*.vo utils/*.glob utils/*.aux
 	@rm -f $(CPROGSDIR)/*.vo $(CPROGSDIR)/*.glob $(CPROGSDIR)/*.aux

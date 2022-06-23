@@ -1,6 +1,7 @@
 
 Require Import compcert.cfrontend.Ctypes.
 Require Import compcert.cfrontend.Clight.
+Require Import CSplit.AClight.
 Require Import CSplit.AClightFunc.
 Require Import compcert.common.AST.
 
