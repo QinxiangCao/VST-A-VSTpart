@@ -317,7 +317,8 @@ Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
   match funcspec with (binder, pre, post) =>
     let binder_list := make_binder_list binder pre in
     (Some funcspec,
-      let fun_body := Ssequence s (Sassert post) in
+      (* let fun_body := Ssequence s (Sassert post) in *)
+      let fun_body := s in
         fold_right (fun binder_ass s' => 
           Sexgiven (fst binder_ass) (snd binder_ass) s'
         ) fun_body binder_list

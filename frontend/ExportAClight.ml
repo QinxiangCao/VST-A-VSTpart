@@ -519,11 +519,15 @@ let print_globdef p (id, gd) =
 let prologue = "\
 From Coq Require Import String List ZArith.\n\
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.\n\
-Require Import CSplit.AClightFunc.\n\
-Require Import CSplit.semanticsFunc.\n\
+Require Import CSplit.semantics.\n\
 Require Import utils.AClightNotations.\n\
 Require Import FloydSeq.proofauto.\n\
 Require Import FloydSeq.client_lemmas.\n\
+Require VST.floyd.proofauto.\n\
+Require Import FloydSeq.proofauto.\n\
+Require Import CSplit.strong.\n\
+Require Import CSplit.strongSoundness.\n\
+Require Import CSplit.AClightFunc.\n\
 Local Open Scope Z_scope.\n\
 Import AClightNotations.\n"
 
