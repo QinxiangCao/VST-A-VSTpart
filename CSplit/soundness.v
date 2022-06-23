@@ -53,13 +53,19 @@ forall b, CForall (@post_to_semax CS Espec Delta P) (c_posts b).
 Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
   - intros. rewrite lb_nil_inv . constructor.
-  - inversion H.
+  - destruct a. 
+    inversion H.
     destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
+    rewrite E.
+    dependent destruction r.
+    constructor.
+    { eapply semax_pre'.
+      2:{ hnf in H0. apply H0. }
+      apply exp_right with (x:=b). simpl.
+      rewrite E. intros. solve_andp. }
     specialize (IHs_posts _ H1 b).
     unfold tl_of in IHs_posts. rewrite E in IHs_posts.
-    rewrite E. constructor;auto.
-    simpl in H0. specialize (H0 b).
-    unfold hd_of in H0. rewrite E in H0. auto.
+    auto.
 Qed.
 
 
@@ -71,13 +77,19 @@ forall b, CForall (@post_ret_to_semax CS Espec Delta P) (c_posts b).
 Proof.
   intros. revert c_posts H b. dependent induction s_posts;intros.
   - intros. rewrite lb_nil_inv . constructor.
-  - inversion H.
+  - destruct a. 
+    inversion H.
     destruct (lb_cons_inv (c_posts b)) as [r [cl E]].
+    rewrite E.
+    dependent destruction r.
+    constructor.
+    { eapply semax_pre'.
+      2:{ hnf in H0. apply H0. }
+      apply exp_right with (x:=b). simpl.
+      rewrite E. intros. solve_andp. }
     specialize (IHs_posts _ H1 b).
     unfold tl_of in IHs_posts. rewrite E in IHs_posts.
-    rewrite E. constructor;auto.
-    simpl in H0. specialize (H0 b).
-    unfold hd_of in H0. rewrite E in H0. auto.
+    auto.
 Qed.
 
 Lemma given_path_sound: forall B  s_paths 
@@ -156,8 +168,7 @@ Lemma Cpost_conn_atoms_inv_exgiven: forall A Q
   (ass' : A -> assert) (atoms: atoms),
   CForall (@post_to_semax CS Espec Delta Q)
   (Cposts_conn_atoms
-     {bind_C_partial_post A (mk_S_partial_post [])
-        (fun a : A => mk_C_partial_post (ass' a) [])} atoms) ->
+     {mk_C_partial_post (fun a : environ => EX x : A, ass' x a) []} atoms) ->
   forall a, Forall (atom_to_semax Delta (ass' a) Q) atoms.
 Proof.
   intros.
@@ -166,7 +177,9 @@ Proof.
   - destruct H. 
     constructor.
     { destruct a0. simpl in H.
-      apply H. }
+      simpl. eapply semax_pre'.
+      2:{ apply H. } simpl. intros.
+      apply exp_right with (x0:=a). solve_andp. }
     { auto. }
 Qed.
 
@@ -175,18 +188,20 @@ Lemma Cpost_conn_atom_rets_inv_exgiven: forall A Q
   (ass' : A -> assert) (atoms: atom_rets),
   CForall (@post_ret_to_semax CS Espec Delta Q)
   (Cposts_conn_returns
-     {bind_C_partial_post A (mk_S_partial_post [])
-        (fun a : A => mk_C_partial_post (ass' a) [])} atoms) ->
+  {mk_C_partial_post (fun a : environ => EX x : A, ass' x a) []}
+   atoms) ->
   forall a, Forall (atom_ret_to_semax Delta (ass' a) Q) atoms.
 Proof.
   intros.
   induction atoms.
   - constructor.
-  - inversion H.
+  - destruct H. 
     constructor.
     { destruct a0. simpl in H.
-      apply H. }
-    { auto. }
+      simpl. eapply semax_pre'.
+      2:{ apply H. } simpl. intros.
+      apply exp_right with (x0:=a). solve_andp. }
+    { auto. } 
 Qed.
 
 Ltac destruct_Sresult_rec S :=

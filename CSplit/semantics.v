@@ -277,8 +277,8 @@ Fixpoint post_to_semax post { s_post : S_partial_post }
   | mk_C_partial_post pre path =>
       @semax CS Espec Delta pre (path_to_statement path)
       (normal_split_assert post)
-  | bind_C_partial_post A s_post' c_post' =>
-      forall (a:A), post_to_semax post (c_post' a)
+  (* | bind_C_partial_post A s_post' c_post' =>
+      forall (a:A), post_to_semax post (c_post' a) *)
   end.
 
 Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
@@ -301,8 +301,8 @@ Fixpoint post_ret_to_semax post { s_post : S_partial_post_ret }
           (path_to_statement path)
           (Clight.Sreturn retval))
       (return_split_assert post)
-  | bind_C_partial_post_ret A s_post' c_post' =>
-      forall (a:A), post_ret_to_semax post (c_post' a)
+  (* | bind_C_partial_post_ret A s_post' c_post' =>
+      forall (a:A), post_ret_to_semax post (c_post' a) *)
   end.
 
 Definition atom_to_semax pre post atom := 

@@ -142,9 +142,9 @@ $(UTIL_FILES:%.v=%.vo): %.vo: %.v
 all: frontend \
   $(CSPLIT_FILES:%.v=%.vo) \
   $(FLOYD_FILES:%.v=%.vo) \
+  $(CPROG_FILES:%.v=%.vo) \
   $(CDEF_FILES:%.v=%.vo) \
-  $(UTIL_FILES:%.v=%.vo) \
-  $(CPROG_FILES:%.v=%.vo)
+  $(UTIL_FILES:%.v=%.vo) 
 
 
 # endif # if .depend exists
