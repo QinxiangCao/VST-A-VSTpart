@@ -29,6 +29,13 @@ Lemma overridePost_normal_split: forall P Q,
   overridePost P (normal_split_assert Q) = normal_split_assert P.
 Proof. intros. reflexivity. Qed.
 
+Fixpoint SForall {A:Type} 
+(P : A -> Prop ) (sl: list A) : Prop :=
+match sl with
+| nil => True
+| x :: sl' =>  P x  /\ SForall P sl'
+end.
+
 Fixpoint CForall {A:Type} {binder: A -> Type} 
 (P : forall (a: A), binder a -> Prop ) {sl: list A}
 (cl : @list_binded_of A binder sl) : Prop :=
@@ -346,5 +353,54 @@ Definition split_Semax (P: assert) (Q: ret_assert) {s_res: S_result} : (C_result
         /\ Forall (atom_ret_to_semax P (RA_return Q)) s_atom_return
       end
   end.
+
+Definition split_Semax_fun (P: assert) (Q: ret_assert) 
+  {s_res: S_result} : (C_result s_res) -> Prop :=
+  match s_res with
+  | None => fun _ => False
+  | Some (mk_S_result_rec s_pre s_path
+      s_post_normal s_post_break s_post_continue s_post_return
+      s_atom_normal s_atom_break s_atom_continue s_atom_return) =>
+      fun c_res =>
+      match c_res with
+      | mk_C_result_rec c_pre c_path
+          c_post_normal c_post_break c_post_continue c_post_return =>
+          CForall (@pre_to_semax P) c_pre
+        /\ CForall (@path_to_semax) c_path
+        /\ CForall (@post_to_semax (RA_normal Q)) c_post_normal
+        /\ CForall (@post_to_semax (RA_break Q)) c_post_break
+        /\ CForall (@post_to_semax (RA_continue Q)) c_post_continue
+        /\ CForall (@post_ret_to_semax (RA_return Q)) c_post_return
+        /\ SForall (atom_to_semax P (RA_normal Q)) s_atom_normal
+        /\ SForall (atom_to_semax P (RA_break Q)) s_atom_break
+        /\ SForall (atom_to_semax P (RA_continue Q)) s_atom_continue
+        /\ SForall (atom_ret_to_semax P (RA_return Q)) s_atom_return
+      end
+  end.
+
+Lemma SForall_equiv: forall {A:Type} P (ls:list A),
+  SForall P ls <-> Forall P ls.
+Proof.
+  intros. split;intro.
+  - induction ls;auto. inversion H;subst.
+    constructor;auto.
+  - induction H;simpl;auto.
+Qed.
+
+
+Theorem split_Semax_fun_equiv: 
+  forall (P: assert) (Q: ret_assert) 
+  (s_res: S_result) (c_res: C_result s_res),
+  split_Semax_fun P Q c_res <-> split_Semax P Q c_res.
+Proof.
+  intros. destruct s_res.
+  - destruct s. destruct c_res. split.
+    + intros. destruct H as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?).
+      repeat split;auto;try solve [apply SForall_equiv;auto].
+    + intros. destruct H as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?).
+      repeat split;auto;try solve [apply SForall_equiv;auto].
+  - destruct c_res. simpl. tauto.
+Qed.
+
 
 End Semantics.

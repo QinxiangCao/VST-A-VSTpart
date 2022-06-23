@@ -16,7 +16,10 @@ Require Import VST.floyd.SeparationLogicAsLogic.
 Require Import VST.floyd.proofauto.
 Import Ctypes LiftNotation.
 Local Open Scope logic.
+Require Import CSplit.semantics.
+Require Import CSplit.soundness.
 Require Import CSplit.strong.
+Require Import CSplit.AClightFunc.
 (* Lemma semax_derives_vst: forall CS  Espec Delta P c Q,
 @SeparationLogicAsLogic.semax CS Espec Delta P c Q ->
 @CSHL_Def.semax CS Espec Delta P c Q.
@@ -179,3 +182,123 @@ Proof.
   - apply semax_ff.
   - apply semax_ff.
 Qed. 
+
+
+Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
+  match s with
+  | Ssequence s1 s2 =>
+      Clight.Ssequence 
+        (S_statement_to_Clight s1) 
+        (S_statement_to_Clight s2)
+  | Sassert       => Clight.Sskip
+  | Sskip         => Clight.Sskip
+  | Sassign e1 e2 => Clight.Sassign e1 e2
+  | Scall id e args
+      => Clight.Scall id e args
+  | Sset id e
+      => Clight.Sset id e
+  | Sifthenelse e s1 s2
+      => Clight.Sifthenelse e 
+          (S_statement_to_Clight s1) 
+          (S_statement_to_Clight s2)
+  | Sloop s1 s2
+      => Clight.Sloop 
+          (S_statement_to_Clight s1) 
+          (S_statement_to_Clight s2)
+  | Sbreak => Clight.Sbreak 
+  | Scontinue => Clight.Scontinue
+  | Sreturn e => Clight.Sreturn e
+  end.
+
+Fixpoint remove_skip (c: statement): statement :=
+  match c with
+  | Clight.Ssequence c1 c2 =>
+      match remove_skip c1 with
+      | Clight.Sskip => remove_skip c2
+      | _ => match remove_skip c2 with
+             | Clight.Sskip => remove_skip c1
+             | _ => Clight.Ssequence (remove_skip c1) (remove_skip c2)
+             end
+      end
+  | Clight.Sifthenelse e c1 c2 =>
+      Clight.Sifthenelse e (remove_skip c1) (remove_skip c2)
+  | Clight.Sloop c1 c2 =>
+      Clight.Sloop (remove_skip c1) (remove_skip c2)
+  | _ =>
+      c
+  end.
+
+Theorem semax_remove_skip: forall {Ora: OracleKind} {CS} Delta P c Q,
+  @semax CS Ora Delta P c Q <-> @semax CS Ora Delta P (remove_skip c) Q.
+Proof.
+  intros.
+  revert P Q.
+  induction c; intros; try tauto.
+  + simpl.
+    assert (semax Delta P (Clight.Ssequence c1 c2) Q <->
+            semax Delta P (Clight.Ssequence (remove_skip c1) (remove_skip c2)) Q).
+    {
+      split; intros HH; apply semax_seq_inv in HH; destruct HH as [R [? ?] ].
+      + rewrite IHc1 in H; rewrite IHc2 in H0.
+        eapply semax_seq; eauto.
+      + rewrite <- IHc1 in H; rewrite <- IHc2 in H0.
+        eapply semax_seq; eauto.
+    }
+    destruct (remove_skip c1), (remove_skip c2);
+      solve
+        [ auto
+        | rewrite H; symmetry; apply semax_skip_seq
+        | rewrite H; symmetry; apply semax_seq_skip].
+  + simpl.
+    split; intros HH; apply semax_ifthenelse_inv in HH.
+    - eapply semax_pre'; eauto.
+      rewrite andp_comm.
+      rewrite exp_andp1.
+      apply semax_extract_exists; intros P'.
+      rewrite andp_assoc.
+      apply semax_extract_prop; intros [? ?].
+      rewrite andp_comm.
+      apply semax_ifthenelse.
+      * apply IHc1, H.
+      * apply IHc2, H0.
+    - eapply semax_pre'; eauto.
+      rewrite andp_comm.
+      rewrite exp_andp1.
+      apply semax_extract_exists; intros P'.
+      rewrite andp_assoc.
+      apply semax_extract_prop; intros [? ?].
+      rewrite andp_comm.
+      apply semax_ifthenelse.
+      * apply IHc1, H.
+      * apply IHc2, H0.
+  + simpl.
+    split; intros HH; apply semax_loop_inv in HH.
+    - eapply semax_pre'; eauto.
+      apply semax_extract_exists; intros Q1.
+      apply semax_extract_exists; intros Q2.
+      apply semax_extract_prop; intros [? ?].
+      eapply semax_loop.
+      * apply IHc1, H.
+      * apply IHc2, H0.
+    - eapply semax_pre'; eauto.
+      apply semax_extract_exists; intros Q1.
+      apply semax_extract_exists; intros Q2.
+      apply semax_extract_prop; intros [? ?].
+      eapply semax_loop.
+      * apply IHc1, H.
+      * apply IHc2, H0.
+Qed.
+
+Lemma soundness: forall {Espec CS} Delta
+(P:assert) (Q:ret_assert) (s_stm: S_statement)
+(c_stm: C_statement s_stm) (c: statement),
+remove_skip c = remove_skip (S_statement_to_Clight s_stm) ->
+split_Semax Delta P Q (C_split s_stm c_stm) ->
+@semax CS Espec Delta P c Q.
+Proof.
+  intros.
+  apply semax_remove_skip.
+  rewrite H.
+  rewrite <- semax_remove_skip.
+  eapply soundness; eauto.
+Qed.

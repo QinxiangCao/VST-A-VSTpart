@@ -325,10 +325,10 @@ atom_conn_return
 ] in res0 in
     exact res1.
 
-    Import AClightNotations.
+Import AClightNotations.
 
 
-    Require Import cprogs.reverse_prog.
+    (* Require Import cprogs.reverse_prog.
     Require Import cprogs.reverse_def.
 
 Parameter (sh:share) (p:val) (l: list val).
@@ -430,7 +430,7 @@ Definition f_reverse_hint :=
 Definition f_reverse_hint_split :=
   ltac:(compute_split f_reverse_hint).
 
-Print f_reverse_hint_split. 
+Print f_reverse_hint_split.  *)
 (* Goal C_split f_append_hint = C_split f_append_hint.
 unfold f_append_hint.
 cbv_conns.
