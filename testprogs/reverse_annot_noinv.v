@@ -62,26 +62,26 @@ Definition f_reverse_hint sh (p: val) l :=
                 (Csequence
                   (Cassert (
        (EX w v l1 l2,
-          PROP  (l = rev l1 ++ l2)
+          PROP  (writable_share sh; l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
                   (EXGIVEN w
                     [[((EX v l1 l2,
-          PROP  (l = rev l1 ++ l2)
+          PROP  (writable_share sh; l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
                     (EXGIVEN v
                       [[((EX l1 l2,
-          PROP  (l = rev l1 ++ l2)
+          PROP  (writable_share sh; l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
                       (EXGIVEN l1
                         [[((EX l2,
-          PROP  (l = rev l1 ++ l2)
+          PROP  (writable_share sh; l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
                         (EXGIVEN l2
-                          [[((PROP  (l = rev l1 ++ l2)
+                          [[((PROP  (writable_share sh; l = rev l1 ++ l2)
 	  LOCAL (temp _w w; temp _v v)
 	  SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
                           (Csequence
@@ -91,24 +91,24 @@ Definition f_reverse_hint sh (p: val) l :=
                             (Csequence
                               (Cassert (
          (EX t x l2',
-	    PROP  (l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
+	    PROP  (writable_share sh; l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
 	    LOCAL (temp _w w; temp _v v)
 	    SEP   (data_at sh t_struct_list (x, t) v;
 	           listrep sh l1 w; listrep sh l2' t))%assert))
                               (EXGIVEN t
                                 [[((EX x l2',
-	    PROP  (l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
+	    PROP  (writable_share sh; l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
 	    LOCAL (temp _w w; temp _v v)
 	    SEP   (data_at sh t_struct_list (x, t) v;
 	           listrep sh l1 w; listrep sh l2' t))%assert)]] 
                                 (EXGIVEN x
                                   [[((EX l2',
-	    PROP  (l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
+	    PROP  (writable_share sh; l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
 	    LOCAL (temp _w w; temp _v v)
 	    SEP   (data_at sh t_struct_list (x, t) v;
 	           listrep sh l1 w; listrep sh l2' t))%assert)]] 
                                   (EXGIVEN l2'
-                                    [[((PROP  (l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
+                                    [[((PROP  (writable_share sh; l = rev l1 ++ l2; l2 = x :: l2'; writable_share sh)
 	    LOCAL (temp _w w; temp _v v)
 	    SEP   (data_at sh t_struct_list (x, t) v;
 	           listrep sh l1 w; listrep sh l2' t))%assert)]] 
@@ -172,10 +172,23 @@ Proof.
   apply semax_skip.
 Qed.
 
+Lemma semax_return_return_split_assert: forall {Ora CS} Delta P c Q F,
+  @semax Ora CS Delta P c (frame_ret_assert Q F) ->
+  @semax Ora CS Delta P c (return_split_assert (RA_return (frame_ret_assert Q F))).
+Proof.
+  intros.
+  eapply semax_post_simple; [ .. | apply H].
+  + apply TT_right.
+  + apply TT_right.
+  + apply TT_right.
+  + intros; apply derives_refl.
+Qed.
+
 Theorem f_reverse_functionally_correct:
   semax_body Vprog Gprog f_reverse reverse_spec.
 Proof.
   start_function.
+  change @client_lemmas.abbreviate with @abbreviate in Delta_specs, Delta.
   apply semax_derives.
   eapply (soundness _ _ _ _ (f_reverse_hint sh p l)); [reflexivity | ..]. 
   match goal with
@@ -188,7 +201,7 @@ Proof.
         path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
         hd_assert_of_post hd_assert_of_post_ret
         path_to_statement to_Clight
-        atoms_conn_atoms atoms_conn_returns Sconcat Sapp Smap SForall CForall].
+        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall].
   repeat
     match goal with
     | |- _ /\ _ => split
@@ -207,7 +220,13 @@ Proof.
     unfold listrep.
     entailer!.
   + intros w v l1 l2.
-    admit.
+    forward_if; [| forward; apply TT_right].
+    forward.
+    unfold RA_normal, normal_split_assert.
+    sep_apply (listrep_isptr sh l2 v).
+    Intros a l2b t.
+    Exists t a l2b.
+    entailer!.
   + Intros w v l1 l2 t a l2b.
     forward.
     forward.
@@ -224,5 +243,13 @@ Proof.
       Exists w.
       entailer!.
   + Intros w v l1 l2.
-    admit.
-Abort.
+    forward_if; [forward; apply TT_right |].
+    unfold POSTCONDITION, abbreviate.
+    apply semax_return_return_split_assert.
+    forward.
+    Exists w; entailer!.
+    sep_apply (listrep_null sh l2).
+    entailer!.
+    rewrite app_nil_r, rev_involutive.
+    entailer!.
+Qed.
