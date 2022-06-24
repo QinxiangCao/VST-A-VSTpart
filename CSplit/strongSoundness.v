@@ -302,3 +302,24 @@ Proof.
   rewrite <- semax_remove_skip.
   eapply soundness; eauto.
 Qed.
+
+Lemma semax_skip_normal_split_post: forall {Ora CS} Delta P Q,
+  P |-- Q ->
+  @semax Ora CS Delta P Clight.Sskip (normal_split_assert Q).
+Proof.
+  intros.
+  eapply semax_post_simple with (normal_ret_assert P); [apply H | apply TT_right .. | apply TT_right | intro; apply TT_right | ].
+  apply semax_skip.
+Qed.
+
+Lemma semax_return_return_split_assert: forall {Ora CS} Delta P c Q F,
+  @semax Ora CS Delta P c (frame_ret_assert Q F) ->
+  @semax Ora CS Delta P c (return_split_assert (RA_return (frame_ret_assert Q F))).
+Proof.
+  intros.
+  eapply semax_post_simple; [ .. | apply H].
+  + apply TT_right.
+  + apply TT_right.
+  + apply TT_right.
+  + intros; apply derives_refl.
+Qed.

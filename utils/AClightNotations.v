@@ -6,6 +6,8 @@ Require Import CSplit.AClightFunc.
 Require Import compcert.common.AST.
 
 
+Require Import CSplit.semantics.
+Require Import CSplit.strongSoundness.
 Require Import FloydSeq.proofauto.
 
 
@@ -328,117 +330,48 @@ atom_conn_return
 
 Import AClightNotations.
 
+Ltac start_function_argument_tac HINT_CODE :=
+  change @floyd.client_lemmas.abbreviate with @FloydSeq.client_lemmas.abbreviate in *;
+  apply semax_derives;
+  eapply (soundness _ _ _ _ HINT_CODE); [reflexivity | ..];
+  match goal with
+  | |- context [C_split ?c] =>
+    change (C_split c) with (ltac:(compute_split HINT_CODE))
+  end;
+  apply split_Semax_fun_equiv;
+    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign
+        path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
+        hd_assert_of_post hd_assert_of_post_ret
+        path_to_statement to_Clight
+        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall];
+  repeat
+    match goal with
+    | |- _ /\ _ => split
+    | |- True => auto
+    | |- _ => intros; simple apply semax_skip_normal_split_post; apply derives_refl
+    end.
 
-    (* Require Import cprogs.reverse_prog.
-    Require Import cprogs.reverse_def.
-
-Parameter (sh:share) (p:val) (l: list val).
-
-Definition f_reverse_hint :=
-(
-  (Csequence
-    Cskip
-    (Csequence
-      Cskip
-      (Csequence
-        (Cset _w (Ecast (Econst_int (Int.repr 0) tint) (tptr tvoid)))
-        (Csequence
-          (Cset _v (Etempvar _p (tptr (Tstruct _list noattr))))
-          (Csequence
-            (Cloop
-              (Csequence
-                (Cassert (
-        (EX w v l1 l2,
-          PROP  (l = rev l1 ++ l2)
-    LOCAL (temp _w w; temp _v v)
-    SEP   (listrep sh l1 w; listrep sh l2 v))%assert))
-                (EXGIVEN w
-                  [[((EX v l1 l2,
-          PROP  (l = rev l1 ++ l2)
-    LOCAL (temp _w w; temp _v v)
-    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
-                  (EXGIVEN v
-                    [[((EX l1 l2,
-          PROP  (l = rev l1 ++ l2)
-    LOCAL (temp _w w; temp _v v)
-    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
-                    (EXGIVEN l1
-                      [[((EX l2,
-          PROP  (l = rev l1 ++ l2)
-    LOCAL (temp _w w; temp _v v)
-    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
-                      (EXGIVEN l2
-                        [[((PROP  (l = rev l1 ++ l2)
-    LOCAL (temp _w w; temp _v v)
-    SEP   (listrep sh l1 w; listrep sh l2 v))%assert)]] 
-                        (Csequence
-                          (Cifthenelse (Etempvar _v (tptr (Tstruct _list noattr)))
-                            Cskip
-                            (Csequence Cbreak Cskip))
-                          (Csequence
-                            (Cassert (
-          (EX t x l2',
-      PROP  (l2 = x :: l2')
-      LOCAL (temp _w w; temp _v v)
-      SEP   (data_at sh t_struct_list (x, t) v;
-              listrep sh l1 w; listrep sh l2' t))%assert))
-                            (EXGIVEN t
-                              [[((EX x l2',
-      PROP  (l2 = x :: l2')
-      LOCAL (temp _w w; temp _v v)
-      SEP   (data_at sh t_struct_list (x, t) v;
-              listrep sh l1 w; listrep sh l2' t))%assert)]] 
-                              (EXGIVEN x
-                                [[((EX l2',
-      PROP  (l2 = x :: l2')
-      LOCAL (temp _w w; temp _v v)
-      SEP   (data_at sh t_struct_list (x, t) v;
-              listrep sh l1 w; listrep sh l2' t))%assert)]] 
-                                (EXGIVEN l2'
-                                  [[((PROP  (l2 = x :: l2')
-      LOCAL (temp _w w; temp _v v)
-      SEP   (data_at sh t_struct_list (x, t) v;
-              listrep sh l1 w; listrep sh l2' t))%assert)]] 
-                                  (Csequence
-                                    (Cset _t
-                                      (Efield
-                                        (Ederef
-                                          (Etempvar _v (tptr (Tstruct _list noattr)))
-                                          (Tstruct _list noattr)) _tail
-                                        (tptr (Tstruct _list noattr))))
-                                    (Csequence
-                                      (Cassign
-                                        (Efield
-                                          (Ederef
-                                            (Etempvar _v (tptr (Tstruct _list noattr)))
-                                            (Tstruct _list noattr)) _tail
-                                          (tptr (Tstruct _list noattr)))
-                                        (Etempvar _w (tptr (Tstruct _list noattr))))
-                                      (Csequence
-                                        (Cset _w
-                                          (Etempvar _v (tptr (Tstruct _list noattr))))
-                                        (Csequence
-                                          (Cset _v
-                                            (Etempvar _t (tptr (Tstruct _list noattr))))
-                                          Cskip))))))))))))))
-              Cskip)
-            (Csequence
-              (Creturn (Some (Etempvar _w (tptr (Tstruct _list noattr)))))
-              Cskip))))))).
-
-
-
-Definition f_reverse_hint_split :=
-  ltac:(compute_split f_reverse_hint).
-
-Print f_reverse_hint_split.  *)
-(* Goal C_split f_append_hint = C_split f_append_hint.
-unfold f_append_hint.
-cbv_conns.
-cbv [C_split].
-unfold_split.
-
-Definition res :=
-  ltac:(cbv_conns f_append_hint).
-
-Print res. *)
+Ltac VST_A_start_function hint :=
+  start_function.start_function hint start_function_argument_tac.
+(*
+  match goal with
+  | |- context [C_split ?c] =>
+    change (C_split c) with (f_reverse_hint_split sh p l)
+  end.
+  apply split_Semax_fun_equiv.
+  unfold f_reverse_hint_split;
+    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign
+        path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
+        hd_assert_of_post hd_assert_of_post_ret
+        path_to_statement to_Clight
+        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall].
+  repeat
+    match goal with
+    | |- _ /\ _ => split
+    | |- True => auto
+    | |- _ => intros;
+              match goal with
+              | |- semax _ _ Clight.Sskip _ => apply semax_skip_normal_split_post, derives_refl
+              end
+    end.
+*)

@@ -51,7 +51,9 @@ Definition f_reverse_funsig: funsig :=
 Definition reverse_spec :=
   ltac:(make_funcspec _reverse f_reverse_funsig f_reverse_spec_complex).
 
-Definition f_reverse_hint sh (p: val) l :=
+Definition f_reverse_hint (para: _ * val * _) :=
+  match para with
+  | (sh, p, l) =>
         (Csequence
 (*          (Cset _w (Econst_int (Int.repr 0) tint)) *)
           (Cset _w  (Ecast (Econst_int (Int.repr 0) tint) (tptr tvoid)))
@@ -137,80 +139,22 @@ Definition f_reverse_hint sh (p: val) l :=
                 Cskip)
               (Csequence
                 (Creturn (Some (Etempvar _w (tptr (Tstruct _list noattr)))))
-                Cskip)))).
+                Cskip))))
+  end.
 
 Definition Gprog : funspecs :=
   ltac:(with_library prog [reverse_spec]).
 
-Time Definition f_reverse_hint_split sh p l:=
-  ltac:(compute_split (f_reverse_hint sh p l)).
-
-Fixpoint remove_skip (c: statement): statement :=
-  match c with
-  | Clight.Ssequence c1 c2 =>
-      match remove_skip c1 with
-      | Clight.Sskip => remove_skip c2
-      | _ => match remove_skip c2 with
-             | Clight.Sskip => remove_skip c1
-             | _ => Clight.Ssequence (remove_skip c1) (remove_skip c2)
-             end
-      end
-  | Clight.Sifthenelse e c1 c2 =>
-      Clight.Sifthenelse e (remove_skip c1) (remove_skip c2)
-  | Clight.Sloop c1 c2 =>
-      Clight.Sloop (remove_skip c1) (remove_skip c2)
-  | _ =>
-      c
+Time Definition f_reverse_hint_split para :=
+  match para with
+  | (sh, p, l) =>
+    ltac:(compute_split (f_reverse_hint (sh, p, l)))
   end.
-
-Lemma semax_skip_normal_split_post: forall {Ora CS} Delta P Q,
-  P |-- Q ->
-  @semax Ora CS Delta P Clight.Sskip (normal_split_assert Q).
-Proof.
-  intros.
-  eapply semax_post_simple with (normal_ret_assert P); [apply H | apply TT_right .. | apply TT_right | intro; apply TT_right | ].
-  apply semax_skip.
-Qed.
-
-Lemma semax_return_return_split_assert: forall {Ora CS} Delta P c Q F,
-  @semax Ora CS Delta P c (frame_ret_assert Q F) ->
-  @semax Ora CS Delta P c (return_split_assert (RA_return (frame_ret_assert Q F))).
-Proof.
-  intros.
-  eapply semax_post_simple; [ .. | apply H].
-  + apply TT_right.
-  + apply TT_right.
-  + apply TT_right.
-  + intros; apply derives_refl.
-Qed.
 
 Theorem f_reverse_functionally_correct:
   semax_body Vprog Gprog f_reverse reverse_spec.
 Proof.
-  start_function.
-  change @client_lemmas.abbreviate with @abbreviate in Delta_specs, Delta.
-  apply semax_derives.
-  eapply (soundness _ _ _ _ (f_reverse_hint sh p l)); [reflexivity | ..]. 
-  match goal with
-  | |- context [C_split ?c] =>
-    change (C_split c) with (f_reverse_hint_split sh p l)
-  end.
-  apply split_Semax_fun_equiv.
-  unfold f_reverse_hint_split;
-    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign
-        path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
-        hd_assert_of_post hd_assert_of_post_ret
-        path_to_statement to_Clight
-        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall].
-  repeat
-    match goal with
-    | |- _ /\ _ => split
-    | |- True => auto
-    | |- _ => intros;
-              match goal with
-              | |- semax _ _ Clight.Sskip _ => apply semax_skip_normal_split_post, derives_refl
-              end
-    end.
+  Time VST_A_start_function f_reverse_hint.
   + Intros.
     forward.
     forward.

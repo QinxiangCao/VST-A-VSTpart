@@ -38,7 +38,8 @@ Import LiftNotation.
 
 Local Open Scope logic.
 
-Ltac start_function :=
+Ltac start_function hint tac :=
+  let HINT := fresh "HINT" in
  leaf_function;
  match goal with |- semax_body ?V ?G ?F ?spec =>
     check_normalized F;
@@ -69,8 +70,7 @@ Ltac start_function :=
              fail "Duplicate formal parameter names in funspec signature"  ] 
          |];
    match Pre with
-   | (fun _ x => match _ with (a,b) => _ end) => intros Espec DependedTypeList [a b]
-   | (fun _ i => _) => intros Espec DependedTypeList i
+   | (fun _ i => _) => intros Espec DependedTypeList i; set (HINT := hint i)
    end;
    simpl fn_body; simpl fn_params; simpl fn_return
  end;
@@ -89,7 +89,13 @@ Ltac start_function :=
              destruct p as [a b]
  | |- @semax _ _ _ (Clight_seplog.close_precondition _ _ ((match ?p with (a,b) => _ end) eq_refl) * _) _ _ =>
              destruct p as [a b]
-       end;
+        end;
+ revert HINT;
+(************ INSERTED CODE 1 BEGIN *************)
+ match goal with
+ | |- let _ := ?HINT_CODE in _ => intros _;
+(************ INSERTED CODE 1 END ***************)
+                                 
  first [apply elim_close_precondition; [solve [auto 50 with closed] | solve [auto 50 with closed] | ]
         | erewrite compute_close_precondition by reflexivity];
  simplify_func_tycontext;
@@ -107,7 +113,17 @@ Ltac start_function :=
  repeat change_mapsto_gvar_to_data_at;  (* should really restrict this to only in main,
                                   but it needs to come after process_stackframe_of *)
  repeat rewrite <- data_at__offset_zero;
- try apply start_function_aux1(*;
+ try apply start_function_aux1;
+
+
+(************ INSERTED CODE 2 BEGIN *************)
+  tac HINT_CODE
+ end
+(************ INSERTED CODE 2 END ***************)
+
+
+
+ (*
  abbreviate_semax;
  lazymatch goal with 
  | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
@@ -117,31 +133,4 @@ Ltac start_function :=
      clearbody DS
  end;
  start_function_hint*).
-(*
 
-
- repeat (apply semax_extract_PROP;
-              match goal with
-              | |- _ ?sh -> _ =>
-                 match type of sh with
-                 | share => intros ?SH
-                 | Share.t => intros ?SH
-                 | _ => intro
-                 end
-               | |- _ => intro
-               end);
-(*
- first [ eapply eliminate_extra_return'; [ reflexivity | reflexivity | ]
-        | eapply eliminate_extra_return; [ reflexivity | reflexivity | ]
-        | idtac];
-*)
- abbreviate_semax;
- lazymatch goal with 
- | |- semax ?Delta (PROPx _ (LOCALx ?L _)) _ _ => check_parameter_vals Delta L
- | _ => idtac
- end;
- try match goal with DS := @abbreviate (PTree.t funspec) PTree.Leaf |- _ =>
-     clearbody DS
- end;
- start_function_hint.
-*)
