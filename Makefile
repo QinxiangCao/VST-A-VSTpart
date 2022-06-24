@@ -50,7 +50,7 @@ FLOYD_FILE_NAMES = \
    for_lemmas.v \
    subsume_funspec.v call_lemmas.v extcall_lemmas.v \
    diagnosis.v \
-   freezer.v forward.v \
+   freezer.v forward.v start_function.v \
    library.v \
    deadvars.v Clightnotations.v hints.v reassoc_seq.v \
    linking.v \

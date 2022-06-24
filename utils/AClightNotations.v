@@ -155,10 +155,11 @@ Notation "!!"  := semax_lemmas.Cnot.
 Notation "{ x ; y ; .. ; z }" := (list_binded_cons x (list_binded_cons y .. (list_binded_cons z list_binded_nil) ..)) : list_scope.
 End AClightNotations.
 
-
 Ltac compute_split c_stm :=
-let res0 := eval unfold c_stm in (C_split c_stm) in
+let c_stm' := eval hnf in c_stm in
 let res1 := eval cbv [
+  C_result
+
   S_split_sequence
   S_split_ifthenelse
   S_split_loop
@@ -322,7 +323,7 @@ atom_conn_return
   add_Q_to_Catoms
 
   Smap Sconcat Sapp Capp Cmap
-] in res0 in
+] in ((C_split c_stm')) in
     exact res1.
 
 Import AClightNotations.

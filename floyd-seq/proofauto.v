@@ -41,6 +41,7 @@ Require Export FloydSeq.diagnosis.
 Require Export FloydSeq.freezer.
 Require Export FloydSeq.deadvars.
 Require Export FloydSeq.hints.
+Require Export FloydSeq.start_function.
 Require Export FloydSeq.Clightnotations.
 Require Export VST.floyd.list_solver.
 Require Export VST.floyd.data_at_lemmas.
