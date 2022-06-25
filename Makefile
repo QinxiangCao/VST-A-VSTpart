@@ -23,7 +23,7 @@ CPROGS=append mytest sgn reverse # reverse #sumarray2  min  leap_year bst linked
 
 # CSPLIT_FILE_NAMES = vst_ext.v model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v soundness.v AClightFunc.v
 CSPLIT_FILE_NAMES = model_lemmas.v logic_lemmas.v strong.v AClight.v semantics.v \
- semantics_lemmas.v soundness.v AClightFunc.v semanticsFunc.v strongFacts.v strongSoundness.v 
+ semantics_lemmas.v soundness.v AClightFunc.v strongFacts.v strongSoundness.v 
 CSPLIT_FILES = $(addprefix CSplit/, $(CSPLIT_FILE_NAMES))
 
 #  jmeq_lemmas.v \
@@ -50,7 +50,7 @@ FLOYD_FILE_NAMES = \
    for_lemmas.v \
    subsume_funspec.v call_lemmas.v extcall_lemmas.v \
    diagnosis.v \
-   freezer.v forward.v \
+   freezer.v forward.v start_function.v \
    library.v \
    deadvars.v Clightnotations.v hints.v reassoc_seq.v \
    linking.v \
@@ -142,9 +142,9 @@ $(UTIL_FILES:%.v=%.vo): %.vo: %.v
 all: frontend \
   $(CSPLIT_FILES:%.v=%.vo) \
   $(FLOYD_FILES:%.v=%.vo) \
+  $(CPROG_FILES:%.v=%.vo) \
   $(CDEF_FILES:%.v=%.vo) \
-  $(UTIL_FILES:%.v=%.vo) \
-  $(CPROG_FILES:%.v=%.vo)
+  $(UTIL_FILES:%.v=%.vo) 
 
 
 # endif # if .depend exists
@@ -167,9 +167,11 @@ clean:
 	@rm -f .depend
 	@rm -f $(CPROGSDIR)/*_prog.v $(CPROGSDIR)/*_annot.v
 	@rm -f _CoqProject
+	@rm -f CSplit/*.vo CSplit/*.glob CSplit/*.aux
 	@rm -f floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
 	@rm -f utils/*.vo utils/*.glob utils/*.aux
 	@rm -f $(CPROGSDIR)/*.vo $(CPROGSDIR)/*.glob $(CPROGSDIR)/*.aux
+	@rm -f frontend/extraction/*.ml* frontend/extraction/*.cmt frontend/extraction/STAMP
 
 
 cleanprogs:

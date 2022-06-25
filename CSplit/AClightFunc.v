@@ -20,7 +20,11 @@ Require Import Clight.
 Require Import VST.veric.mpred.
 Require Import VST.msl.seplog.
 Require Import VST.veric.SeparationLogic.
+Require Import VST.veric.juicy_extspec.
+Require Import CSplit.AClight.
 Import ListNotations.
+
+
 
 
 Definition Sapp :=
@@ -30,15 +34,6 @@ Definition Sapp :=
     | nil => m
     | a :: l1 => a :: Sapp l1 m
     end.
-
-
-
-(* Higher Order Auxiliary Definitions and Functions
-   on dependent results *)
-Inductive list_binded_of {R : Type} {binder: R -> Type} : list R -> Type :=
-| list_binded_nil : list_binded_of []
-| list_binded_cons (r:R) (r': binder r) (l: list R)
-                   (l':list_binded_of l) : list_binded_of (r::l).
 
 Fixpoint Capp {A:Type} {binder: A -> Type} 
   {sl1: list A} (cl1 : @list_binded_of A binder sl1)
@@ -111,229 +106,8 @@ Definition option_map2 {A B C:Type} (f:A->B->C)
     | _, _ => @None C
   end.
 
-(***********************************)
-(** Statements *********************)
-(***********************************)
-
-
-Inductive S_statement : Type :=
-| Ssequence (s1: S_statement) (s2: S_statement)
-| Sassert
-| Sskip
-| Sassign (e1:expr) (e2:expr)
-| Scall  (id: option ident) (e: expr) (args: list expr)
-| Sset (id: ident) (e: expr)
-| Sifthenelse  (e: expr) (s1 s2: S_statement)
-| Sloop (s1 s2: S_statement)
-| Sbreak 
-| Scontinue 
-| Sreturn (e: option expr)
-.
-
-(***********************************)
-(** Assertion annotated statements *)
-(***********************************)
-Definition assert := (environ -> mpred).
-
-
-Inductive C_statement : S_statement -> Type :=
-| Csequence: forall (s1: S_statement) (s2: S_statement)
-      (c1: C_statement s1) (c2: C_statement s2),
-    C_statement (Ssequence s1 s2)
-| Cassert: forall (a: assert),
-    C_statement Sassert
-| Cskip: C_statement Sskip
-| Cexgiven:  forall (A:Type)
-    (ass: A -> assert)
-    (c: S_statement)
-    (a_stm': A -> C_statement c),
-    C_statement ((Ssequence Sassert c ))
-| Cassign : forall (e1:expr) (e2:expr),
-    C_statement (Sassign e1 e2)
-| Ccall : forall (id: option ident) (e: expr) (args: list expr),
-    C_statement (Scall id e args)
-| Cset : forall (id: ident) (e: expr),
-    C_statement (Sset id e)
-| Cifthenelse : forall (e: expr) (s1 s2: S_statement)
-      (c1: C_statement s1) (c2: C_statement s2),
-    C_statement (Sifthenelse e s1 s2)
-| Cloop : forall 
-      (s1 s2: S_statement)
-      (c1: C_statement s1) (c2: C_statement s2),
-    C_statement (Sloop s1 s2)
-| Cbreak : C_statement (Sbreak)
-| Ccontinue : C_statement (Scontinue)
-| Creturn : forall (e: option expr), C_statement (Sreturn e)
-.
-
-
-
-(***********************************)
-(** Simple Split Results  *)
-(***********************************)
-
-Inductive atom_statement : Type :=
-| Askip : atom_statement                   (**r do nothing *)
-| Aassign : expr -> expr -> atom_statement (**r assignment [lvalue = rvalue] *)
-| Aset : ident -> expr -> atom_statement   (**r assignment [tempvar = rvalue] *)
-| Acall: option ident -> expr 
-          -> list expr -> atom_statement   (**r function call *).
 
 Definition path:= list (bool * expr + atom_statement) .
-
-Inductive atom : Type :=
-| mk_atom : path -> atom.
-
-Notation atoms := (list atom). 
-
-Inductive atom_ret : Type :=
-| mk_atom_ret : path -> option expr -> atom_ret.
-
-Notation atom_rets := (list atom_ret).
-
-Inductive S_full_path : Type :=
-| mk_S_full_path : path -> S_full_path.
-
-Notation S_full_paths := (list S_full_path).
-
-Inductive S_partial_pre : Type :=
-| mk_S_partial_pre : path -> S_partial_pre.
-
-Notation S_partial_pres := (list S_partial_pre).
-
-Inductive S_partial_post : Type :=
-| mk_S_partial_post : path -> S_partial_post.
-
-Notation S_partial_posts := (list S_partial_post).
-
-Inductive S_partial_post_ret : Type :=
-| mk_S_partial_post_ret : path -> option expr -> S_partial_post_ret.
-
-Notation S_partial_post_rets := (list S_partial_post_ret).
-
-
-Record S_result_rec := mk_S_result_rec {
-  S_pre : S_partial_pres;
-  S_path : S_full_paths;
-  S_post_normal : S_partial_posts;
-  S_post_break : S_partial_posts;
-  S_post_continue : S_partial_posts;
-  S_post_return : S_partial_post_rets;
-  S_atom_normal : atoms;
-  S_atom_break : atoms;
-  S_atom_continue : atoms;
-  S_atom_return : atom_rets;
-}.
-
-Definition S_result := option S_result_rec.
-
-(***********************************)
-(** Dependent split results   *)
-(***********************************)
-
-
-Inductive C_full_path : S_full_path -> Type :=
-| mk_C_full_path : 
-    forall (pre: assert) (path: path) (post: assert),
-      C_full_path (mk_S_full_path path)
-| bind_C_full_path :
-    forall (A: Type)  (s: S_full_path)
-           (c': A -> C_full_path s),
-      C_full_path s
-.
-
-Notation C_full_paths := (@list_binded_of _ C_full_path).
-
-Inductive C_partial_pre : S_partial_pre -> Type :=
-| mk_C_partial_pre : 
-    forall (path: path) (post: assert),
-      C_partial_pre (mk_S_partial_pre path)
-.
-
-Notation C_partial_pres := (@list_binded_of _ C_partial_pre).
-
-Inductive C_partial_post : S_partial_post -> Type :=
-| mk_C_partial_post : 
-    forall (pre: assert) (path: path),
-      C_partial_post (mk_S_partial_post path)
-| bind_C_partial_post :
-    forall (A: Type) (s: S_partial_post)
-           (c': A -> C_partial_post s),
-      C_partial_post s
-.
-
-Notation C_partial_posts := (@list_binded_of _ C_partial_post).
-
-Inductive C_partial_post_ret : S_partial_post_ret -> Type :=
-| mk_C_partial_post_ret : 
-    forall (pre: assert) (path: path) (ret: option expr),
-      C_partial_post_ret (mk_S_partial_post_ret path ret)
-| bind_C_partial_post_ret :
-    forall (A: Type) (s: S_partial_post_ret)
-           (c': A -> C_partial_post_ret s),
-      C_partial_post_ret s
-.
-
-Notation C_partial_post_rets := (@list_binded_of _ C_partial_post_ret).
-
-Record C_result_rec
-  (s_pre : S_partial_pres)
-  (s_path : S_full_paths)
-  (s_post_normal : S_partial_posts)
-  (s_post_break : S_partial_posts)
-  (s_post_continue : S_partial_posts)
-  (s_post_return : S_partial_post_rets)
-  (s_atom_normal : atoms)
-  (s_atom_break : atoms)
-  (s_atom_continue : atoms)
-  (s_atom_return : atom_rets)
-: Type := 
-mk_C_result_rec {
-  C_pre :  C_partial_pres s_pre;
-  C_path :  C_full_paths s_path;
-  C_post_normal : C_partial_posts s_post_normal;
-  C_post_break : C_partial_posts s_post_break;
-  C_post_continue : C_partial_posts s_post_continue;
-  C_post_return : C_partial_post_rets s_post_return;
-}.
-
-Definition C_result (s_res : S_result) : Type :=
-  match s_res with
-  | Some (mk_S_result_rec s_pre s_path
-      s_post_normal s_post_break s_post_continue s_post_return
-      s_atom_normal s_atom_break s_atom_continue s_atom_return) =>
-      (C_result_rec s_pre s_path 
-        s_post_normal s_post_break s_post_continue s_post_return
-        s_atom_normal s_atom_break s_atom_continue s_atom_return)
-  | None => unit
-  end.
-
-(* 
-Inductive C_result : S_result -> Type := 
-| mk_C_result : forall 
-    (S_pre : S_partial_pres)
-    (C_pre : C_partial_pres (S_pre))
-    (S_path : S_full_paths)
-    (C_path : C_full_paths (S_path))
-    (S_post_normal : S_partial_posts)
-    (C_post_normal : C_partial_posts (S_post_normal))
-    (S_post_break : S_partial_posts)
-    (C_post_break : C_partial_posts (S_post_break))
-    (S_post_continue : S_partial_posts)
-    (C_post_continue : C_partial_posts (S_post_continue))
-    (S_post_return : S_partial_post_rets)
-    (C_post_return : C_partial_post_rets (S_post_return))
-    (S_atom_normal : atoms)
-    (S_atom_break : atoms)
-    (S_atom_continue : atoms)
-    (S_atom_return : atom_rets),
-      C_result (mk_S_result 
-                  S_pre S_path 
-                  S_post_normal S_post_break 
-                  S_post_continue S_post_return
-                  S_atom_normal S_atom_break 
-                  S_atom_continue S_atom_return)
-| no_C_result : C_result None. *)
 
 (***********************************)
 (** Simple operations on results *)
@@ -568,9 +342,6 @@ Fixpoint Cpost_conn_atom { s_post1 }
   return C_partial_post (Spost_conn_atom s_post1' (mk_atom path2)) with
   | mk_C_partial_post pre1 path1 =>
       mk_C_partial_post pre1 (path1 +/+ path2)
-  | bind_C_partial_post A s_post1 c_post1' =>
-      bind_C_partial_post A (Spost_conn_atom s_post1 (mk_atom path2))
-        (fun a => Cpost_conn_atom (c_post1' a) (mk_atom path2))
   end
 end.
 
@@ -605,9 +376,6 @@ Fixpoint Cpost_conn_return { s_post1 }
   return C_partial_post_ret (Spost_conn_return s_post1' (mk_atom_ret path2 retval)) with
   | mk_C_partial_post pre1 path1 =>
       mk_C_partial_post_ret pre1 (path1 +/+ path2) retval
-  | bind_C_partial_post A s_post1 c_post1' =>
-      bind_C_partial_post_ret A (Spost_conn_return s_post1 (mk_atom_ret path2 retval))
-        (fun a => Cpost_conn_return (c_post1' a) (mk_atom_ret path2 retval))
   end
 end.
 
@@ -658,10 +426,6 @@ match c_post1 in C_partial_post s_post1'
 return C_full_path (Spost_conn_Spre s_post1' s_pre2) with
 | mk_C_partial_post pre path1 =>
     Cpost_conn_Cpre_aux pre path1 c_pre2
-| bind_C_partial_post A s_post1 c_post1' =>
-    bind_C_full_path A 
-      (Spost_conn_Spre s_post1 s_pre2)
-      (fun a => Cpost_conn_Cpre (c_post1' a) c_pre2)
 end.
 
 
@@ -754,17 +518,14 @@ Fixpoint add_P_to_Catom_rets P s_atoms
         (add_P_to_Catom_rets P s_atoms)
   end.
   
-
-Fixpoint add_Q_to_Cpost Q {s_post} 
-  (c_post: C_partial_post s_post) :=
+Definition add_Q_to_Cpost Q {s_post} 
+  (c_post: C_partial_post s_post):
+     C_full_path (add_Q_to_Spost s_post):=
 match s_post with
 | mk_S_partial_post path =>
   match c_post with
   | mk_C_partial_post P path =>
       mk_C_full_path P path Q
-  | bind_C_partial_post A s_post c_post' =>
-      bind_C_full_path A (add_Q_to_Spost s_post)
-        (fun a => add_Q_to_Cpost Q (c_post' a))
   end
 end.
 
@@ -1231,18 +992,78 @@ Fixpoint flatten_partial_pres_binds {A:Type}
         s_pres' (flatten_partial_pres_binds s_pres' c_pres)
   end.
 
-Definition flatten_partial_posts_binds {A:Type}
+Fixpoint flatten_partial_posts_binds {A:Type}
   (s_posts: S_partial_posts)
-  (c_posts': A -> C_partial_posts s_posts)
-  : C_partial_posts s_posts :=
-  flatten_binds (bind_C_partial_post A) s_posts c_posts'.
+  : ( A -> C_partial_posts s_posts)
+  -> C_partial_posts s_posts :=
+  match s_posts with
+  | nil => fun _ => list_binded_nil
+  | (mk_S_partial_post path) :: s_posts' =>
+     fun c_posts' =>
+     (* let c_post := hd_of (mk_S_partial_post path) s_posts' c_posts' in *)
+     let c_posts := tl_of (mk_S_partial_post path) s_posts' c_posts' in
+     let c_post_ass := hd_assert_of_post c_posts' in
+     let new_c_post := mk_C_partial_post (exp c_post_ass) path  in
+      (* (@exp assert (@LiftNatDed' mpostd Nveric) A c_post_ass) in *)
+      list_binded_cons
+        (mk_S_partial_post path) new_c_post
+        s_posts' (flatten_partial_posts_binds s_posts' c_posts)
+  end.
+
+Definition assert_of_post_ret {A:Type} s_post_ret :
+(A -> C_partial_post_ret s_post_ret)
+-> (A -> assert) :=
+match s_post_ret with
+| mk_S_partial_post_ret path ret =>
+  fun c_post_ret =>
+  fun a => match (c_post_ret a) with
+            | mk_C_partial_post_ret pre path ret =>
+            pre
+  end
+end.
+
+Definition hd_assert_of_post_ret {A:Type} {s_post s_post_rets} :
+(A -> C_partial_post_rets (s_post::s_post_rets))
+-> (A -> assert) :=
+match s_post with
+| mk_S_partial_post_ret path ret =>
+  fun c_post_rets =>
+  fun a => match (c_post_rets a) with
+            | list_binded_cons
+                (mk_S_partial_post_ret path ret)
+                (mk_C_partial_post_ret pre path' ret')
+                s_post_rets c_post_rets' =>
+            pre
+    end
+end.
 
 
-Definition flatten_partial_post_rets_binds {A:Type}
+Fixpoint flatten_partial_post_rets_binds {A:Type}
+  (s_post_rets: S_partial_post_rets)
+  : ( A -> C_partial_post_rets s_post_rets)
+  -> C_partial_post_rets s_post_rets :=
+  match s_post_rets with
+  | nil => fun _ => list_binded_nil
+  | (mk_S_partial_post_ret path ret) :: s_post_rets' =>
+     fun c_post_rets' =>
+     (* let c_post := hd_of (mk_S_partial_post path) s_post_rets' c_post_rets' in *)
+     let c_post_rets := tl_of (mk_S_partial_post_ret path ret) s_post_rets' c_post_rets' in
+     let c_post_ass := hd_assert_of_post_ret c_post_rets' in
+     let new_c_post := mk_C_partial_post_ret (exp c_post_ass) path ret  in
+      (* (@exp assert (@LiftNatDed' mpostd Nveric) A c_post_ass) in *)
+      list_binded_cons
+        (mk_S_partial_post_ret path ret) new_c_post
+        s_post_rets' (flatten_partial_post_rets_binds s_post_rets' c_post_rets)
+  end.
+
+
+
+
+(* Definition flatten_partial_post_rets_binds {A:Type}
   (s_posts: S_partial_post_rets)
   (c_posts': A -> C_partial_post_rets s_posts)
   : C_partial_post_rets s_posts :=
-  flatten_binds (bind_C_partial_post_ret A) s_posts c_posts'.
+  flatten_binds (bind_C_partial_post_ret A) s_posts c_posts'. *)
 
 Definition flatten_full_paths_binds {A:Type}
   (s_paths: S_full_paths)
@@ -1469,7 +1290,7 @@ Fixpoint add_exP_to_Cpre {A:Type}
 end.
 
 
-Fixpoint C_split_exgiven (s_res: S_result) (A: Type) 
+Definition C_split_exgiven (s_res: S_result) (A: Type) 
  (c_ass': A -> assert) : (A -> C_result s_res) ->
 C_result (S_split_sequence S_split_assert s_res ) :=
 match s_res with
@@ -1488,9 +1309,11 @@ let c_post_return := flatten_partial_post_rets_binds (s_post_return) c_post_retu
 let c_path := C_result_proj_C_path A c_res' in
 let c_path := flatten_full_paths_binds (s_path) c_path in
 
-let ass_post_normal_C := bind_C_partial_post A 
+let ass_post_normal_C := 
+          (* bind_C_partial_post A 
           (mk_S_partial_post nil)
-          (fun a => mk_C_partial_post (c_ass' a) nil) in
+          (fun a => mk_C_partial_post (c_ass' a) nil) in *)
+          mk_C_partial_post (ex_ass) nil in
 let ass_post_normal_S := mk_S_partial_post nil in
 
 mk_C_result_rec
@@ -1981,3 +1804,9 @@ end.
 
 Close Scope aclight_scope.
 Bind Scope list_scope with list.
+
+
+Lemma S_split_eq: forall s, S_split s = AClight.S_split s.
+Proof. intros. reflexivity. Qed.
+Lemma C_split_eq: forall s c, C_split s c = AClight.C_split s c.
+Proof. intros. reflexivity. Qed.

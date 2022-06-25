@@ -46,7 +46,7 @@ Proof.
     unfold normal_split_assert, RA_normal, RA_break, RA_continue, RA_return;
     intros;try solve_andp.
     { eapply derives_trans;[|apply H]. solve_andp. }
-  + simpl in *. auto.
+  (* + simpl in *. auto. *)
 Qed.
 
 Lemma post_ret_to_semax_derives: forall P Q s_post
@@ -61,7 +61,7 @@ Proof.
     unfold return_split_assert, RA_normal, RA_break, RA_continue, RA_return;
     intros;try solve_andp.
     { eapply derives_trans;[|apply H]. solve_andp. }
-  + simpl in *. auto.
+  (* + simpl in *. auto. *)
 Qed.
 
 Lemma atom_to_semax_derives: forall P1 P2 Q1 Q2 a,
@@ -132,7 +132,7 @@ Proof.
     apply andp_right.
     + solve_andp.
     + apply prop_right. auto.
-  - simpl. intros. simpl in H. specialize (H a). apply H0 in H. auto.
+  (* - simpl. intros. simpl in H. specialize (H a). apply H0 in H. auto. *)
 Qed.
 
 Lemma path_conn_to_semax_reverse_simple: forall { s_pre }
@@ -333,7 +333,7 @@ Proof.
     { solve_andp. }
     { solve_andp. }
     { intros. solve_andp. }
-  - simpl in *. auto.
+  (* - simpl in *. auto. *)
 Qed.
 
 
@@ -491,7 +491,7 @@ Proof.
     apply andp_right. solve_andp.
     apply prop_right. auto.
   }
-  { intros a. apply H0. auto. }
+  (* { intros a. apply H0. auto. } *)
 Qed.
 
 
@@ -538,8 +538,8 @@ Proof.
     Intros Q0.
     Exists Q0. apply andp_right. solve_andp.
     apply prop_right. auto.
-  - intros a. apply H0. simpl in H. destruct atom.
-    apply H.
+  (* - intros a. apply H0. simpl in H. destruct atom. *)
+    (* apply H. *)
 Qed.
 
 
@@ -605,8 +605,8 @@ Proof.
       simpl. apply semax_seq with (Q0:=Qr);auto.
     }
 
-  - intros a. apply H0. simpl in H. destruct atom.
-    apply H.
+  (* - intros a. apply H0. simpl in H. destruct atom. *)
+    (* apply H. *)
 Qed.
 
 
@@ -641,9 +641,9 @@ Proof.
     rewrite normal_split_assert_elim.
     eapply derives_trans;[|apply FF_left].
     solve_andp.
-  - simpl. intros a. apply H0.
+  (* - simpl. intros a. apply H0.
     simpl in H. destruct s. simpl in H.
-    apply H.
+    apply H. *)
 Qed.
 
 (* Rewriting Lemmas *)
@@ -912,9 +912,9 @@ post_ret_to_semax Delta Q (Cpost_conn_return (Cpost_conn_atom post1 atom1) atom2
 Proof.
   intros. destruct atom2, atom1. induction post1.
   + simpl. rewrite app_assoc. tauto.
-  + simpl. split;intro.
+  (* + simpl. split;intro.
     * intros a. apply H. auto.
-    * intros a. apply H. auto.
+    * intros a. apply H. auto. *)
 Qed.
 
 Lemma post_conn_atom_conn_atom_assoc: forall Q s_post1
@@ -924,9 +924,9 @@ post_to_semax Delta Q (Cpost_conn_atom (Cpost_conn_atom post1 atom1) atom2).
 Proof.
   intros. destruct atom2, atom1. induction post1.
   + simpl. rewrite app_assoc. tauto.
-  + simpl. split;intro.
+  (* + simpl. split;intro.
     * intros a. apply H. auto.
-    * intros a. apply H. auto.
+    * intros a. apply H. auto. *)
 Qed.
 
 
@@ -1143,9 +1143,9 @@ Proof.
   destruct pre1.
   induction post1.
   - simpl. rewrite app_assoc. tauto.
-  - split;intros.
+  (* - split;intros.
     + intros a. apply H. auto.
-    + intros a. apply H. auto.
+    + intros a. apply H. auto. *)
 Qed.    
 
 
