@@ -1,7 +1,7 @@
 //* demo for multi-cond
 
 int sgn (int x) {
-  //@ With x:Z,
+  //@ With x,
   //@ Require PROP (Int.min_signed <= x <= Int.max_signed) LOCAL (temp _x  (Vint (Int.repr x))) SEP ()
   //@ Ensure PROP () LOCAL (temp ret_temp  (Vint (Int.repr (sgn x)))) SEP ()
   int ret;

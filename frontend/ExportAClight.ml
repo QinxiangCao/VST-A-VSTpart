@@ -610,10 +610,17 @@ let print_function_spec p (id, f) =
 
 (* Print annotation part only *)
 let print_function_annotation p (id, f) =
-  print_function_spec p (id, f);
-  fprintf p "Definition f_%s_hint :=@ " (extern_atom id);
-  stmt p f.fn_body;
-  fprintf p ".@ @ "
+  match f.fn_spec with
+  | Some ((binder, pre), post) ->
+    print_function_spec p (id, f);
+    fprintf p "Definition f_%s_hint (para: GET_PARA_TYPE f_%s_spec_annotation) :=@ " (extern_atom id) (extern_atom id);
+    fprintf p "match para with\n";
+    (* List.iter (print_endline) (Str.split (Str.regexp "[ \t]+") binder); *)
+    fprintf p "| (%s) =>@ "  (String.concat ", " (Str.split (Str.regexp "[ \t]+") (String.sub binder 0 (String.length binder - 1))));
+    stmt p f.fn_body;
+    fprintf p "\nend";
+    fprintf p ".@ @ "
+  | None -> ()
 
 let print_globdef_annotation p (id, gd) =
   match gd with
@@ -643,8 +650,11 @@ let print_split_tac p (id, gd) =
   let print_fun_split_tac p (id, f) =
     match f.fn_spec with
     | Some ((binder, pre), post) ->
-      fprintf p "Definition f_%s_hint_split :=@ " (extern_atom id);
-      fprintf p "  ltac:(compute_split f_%s_hint).@ @ " (extern_atom id)
+      fprintf p "Theorem f_%s_functionally_correct :@ " (extern_atom id);
+      fprintf p "  semax_body Vprog Gprog f_%s %s_spec.@ " (extern_atom id) (extern_atom id);
+      fprintf p "Proof.\n";
+      fprintf p "  VST_A_start_function f_%s_hint.@ @ " (extern_atom id);
+      fprintf p "Admitted.@ @ ";
     | None -> () in
   match gd with
   | Gfun(Ctypes.Internal f) -> print_fun_split_tac p (id, f)

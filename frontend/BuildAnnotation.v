@@ -315,13 +315,14 @@ with annotate_lblstmt (ls: ClightC.labeled_statements) : res labeled_statements 
 Definition add_funcspec (funcspec : binder * assert * assert) (s: statement)
       : option (binder * assert * assert) * statement :=
   match funcspec with (binder, pre, post) =>
-    let binder_list := make_binder_list binder pre in
+    (* let binder_list := make_binder_list binder pre in *)
     (Some funcspec,
+      s
       (* let fun_body := Ssequence s (Sassert post) in *)
-      let fun_body := s in
-        fold_right (fun binder_ass s' => 
-          Sexgiven (fst binder_ass) (snd binder_ass) s'
-        ) fun_body binder_list
+      (* let fun_body := s in *)
+        (* fold_right (fun binder_ass s' =>  *)
+          (* Sexgiven (fst binder_ass) (snd binder_ass) s' *)
+        (* ) fun_body binder_list *)
       (* Sgiven2 binder (
         Ssequence (Sdummyassert pre) (
           Ssequence (Sdummyassert post)
