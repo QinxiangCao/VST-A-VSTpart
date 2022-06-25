@@ -1290,7 +1290,7 @@ Fixpoint add_exP_to_Cpre {A:Type}
 end.
 
 
-Fixpoint C_split_exgiven (s_res: S_result) (A: Type) 
+Definition C_split_exgiven (s_res: S_result) (A: Type) 
  (c_ass': A -> assert) : (A -> C_result s_res) ->
 C_result (S_split_sequence S_split_assert s_res ) :=
 match s_res with

@@ -51,7 +51,21 @@ Definition f_reverse_funsig: funsig :=
 Definition reverse_spec :=
   ltac:(make_funcspec _reverse f_reverse_funsig f_reverse_spec_complex).
 
-Definition f_reverse_hint (para: _ * val * _) :=
+Ltac get_para_type_rec_tac A B :=
+  match B with
+  | ?B1 -> ?B2 => get_para_type_rec_tac (prod A B1) B2
+  | prod _ _ => exact A
+  end.
+
+Ltac get_para_type_tac spec_annot :=
+  match type of spec_annot with
+  | ?A -> prod _ _ => exact A
+  | ?A -> ?B => get_para_type_rec_tac A B
+  end.
+
+Notation "'GET_PARA_TYPE' x" := ltac:(get_para_type_tac x) (at level 99).
+
+Definition f_reverse_hint (para: GET_PARA_TYPE f_reverse_spec_annotation) :=
   match para with
   | (sh, p, l) =>
         (Csequence
@@ -145,12 +159,22 @@ Definition f_reverse_hint (para: _ * val * _) :=
 Definition Gprog : funspecs :=
   ltac:(with_library prog [reverse_spec]).
 
+(*
 Time Definition f_reverse_hint_split para :=
   match para with
   | (sh, p, l) =>
     ltac:(compute_split (f_reverse_hint (sh, p, l)))
   end.
+Goal forall para,
+  match para with
+  | (sh, p, l) =>
+    ltac:(compute_split (f_reverse_hint (sh, p, l))) = C_split (f_reverse_hint (sh, p, l))
+  end.
+  intros [ [sh p] l].
+  unfold C_split, f_reverse_hint.
+  Print C_split_exgiven.
 
+*)
 Theorem f_reverse_functionally_correct:
   semax_body Vprog Gprog f_reverse reverse_spec.
 Proof.

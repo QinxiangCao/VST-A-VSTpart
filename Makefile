@@ -171,6 +171,7 @@ clean:
 	@rm -f floyd-seq/*.vo floyd-seq/*.glob floyd-seq/*.aux
 	@rm -f utils/*.vo utils/*.glob utils/*.aux
 	@rm -f $(CPROGSDIR)/*.vo $(CPROGSDIR)/*.glob $(CPROGSDIR)/*.aux
+	@rm -f frontend/extraction/*.ml* frontend/extraction/*.cmt frontend/extraction/STAMP
 
 
 cleanprogs:
