@@ -11,3 +11,9 @@
 11. strange verification flow in loop bodies. This might be solved by 10.
 12. A ad-hoc solver for listrep and/or lseg_rec.
 
+2022.10.25: unreachable paths cause failure of proof goal generation (missing return, ...)
+            e.g. while (1) { ... } /* unreachable */
+            [fixed: simple conditions will be simplified like clightgen, for while/if]
+2022.10.25: normal exit should be valid in void function
+    [ fixed: Also consider "post_normal" and "atom_normal" when
+      generating proof goals for void functions ]

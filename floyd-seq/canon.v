@@ -2,8 +2,9 @@ Require Export Coq.Sorting.Permutation.
 Require Import VST.veric.seplog.
 Require Import FloydSeq.base2.
 Import LiftNotation.
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
+Require Import VST.floyd.seplog_tactics.
 
 Local Open Scope logic.
 
@@ -664,7 +665,7 @@ Module ConseqFacts :=
 
 
 (* [litao]
-Admitted: seems not provable 
+seems not provable 
 
 Lemma extract_exists_pre_later {CS: compspecs} {Espec: OracleKind}:
   forall  (A : Type) (Q: assert) (P : A -> assert) c Delta (R: ret_assert),
@@ -877,6 +878,21 @@ Lemma semax_pre_post': forall P' R' Espec {cs: compspecs} Delta R P c,
 Proof. intros.
  eapply semax_pre; eauto.
  eapply semax_post'; eauto.
+Qed.
+
+Lemma semax_pre_post_allp_fun_id':
+  forall P' R' Espec {cs: compspecs} Delta R P c,
+    ENTAIL Delta, allp_fun_id Delta && P |-- P' ->
+    ENTAIL Delta, allp_fun_id Delta && R' |-- R ->
+    @semax cs Espec Delta P' c (normal_ret_assert R') ->
+    @semax cs Espec Delta P c (normal_ret_assert R).
+Proof. intros.
+  eapply semax_conseq; eauto.
+  - unfold_der. assumption.
+  - unfold_der. apply andp_left2, andp_left2, FF_left.
+  - unfold_der. apply andp_left2, andp_left2, FF_left.
+  - intros. unfold_der.
+    apply andp_left2, andp_left2, FF_left.
 Qed.
 
 (* OLD VERSION: 
@@ -2479,7 +2495,6 @@ Lemma replace_nth_SEP: forall P Q R n Rn Rn', Rn |-- Rn' -> PROPx P (LOCALx Q (S
 Proof.
   simpl.
   intros.
-  normalize.
   autorewrite with subst norm1 norm2; normalize.
   apply andp_right; [apply prop_right; auto | auto].
   unfold_lift.

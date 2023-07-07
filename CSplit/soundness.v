@@ -1,10 +1,11 @@
 Require Import VST.floyd.proofauto.
-Require Import CSplit.semantics_lemmas.
-Require Import CSplit.semantics.
-Require Import CSplit.strong.
+Require Import Csplit.semantics_lemmas.
+Require Import Csplit.semantics.
+Require Import Csplit.strong.
 Require Import Coq.Program.Equality.
-Require Import CSplit.AClight.
+Require Import Csplit.AClight.
 Open Scope aclight_scope.
+Local Open Scope logic.
 
 Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=
   match s with
@@ -1239,7 +1240,7 @@ forall P Q e s_res1 s_res2
     (C_split_ifthenelse e s_res1 s_res2 c_res1 c_res2) ->
   ENTAIL Delta, allp_fun_id Delta && P |-- 
     (!! ((bool_type (typeof e)) = true)) &&
-   (tc_expr Delta (Eunop Onotbool e (Tint I32 Signed noattr))) && P /\
+   (tc_expr Delta (Eunop Onotbool e (Ctypes.Tint I32 Signed noattr))) && P /\
   split_Semax Delta (P && local (liftx (typed_true (typeof e)) (eval_expr e))) Q c_res1 /\
   split_Semax Delta (P && local (liftx (typed_false (typeof e)) (eval_expr e))) Q c_res2.
 Proof.
@@ -1435,10 +1436,7 @@ Proof.
   destruct H as (S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10).
   inversion S10;subst.
   simpl in H1.
-  apply semax_seq_inv in H1. destruct H1 as [Q' [H1 H3]].
-  apply semax_skip_inv in H1.
-  apply semax_return_inv in H3.
-  eapply semax_pre';[apply H1|].
+  apply semax_return_inv in H1.
   destruct Q.
   unfold return_split_assert in *.  unfold_der.
   eapply semax_pre';[|apply semax_return].

@@ -7,9 +7,9 @@ Require Import VST.floyd.reptype_lemmas.
 Require Import VST.floyd.data_at_rec_lemmas.
 Require Import VST.floyd.field_at.
 Require Import FloydSeq.loadstore_mapsto.
-Require Import CSplit.strongFacts.
-Require Import CSplit.strong.
-
+Require Import Csplit.strongFacts.
+Require Import Csplit.strong.
+Require Import VST.floyd.seplog_tactics.
 
 
 Import LiftNotation.

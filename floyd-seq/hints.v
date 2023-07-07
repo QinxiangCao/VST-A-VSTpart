@@ -23,7 +23,7 @@ Require Import VST.floyd.functional_base.
 Require Import FloydSeq.entailer.
 Require Import FloydSeq.globals_lemmas.
 Require Import FloydSeq.deadvars.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 Import Cop.
 Import Cop2.
 
@@ -50,16 +50,16 @@ Ltac check_temp_value Delta i v :=
 let x := constr:(PTree.get i (temp_types Delta))
  in let x := eval hnf in x
    in match x with
-       | Some (Tint _ _ _, _) => lazymatch v with Vint _ => idtac | Vbyte _ => idtac
+       | Some (Ctypes.Tint _ _ _, _) => lazymatch v with Vint _ => idtac | Vbyte _ => idtac
                                | _ =>  idtac "Hint:  your LOCAL precondition binds temp " i " to a value " v " that is not of the form (Vint _) or (Vbyte _).  Although this is legal, Floyd's proof automation will not handle it as nicely.  See if you can rewrite that value so that it has Vint or Vbyte on the outside"
                               end
-      | Some (Tlong _ _, _) =>  lazymatch v with Vlong _ => idtac
+      | Some (Ctypes.Tlong _ _, _) =>  lazymatch v with Vlong _ => idtac
                                | _ =>  idtac "Hint:  your LOCAL precondition binds temp " i " to a value " v " that is not of the form (Vlong _).  Although this is legal, Floyd's proof automation will not handle it as nicely.  See if you can rewrite that value so that it has Vlong on the outside"
                               end
-      | Some (Tfloat F64 _, _) =>  lazymatch v with Vfloat _ => idtac
+      | Some (Ctypes.Tfloat F64 _, _) =>  lazymatch v with Vfloat _ => idtac
                                | _ =>  idtac "Hint:  your LOCAL precondition binds temp " i " to a value " v " that is not of the form (Vfloat _).  Although this is legal, Floyd's proof automation will not handle it as nicely.  See if you can rewrite that value so that it has Vfloat on the outside"
                               end
-      | Some (Tfloat F32 _, _) =>  lazymatch v with Vsingle _ => idtac
+      | Some (Ctypes.Tfloat F32 _, _) =>  lazymatch v with Vsingle _ => idtac
                                | _ =>  idtac "Hint:  your LOCAL precondition binds temp " i " to a value " v " that is not of the form (Vsingle _).  Although this is legal, Floyd's proof automation will not handle it as nicely.  See if you can rewrite that value so that it has Vsingle on the outside"
                               end
       | _ => idtac

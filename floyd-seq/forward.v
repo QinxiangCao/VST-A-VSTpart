@@ -30,7 +30,8 @@ Require Import FloydSeq.diagnosis.
 Require Import FloydSeq.simpl_reptype.
 Require Import VST.floyd.nested_pred_lemmas.
 Require Import FloydSeq.freezer.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
+Require Import VST.floyd.seplog_tactics.
 Import Cop.
 Import Cop2.
 Import Clight_Cop2.
@@ -843,6 +844,30 @@ cbv beta iota zeta; unfold_post; extensionality rho;
            ].
  *)
 
+Ltac prove_precise_context_aux H :=
+  repeat match type of H with
+  | In _ _ =>
+      destruct H as [H | H];
+      [ injection H;
+        intros; subst;
+        auto with precise_spec
+      | prove_precise_context_aux H ]
+  | _ => try destruct H
+  end.
+
+Ltac prove_precise_context :=
+  match goal with
+  | |- precise_context _ =>
+    let H := fresh "H" in
+    unfold precise_context;
+    intros ? ? H;
+    unfold precise_context; intros;
+    apply PTree.elements_correct in H;
+    prove_precise_context_aux H
+  end.
+
+Ltac forward_call_precise_context := auto.
+
 Ltac  forward_call_id1_wow_nil := 
 let H := fresh in intro H;
 eapply (semax_call_id1_wow_nil _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H); 
@@ -854,6 +879,7 @@ eapply (semax_call_id1_wow_nil _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac  forward_call_id1_wow := 
@@ -867,6 +893,7 @@ eapply (semax_call_id1_wow _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id1_x_wow_nil :=
@@ -885,6 +912,7 @@ eapply (semax_call_id1_x_wow_nil
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id1_x_wow :=
@@ -903,6 +931,7 @@ eapply (semax_call_id1_x_wow
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id1_y_wow_nil :=
@@ -921,6 +950,7 @@ eapply (semax_call_id1_y_wow_nil
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id1_y_wow :=
@@ -939,6 +969,7 @@ eapply (semax_call_id1_y_wow
  | prove_delete_temp
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id01_wow_nil :=
@@ -950,6 +981,7 @@ eapply (semax_call_id01_wow_nil _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
  | match_postcondition
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id01_wow :=
@@ -964,6 +996,7 @@ eapply (semax_call_id01_wow
  | match_postcondition
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id00_wow_nil  :=
@@ -983,6 +1016,7 @@ that is ill-formed.  The LOCALS part of the postcondition
 should be empty, but it is not")
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac forward_call_id00_wow  :=
@@ -1003,6 +1037,7 @@ that is ill-formed.  The LOCALS part of the postcondition
 should be empty, but it is not")
  | unify_postcondition_exps
  | unfold fold_right_and; repeat rewrite and_True; auto
+ | forward_call_precise_context
  ].
 
 Ltac simpl_strong_cast :=
@@ -1259,7 +1294,7 @@ Ltac prove_call_setup1 subsumes :=
 Use Intros  to move          the existentially bound variables above the line"
   | |- @semax ?CS _ ?Delta (PROPx ?P (LOCALx ?Q (SEPx ?R'))) ?c _ =>
     match c with
-    | context [Scall _ ?a ?bl] =>
+    (* | context [Scall _ ?a ?bl] =>
       let R := strip1_later R' in
       exploit (call_setup1_i CS Delta P Q (*R*) R' a bl);
       [check_prove_local2ptree
@@ -1271,7 +1306,7 @@ Use Intros  to move          the existentially bound variables above the line"
       |check_typecheck
       |check_cast_params
       |reflexivity
-      | ]
+      | ] *)
     | context [Scall _ (Evar ?id ?ty) ?bl] =>
       let R := strip1_later R' in
       exploit (call_setup1_i2 CS Delta P Q R' (*R*) id ty bl) ;
@@ -1376,6 +1411,12 @@ Ltac fwd_call_dep ts subsumes witness :=
       rewrite <- seq_assoc
  end;
 lazymatch goal with |- @semax ?CS _ ?Delta _ (Ssequence ?C _) _ =>
+  lazymatch goal with
+  | H: precise_context Delta |- _ => idtac
+  | |- _ =>
+    let H := fresh "Hprecise" in
+    assert (H: precise_context Delta) by prove_precise_context
+  end;
   lazymatch C with context [Scall _ _ _] =>
          fwd_call' ts subsumes witness
     end
@@ -1504,6 +1545,12 @@ Ltac new_fwd_call:=
       rewrite <- seq_assoc
  end;
 lazymatch goal with |- @semax ?CS _ ?Delta _ (Ssequence ?C _) _ =>
+  lazymatch goal with
+  | H: precise_context Delta |- _ => idtac
+  | |- _ =>
+    let H := fresh "Hprecise" in
+    assert (H: precise_context Delta) by prove_precise_context
+  end;
   lazymatch C with context [Scall _ _ _] =>
          new_fwd_call'
     end
@@ -2687,12 +2734,14 @@ match goal with
        do_repr_inj HRE;
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
+       try rewrite Int.unsigned_repr in HRE by rep_omega; (* added by VST-A *)
        repeat apply -> semax_skip_seq;
        try abbreviate_semax
      | clear HRE; subst v; apply semax_extract_PROP; intro HRE;
        do_repr_inj HRE;
        repeat (apply semax_extract_PROP; intro);
        try rewrite Int.signed_repr in HRE by rep_omega;
+       try rewrite Int.unsigned_repr in HRE by rep_omega; (* added by VST-A *)
        repeat apply -> semax_skip_seq;
        try abbreviate_semax
      ]
@@ -3190,7 +3239,7 @@ Qed.
 Hint Rewrite @offset_val_sem_add_pi using (solve [auto with norm ; rep_omega]) : norm.
 *)
 
-Arguments field_type i m / .
+Arguments fieldlist.field_type i m / .
 Arguments nested_field_type {cs} t gfs / .
 
 Ltac really_simplify A :=
@@ -4561,7 +4610,7 @@ Proof.
 Qed.
 
 Lemma extract_prog_main' {F} defs publics main types compenv prf:
-  @prog_main F {| prog_defs := defs; prog_public := publics; prog_main:=main; prog_types:=types;
+  @Ctypes.prog_main F {| Ctypes.prog_defs := defs; Ctypes.prog_public := publics; Ctypes.prog_main:=main; prog_types:=types;
                      prog_comp_env := compenv; prog_comp_env_eq := prf |} = main.
 Proof. reflexivity. Qed.
 

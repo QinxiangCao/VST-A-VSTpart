@@ -5,7 +5,7 @@ FloydSeq
 
 
 
-CSplit
+Csplit
 - current split tactic is slow [check simpl, in progress]
 - evaluation with other tools
   - [+] Verifast 

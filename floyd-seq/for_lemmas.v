@@ -9,8 +9,9 @@ Require Import FloydSeq.entailer.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
+Require Import VST.floyd.seplog_tactics.
 
 Import Cop.
 Import LiftNotation.
@@ -18,7 +19,7 @@ Local Open Scope logic.
 
 Definition int_type_min_max (type_i type_hi: type): option (Z * Z) :=
   match type_i, type_hi with
-  | Tint I32 s_i _, Tint i_hi s_hi _ =>
+  | Ctypes.Tint I32 s_i _, Ctypes.Tint i_hi s_hi _ =>
     Some match s_i with
          | Signed => (match i_hi, s_hi with
                       | I32, Unsigned => 0
@@ -26,7 +27,7 @@ Definition int_type_min_max (type_i type_hi: type): option (Z * Z) :=
                       end, Int.max_signed)
          | Unsigned => (0, Int.max_unsigned)
          end
-  | Tint I32 s_i _, Tlong s_hi _ =>
+  | Ctypes.Tint I32 s_i _, Ctypes.Tlong s_hi _ =>
     Some match s_i with
          | Signed => match s_hi with
                      | Unsigned => (0, Int.max_signed)
@@ -96,10 +97,10 @@ Inductive Int64_eqm_unsigned: int64 -> Z -> Prop :=
 Inductive Int6432_val: type -> val -> Z -> Prop :=
 | Int_64_eqm_unsigned_repr: forall s i64 z,
     Int64_eqm_unsigned i64 z ->
-    Int6432_val (Tlong s noattr) (Vlong i64) z
+    Int6432_val (Ctypes.Tlong s noattr) (Vlong i64) z
 | Int_32_eqm_unsigned_repr: forall s i i32 z,
     Int_eqm_unsigned i32 z ->
-    Int6432_val (Tint s i noattr) (Vint i32) z.
+    Int6432_val (Ctypes.Tint s i noattr) (Vint i32) z.
 
 Lemma Int_eqm_unsigned_repr': forall i z,
   i = Int.repr z ->
@@ -302,7 +303,7 @@ Proof.
 Qed.
 
 (* [litao]
-Admitted
+Abort
 because use const_only_isUnOpResultType_spec
 
 
@@ -662,9 +663,9 @@ Qed.
 Lemma Sfor_inc_tc: forall i s,
   m <= i < n ->
   ENTAIL Delta, inv2 i
-  |-- tc_expr Delta (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i) &&
-      tc_temp_id _i (typeof (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i))
-        Delta (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i).
+  |-- tc_expr Delta (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i) &&
+      tc_temp_id _i (typeof (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i))
+        Delta (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i).
 Proof.
   intros.
   unfold tc_expr, tc_temp_id.
@@ -730,7 +731,7 @@ Lemma Sfor_inc_entail: forall i s,
   local
     ((` eq) (eval_id _i)
        (subst _i (` old)
-          (eval_expr (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i)))) &&
+          (eval_expr (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i)))) &&
     subst _i (` old) (inv2 i) |--
   inv0.
 Proof.
@@ -752,17 +753,17 @@ Proof.
   rewrite H0; clear H0.
   destruct type_i as [| [| | |] [|] | | | | | | |]; inv I32_i.
   + destruct s.
-    - change (force_val2 (Clight_Cop2.sem_add (Tint I32 Signed a) (Tint I32 Signed noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
+    - change (force_val2 (Clight_Cop2.sem_add (Ctypes.Tint I32 Signed a) (Ctypes.Tint I32 Signed noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
       rewrite add_repr.
       split; [auto | congruence].
-    - change (force_val2 (Clight_Cop2.sem_add (Tint I32 Signed a) (Tint I32 Unsigned noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
+    - change (force_val2 (Clight_Cop2.sem_add (Ctypes.Tint I32 Signed a) (Ctypes.Tint I32 Unsigned noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
       rewrite add_repr.
       split; [auto | congruence].
   + destruct s.
-    - change (force_val2 (Clight_Cop2.sem_add (Tint I32 Unsigned a) (Tint I32 Signed noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
+    - change (force_val2 (Clight_Cop2.sem_add (Ctypes.Tint I32 Unsigned a) (Ctypes.Tint I32 Signed noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
       rewrite add_repr.
       split; [auto | congruence].
-    - change (force_val2 (Clight_Cop2.sem_add (Tint I32 Unsigned a) (Tint I32 Unsigned noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
+    - change (force_val2 (Clight_Cop2.sem_add (Ctypes.Tint I32 Unsigned a) (Ctypes.Tint I32 Unsigned noattr)) (Vint (Int.repr i)) (Vint (Int.repr 1))) with (Vint (Int.add (Int.repr i) (Int.repr 1))).
       rewrite add_repr.
       split; [auto | congruence].
 Qed.
@@ -772,7 +773,7 @@ End Sfor.
 (* 
 
 
-Admitted
+Abort
 because use const_only_isUnOpResultType_spec
 because use setup lemma
 *)
@@ -797,9 +798,9 @@ Lemma semax_for :
      @semax cs Espec Delta Pre
        (Ssequence
          (Sfor init
-                (Ebinop Olt (Etempvar _i type_i) hi (Tint I32 Signed noattr))
+                (Ebinop Olt (Etempvar _i type_i) hi (Ctypes.Tint I32 Signed noattr))
                 body
-                (Sset _i (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i)))
+                (Sset _i (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i)))
          MORE_COMMAND) Post.
 (* Proof. *)
   (* intros.
@@ -866,7 +867,7 @@ Abort.
 (* 
 
 
-Admitted
+Abort
 because use const_only_isUnOpResultType_spec
 because use setup lemma
 *)
@@ -879,8 +880,8 @@ Lemma semax_for_x :
            (inv0: environ -> mpred)
            (inv1 inv2: Z -> environ -> mpred) s
            test incr,
-     test = Ebinop Olt (Etempvar _i type_i) hi (Tint I32 Signed noattr) ->
-     incr = Sset _i (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Tint I32 s noattr)) type_i) ->
+     test = Ebinop Olt (Etempvar _i type_i) hi (Ctypes.Tint I32 Signed noattr) ->
+     incr = Sset _i (Ebinop Oadd (Etempvar _i type_i) (Econst_int (Int.repr 1) (Ctypes.Tint I32 s noattr)) type_i) ->
      forall
      (TI: (temp_types Delta) ! _i = Some type_i)
      (CALLEE: Inv = exp assert_callee)

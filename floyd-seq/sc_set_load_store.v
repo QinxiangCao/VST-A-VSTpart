@@ -17,8 +17,8 @@ Require Import FloydSeq.nested_loadstore.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 Require Import FloydSeq.simpl_reptype.
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
 
 Import LiftNotation.
 

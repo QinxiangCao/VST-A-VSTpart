@@ -1,6 +1,7 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
+Require Import VST.floyd.seplog_tactics.
 Import LiftNotation.
 Local Open Scope logic.
 
@@ -9,8 +10,7 @@ Lemma canon1: forall P1 B  P Q R,
 Proof.
 unfold do_canon, PROPx, LOCALx, SEPx; intros.
 extensionality rho.
-simpl.
-normalize.
+simpl. normalize.
 Qed.
 
 Lemma canon2: forall Q1 B P Q R,

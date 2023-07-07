@@ -11,7 +11,7 @@ Require Export VST.floyd.find_nth_tactic.
 Require Export VST.floyd.val_lemmas.
 Require Export VST.floyd.assert_lemmas.
 Require Export VST.floyd.base.
-Require CSplit.strong.
+Require Csplit.strong.
 
 Local Open Scope logic.
 

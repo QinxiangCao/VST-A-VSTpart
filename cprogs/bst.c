@@ -1,141 +1,181 @@
-#include <stddef.h>
+struct tree {
+  int key;
+  void *value;
+  struct tree *left;
+  struct tree *right;
+};
 
-extern void *mallocN (int n);
-extern void freeN(void *p, int n);
+struct tree * malloc_tree_node(void)
+  /*@ Require emp
+      Ensure store_tree_cell_(__return)
+   */;
 
-struct tree {int key; void *value; struct tree *left, *right;};
+void free_tree_node(struct tree * ptr)
+  /*@ Require store_tree_cell_(ptr)
+      Ensure emp
+   */;
 
-typedef struct tree **treebox;
+void *lookup(int x, struct tree *p) {
+  /*@ With n t p_old
+      Require
+        x == Vint(IntRepr(n)) &&
+        INT_MIN <= n && n <= INT_MAX &&
+        p == p_old &&
+        tree_rep(t, p)
+      Ensure
+        __return == lookup(n, t) &&
+        tree_rep(t, p_old)
+   */
+  int y;
+  void *v;
 
-void insert (treebox p, int x, void *value){
-  //@ With (p0: val) (x: nat) (v: val) (m0: total_map val),
-  /*@ Require
-        PROP( Int.min_signed <= Z.of_nat x <= Int.max_signed; is_pointer_or_null v)
-        LOCAL(temp _p p0; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-        SEP (Mapbox_rep m0 p0)
-  */
-  /*@ Ensure
-        PROP()
-        LOCAL()
-        SEP (Mapbox_rep (t_update m0 x v) p0)
-  */
-  /*@ Assert EX t0 : tree val,
-        PROP (Abs val nullval t0 m0; SearchTree val t0)
-        LOCAL (temp _p p0; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-        SEP (treebox_rep t0 p0)
-  */
-  struct tree *q;
-  /*@ Inv EX p: val, EX t: tree val, EX P: tree val -> tree val,
-        PROP(P (insert x v t) = (insert x v t0))
-        LOCAL(temp _p p; temp _x (Vint (Int.repr (Z.of_nat x)));   temp _value v)
-        SEP(treebox_rep t p;  partial_treebox_rep P p0 p)
-  */
-  for(;;) {
-    /*@ Assert EX q : val,
-          PROP ( )
-          LOCAL (temp _p p; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-          SEP (data_at Tsh (tptr t_struct_tree) q p * tree_rep t q; partial_treebox_rep P p0 p)
-    */
-    q = * p;
-    if (q == NULL) {
-      q = (struct tree *) mallocN (sizeof * q);
-      /*@ Assert EX q,
-            PROP (malloc_compatible (sizeof t_struct_tree) q)
-            LOCAL (temp _q q; temp _p p; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-            SEP (memory_block Tsh (sizeof t_struct_tree) q; data_at Tsh (tptr t_struct_tree) nullval p;
-              tree_rep t nullval; partial_treebox_rep P p0 p)
-      */
-      /*@ Assert
-            PROP ()
-            LOCAL (temp _q q; temp _p p; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-            SEP (data_at_ Tsh t_struct_tree q; data_at Tsh (tptr t_struct_tree) nullval p;
-                tree_rep t nullval; partial_treebox_rep P p0 p)
-      */
-      q -> key = x; q -> value = value; q -> left = NULL; q -> right = NULL;
-      * p = q;
+  /*@ Inv
+        exists t1,
+          x == Vint(IntRepr(n)) &&
+          INT_MIN <= n && n <= INT_MAX &&
+          lookup(n, t1) == lookup(n, t) &&
+          tree_rep(t1, p) -* tree_rep(t, p_old) *
+          tree_rep(t1, p)
+   */
+  while (p != (void *)0) {
+    y = p->key;
+    if (x < y) {
+      p = p->left;
+    } else if (y < x) {
+      p = p->right;
+    } else {
+      v = p->value;
+      return v;
+    }
+  }
+
+  return (void *)0;
+}
+
+void insert(struct tree **b, int x, void *value) {
+  /*@ With t n b_old v
+      Require
+        x == Vint(IntRepr(n)) &&
+        INT_MIN <= n && n <= INT_MAX &&
+        value == v &&
+        is_pointer_or_null(v) &&
+        b == b_old &&
+        treebox_rep(t, b)
+      Ensure
+        treebox_rep(insert(n, v, t), b_old)
+   */
+  struct tree *p;
+  int y;
+
+  /*@ Inv
+        exists t1,
+          x == Vint(IntRepr(n)) &&
+          INT_MIN <= n && n <= INT_MAX &&
+          value == v &&
+          is_pointer_or_null(v) &&
+          treebox_rep(insert(n, v, t1), b) -* treebox_rep(insert(n, v, t), b_old) *
+          treebox_rep(t1, b)
+   */
+  while (1) {
+    p = *b;
+    if (p == (void *)0) {
+      p = malloc_tree_node();
+      p->key = x;
+      p->value = value;
+      p->left = (void *)0;
+      p->right = (void *)0;
+      *b = p;
       return;
     } else {
-      /*@ Assert (EX (t1 : tree val) (k : key) (v0 : val) (t2 : tree val),
-            PROP (t = T t1 k v0 t2)
-            LOCAL (temp _q q; temp _p p; temp _x (Vint (Int.repr (Z.of_nat x))); temp _value v)
-            SEP (data_at Tsh (tptr t_struct_tree) q p;
-              !! (Int.min_signed <= Z.of_nat k <= Int.max_signed /\ tc_val (tptr Tvoid) v0) &&
-              field_at Tsh t_struct_tree [StructField _key] (Vint (Int.repr (Z.of_nat k))) q *
-              field_at Tsh t_struct_tree [StructField _value] v0 q *
-              treebox_rep t1 (field_address t_struct_tree [StructField _left] q) *
-              treebox_rep t2 (field_address t_struct_tree [StructField _right] q);
-              partial_treebox_rep P p0 p)
-          )%assert
-      */
-      int y = q -> key;
-      if (x < y)
-	p = & q -> left;
-      else if (y<x)
-	p = & q -> right;
-      else {
-	q -> value = value;
-	return;
+      y = p->key;
+      if (x < y) {
+        b = &p->left;
+      } else if (y < x) {
+        b = &p->right;
+      } else {
+        p->value = value;
+        return;
       }
     }
   }
 }
 
-void *lookup (struct tree * p, int x) {
-  void * v;
-  while (p != NULL) {
-    int y = p -> key;
-    if (x < y)
-      p = p -> left;
-    else if (y<x)
-      p = p -> right;
-    else {
-      v = p -> value;
-      return v;
-    }
-  }
-  return NULL;
-}
-
-void turn_left(treebox _l, struct tree * l, struct tree * r) {
-  struct tree * mid;
-  mid = r->left;
-  l->right = mid;
-  r->left = l;
-  *_l = r;
-}
-
-void pushdown_left (treebox t) {
+void pushdown_left(struct tree **b) {
+  /*@ With ta tb n v t b_old
+      Require
+        INT_MIN <= n && n <= INT_MAX &&
+        tc_val_ptr(v) &&
+        b == b_old &&
+        is_pointer_or_null(t) &&
+        store_tree_ptr(b_old, t) *
+        store_int(field_addr(t, key), n) *
+        store_void_ptr(field_addr(t, value), v) *
+        treebox_rep(ta, field_addr(t, left)) *
+        treebox_rep(tb, field_addr(t, right))
+      Ensure
+        treebox_rep(pushdown_left(ta, tb), b_old)
+   */
   struct tree *p, *q;
-  for(;;) {
-    p = *t;
+  struct tree *mid;
+
+  /*@ Inv
+      exists ta1 tb1 n1 v1,
+        INT_MIN <= n && n <= INT_MAX &&
+        tc_val_ptr(v) &&
+        treebox_rep(T(ta1, n1, v1, tb1), b) *
+        treebox_rep(pushdown_left(ta1, tb1), b) -* treebox_rep(pushdown_left(ta, tb), b_old)
+   */
+  while (1) {
+    p = *b;
     q = p->right;
-    if (q==NULL) {
+    if (q == (void*)0) {
       q = p->left;
-      *t = q;
-      freeN(p, sizeof (*p));
+      *b = q;
+      free_tree_node(p);
       return;
     } else {
-      turn_left(t, p, q);
-      t = &q->left;
+      mid = q->left;
+      p->right = mid;
+      q->left = p;
+      *b = q;
+      b = &q->left;
     }
   }
 }
 
-void delete (treebox t, int x) {
+void delete(struct tree **b, int x) {
+  /*@ With n t b_old
+      Require
+        x == Vint(IntRepr(n)) &&
+        INT_MIN <= n && n <= INT_MAX &&
+        b == b_old &&
+        treebox_rep(t, b_old)
+      Ensure
+        treebox_rep(delete(n, t), b_old)
+   */
   struct tree *p;
-  for(;;) {
-    p = *t;
-    if (p==NULL) {
+  int y;
+
+  /*@ Inv
+      exists t1,
+        x == Vint(IntRepr(n)) &&
+        INT_MIN <= n && n <= INT_MAX &&
+        treebox_rep(t1, b) *
+        treebox_rep(delete(n, t1), b) -* treebox_rep(delete(n, t), b_old)
+   */
+  while (1) {
+    p = *b;
+    if (p == (void *)0) {
       return;
     } else {
-      int y = p->key;
-      if (x<y)
-	t= &p->left;
-      else if (y<x)
-	t= &p->right;
-      else {
-	pushdown_left(t);
-	return;
+      y = p->key;
+      if (x < y) {
+        b = &p->left;
+      } else if (y < x) {
+        b = &p->right;
+      } else {
+        pushdown_left(b);
+        return;
       }
     }
   }

@@ -8,6 +8,8 @@ CONFIGURE
 
 # Object files, in general
 *.vo
+*.vos
+*.vok
 *.glob
 *.o
 *.a
@@ -32,3 +34,11 @@ CONFIGURE
 /Makefile.config
 /compcert.ini
 /frontend/STAMP
+/cprogs/*/program.v
+/cprogs/*/annotation.v
+/cprogs/*/Makefile.config
+/cprogs/*/*/path[0-9].v
+/cprogs/*/*/path[0-9][0-9].v
+/cprogs/*/*/ret_path[0-9].v
+/cprogs/*/*/ret_path[0-9][0-9].v
+/cprogs/*.pc

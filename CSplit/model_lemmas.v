@@ -1124,58 +1124,33 @@ Qed.
 
 Require VST.floyd.SeparationLogicFacts.
 
-Definition precise_funspec := 
-fun (Delta : seplog.tycontext) (f : funspec) =>
-match f with
-| mk_funspec fsig0 _ A P R _ _ =>
-	forall (bl : environ -> list val) (Q1 Q2 : environ -> mpred)
-      (ret : option ident) r,
-    (snd fsig0 = Tvoid -> ret = None) ->
-    tc_fn_return Delta ret (snd fsig0) ->
-    ((EX (ts1 : list Type)
-      (x1 : (fix dtfr (T : rmaps.TypeTree) : functor :=
-               match T with
-               | rmaps.ConstType A0 => fconst A0
-               | rmaps.Mpred => fidentity
-               | rmaps.DependentType n => fconst (nth n ts1 unit)
-               | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
-               | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
-               | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
-               | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
-               | rmaps.ListType T0 => flist (dtfr T0)
-               end) A mpred),
-      @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts1 x1 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r *
-      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts1 x1) (snd fsig0) ret rho -* Q1 rho) r) &&
-     (EX (ts2 : list Type)
-      (x2 : (fix dtfr (T : rmaps.TypeTree) : functor :=
-               match T with
-               | rmaps.ConstType A0 => fconst A0
-               | rmaps.Mpred => fidentity
-               | rmaps.DependentType n => fconst (nth n ts2 unit)
-               | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
-               | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
-               | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
-               | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
-               | rmaps.ListType T0 => flist (dtfr T0)
-               end) A mpred),
-        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts2 x2 : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r  *
-      SeparationLogicFacts.oboxopt Delta ret (fun rho => maybe_retval (R ts2 x2) (snd fsig0) ret rho -* Q2 rho) r))
-    |-- (EX (ts : list Type)
-         (x : (fix dtfr (T : rmaps.TypeTree) : functor :=
-                 match T with
-                 | rmaps.ConstType A0 => fconst A0
-                 | rmaps.Mpred => fidentity
-                 | rmaps.DependentType n => fconst (nth n ts unit)
-                 | rmaps.ProdType T1 T2 => fpair (dtfr T1) (dtfr T2)
-                 | rmaps.ArrowType T1 T2 => ffunc (dtfr T1) (dtfr T2)
-                 | rmaps.SigType I0 f0 => fsig (fun i : I0 => dtfr (f0 i))
-                 | rmaps.PiType I0 f0 => fpi (fun i : I0 => dtfr (f0 i))
-                 | rmaps.ListType T0 => flist (dtfr T0)
-                 end) A mpred),
-        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred)) (P ts x : environ -> mpred) (SeparationLogic.make_args' fsig0 bl) r *
-         SeparationLogicFacts.oboxopt Delta ret
-           (fun rho => maybe_retval (R ts x) (snd fsig0) ret rho -* Q1 rho && Q2 rho) r)
-end.
+Definition precise_funspec (Delta : seplog.tycontext) (f : funspec) := 
+  match f with mk_funspec fsig0 _ A P R _ _ =>
+    forall (bl : environ -> list val) (Q1 Q2 : environ -> mpred)
+           (ret : option ident) r,
+      (snd fsig0 = Tvoid -> ret = None) ->
+      tc_fn_return Delta ret (snd fsig0) ->
+      (EX ts1 x1,
+        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred))
+          (P ts1 x1 : environ -> mpred)
+          (SeparationLogic.make_args' fsig0 bl) r *
+        SeparationLogicFacts.oboxopt Delta ret
+          (fun rho => maybe_retval (R ts1 x1) (snd fsig0) ret rho -* Q1 rho) r) &&
+      (EX ts2 x2,
+        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred))
+          (P ts2 x2 : environ -> mpred)
+          (SeparationLogic.make_args' fsig0 bl) r *
+        SeparationLogicFacts.oboxopt Delta ret
+          (fun rho => maybe_retval (R ts2 x2) (snd fsig0) ret rho -* Q2 rho) r)
+      |--
+      (EX ts x,
+        @lift.liftx (lift.Tarrow environ (LiftEnviron mpred))
+          (P ts x : environ -> mpred)
+          (SeparationLogic.make_args' fsig0 bl) r *
+        SeparationLogicFacts.oboxopt Delta ret
+          (fun rho =>
+            maybe_retval (R ts x) (snd fsig0) ret rho -* Q1 rho && Q2 rho) r)
+  end.
 
 Definition precise_fun_at_ptr (Delta:seplog.tycontext) (v:val) : mpred:= 
   (allp (fun (fs:funspec) =>
@@ -1184,9 +1159,9 @@ Definition precise_fun_at_ptr (Delta:seplog.tycontext) (v:val) : mpred:=
        (!! (precise_funspec Delta fs) ))))%pred.
 
 Lemma func_ptr_der: forall Delta argsig1 argsig2 retsig cc A1 A2 P1 P2 R1 R2 NEP1 NER1 NEP2 NER2 v,
-(( (seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1))) v &&
-((seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2))) v &&  
-precise_fun_at_ptr Delta v)
+(seplog.func_ptr_si (mk_funspec (argsig1, retsig) cc A1 P1 R1 NEP1 NER1)) v &&
+(seplog.func_ptr_si (mk_funspec (argsig2, retsig) cc A2 P2 R2 NEP2 NER2)) v &&  
+precise_fun_at_ptr Delta v
 |--
 !! (argsig1 = argsig2) &&
 (EX (blk_fun: block) (gA : rmaps.TypeTree)
@@ -1240,8 +1215,6 @@ Lemma fun_beta: forall {A B:Type} (a: A -> B) y, (fun x => a x) y = a y.
 Proof.
   reflexivity.
 Qed.
-
-
 
 Require VST.veric.SeparationLogic.
 (* Require Import VST.veric.lift. *)

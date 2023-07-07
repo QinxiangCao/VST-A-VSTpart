@@ -1,11 +1,11 @@
-Require Export CSplit.AClight.
+Require Export Csplit.AClight.
 Require Import VST.floyd.proofauto.
-Require Import CSplit.strong.
-Require Import CSplit.semantics.
-
-
+Require Import Csplit.strong.
+Require Import Csplit.semantics.
 
 Section SemanticsProofs.
+
+Local Open Scope logic.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
@@ -551,27 +551,29 @@ Proof.
   intros.
   destruct s_atom2, s_atom1. unfold atom_to_semax.
   simpl in H.
-
+  replace (p0 ++ p) with ((p0 ++ p) ++ nil) in H by apply app_nil_r.
+  apply path_to_statement_app in H.
   apply semax_seq_inv in H. destruct H as [Qr [H H']].
   apply path_to_statement_app in H.
   apply semax_seq_inv' in H.
 
   eapply semax_noreturn_inv
   with (Post':=
-  (normal_split_assert ((EX Q0 : environ -> mpred,
-  !! semax Delta Q0 (path_to_statement p)
+    (normal_split_assert (EX Q0 : environ -> mpred,
+    !! semax Delta Q0 (path_to_statement p Clight.Sskip)
         (overridePost Qr (return_split_assert R)) && Q0
-  ))))
-  in H;
-  try solve [unfold_der;reflexivity].
-  2:{ apply noreturn_split_result. }
+    ))) in H;
+  try solve [unfold_der; reflexivity].
+  2:{ apply noreturn_split_result. auto. }
   
   eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
   { rewrite !normal_split_assert_elim.
     Intros Q. Exists Q. apply andp_right.
     solve_andp. apply prop_right.
-    simpl. apply semax_seq with (Q0:=Qr);auto.
-  }
+    simpl. replace p with (p ++ nil) by apply app_nil_r.
+    apply path_to_statement_app.
+    eapply semax_seq. apply H0.
+    apply H'. }
 Qed.
 
 
@@ -584,6 +586,8 @@ Proof.
   intros.
   induction c_post.
   - destruct atom. simpl in H.
+    replace (path ++ p) with ((path ++ p) ++ nil) in H by apply app_nil_r.
+    apply path_to_statement_app in H.
     apply semax_seq_inv in H. destruct H as [Qr [H H']].
     apply path_to_statement_app in H.
     apply semax_seq_inv' in H. unfold post_to_semax.
@@ -591,22 +595,21 @@ Proof.
     eapply semax_noreturn_inv
     with (Post':=
     (normal_split_assert ((EX Q0 : environ -> mpred,
-    !! semax Delta Q0 (path_to_statement p)
+    !! semax Delta Q0 (path_to_statement p Clight.Sskip)
          (overridePost Qr (return_split_assert Q)) && Q0
     ))))
     in H;
     try solve [unfold_der;reflexivity].
-    2:{ apply noreturn_split_result. }
+    2:{ apply noreturn_split_result. auto. }
     
     eapply semax_conseq;[..|apply H];try solve [intros;solve_andp].
     { rewrite !normal_split_assert_elim.
       Intros R. Exists R. apply andp_right.
       solve_andp. apply prop_right.
-      simpl. apply semax_seq with (Q0:=Qr);auto.
-    }
-
-  (* - intros a. apply H0. simpl in H. destruct atom. *)
-    (* apply H. *)
+      simpl. replace p with (p ++ nil) by apply app_nil_r.
+      apply path_to_statement_app.
+      eapply semax_seq. apply H0.
+      apply H'. }
 Qed.
 
 
@@ -710,17 +713,17 @@ Proof.
       simpl. split.
       * constructor;auto.
       * apply CForall_Capp. split;auto.
-        clear H H1 H2 IHs_atoms.
+        (* clear H H1 H2 IHs_atoms.
         induction c_posts'.
         { constructor. }
         { destruct H1_. apply IHc_posts' in H1.
           constructor;auto.
-          rewrite Cpost_atom_conn_distrib. auto. }
+          rewrite Cpost_atom_conn_distrib. auto. } *)
     + destruct H. destruct H. simpl in H1.
       simpl in H0. destruct_CForalls H0.
       constructor;auto.
       apply CForall_Capp. split;auto.
-      { rewrite Cpost_atom_conn_distrib. auto. }
+      (* { rewrite Cpost_atom_conn_distrib. auto. } *)
       { apply IHs_atoms. auto. }
 Qed.
 
@@ -742,17 +745,17 @@ Proof.
       simpl. split.
       * constructor;auto.
       * apply CForall_Capp. split;auto.
-        clear H H1 H2 IHs_atoms.
+        (* clear H H1 H2 IHs_atoms.
         induction c_posts'.
         { constructor. }
         { destruct H1_. apply IHc_posts' in H1.
           constructor;auto.
-          rewrite Cpost_return_conn_distrib. auto. }
+          rewrite Cpost_return_conn_distrib. auto. } *)
     + destruct H. destruct H. simpl in H1.
       simpl in H0. destruct_CForalls H0.
       constructor;auto.
       apply CForall_Capp. split;auto.
-      { rewrite Cpost_return_conn_distrib. auto. }
+      (* { rewrite Cpost_return_conn_distrib. auto. } *)
       { apply IHs_atoms. auto. }
 Qed.
 
@@ -948,8 +951,8 @@ Proof.
       induction post1;auto.
       destruct H. rewrite Cpost_return_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
-      2:{ rewrite Cpost_return_conn_distrib.
-          rewrite Cpost_atom_conn_distrib. auto. }
+      (* 2:{ rewrite Cpost_return_conn_distrib.
+          rewrite Cpost_atom_conn_distrib. auto. } *)
       apply post_conn_atom_conn_return_assoc. auto.
     + apply CForall_Capp. apply CForall_Capp in H.
       destruct H. split;auto.
@@ -959,7 +962,7 @@ Proof.
       destruct H. rewrite Cpost_return_conn_distrib in H0.
       rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
-      2:{ rewrite Cpost_return_conn_distrib. auto. }
+      (* 2:{ rewrite Cpost_return_conn_distrib. auto. } *)
       apply post_conn_atom_conn_return_assoc. auto.
 Qed.
 
@@ -981,8 +984,8 @@ Proof.
       induction post1;auto.
       destruct H. rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
-      2:{ rewrite Cpost_atom_conn_distrib.
-          rewrite Cpost_atom_conn_distrib. auto. }
+      (* 2:{ rewrite Cpost_atom_conn_distrib.
+          rewrite Cpost_atom_conn_distrib. auto. } *)
       apply post_conn_atom_conn_atom_assoc. auto.
     + apply CForall_Capp. apply CForall_Capp in H.
       destruct H. split;auto.
@@ -992,7 +995,7 @@ Proof.
       destruct H. rewrite Cpost_atom_conn_distrib in H0.
       rewrite Cpost_atom_conn_distrib in H0.
       apply IHpost1 in H0. split;auto.
-      2:{ rewrite Cpost_atom_conn_distrib. auto. }
+      (* 2:{ rewrite Cpost_atom_conn_distrib. auto. } *)
       apply post_conn_atom_conn_atom_assoc. auto.
 Qed.
 
@@ -1597,13 +1600,17 @@ Proof.
   intros. destruct return_atom', b.
   - simpl in H.
     apply semax_seq_inv in H. destruct H as [Q' [? ?]].
-    apply semax_seq_inv in H. destruct H as [Q'' [? ?]].
+    replace p with (p ++ nil) in H0 by apply app_nil_r.
+    apply path_to_statement_app in H0.
+    apply semax_seq_inv in H0. destruct H0 as [Q'' [? ?]].
     apply semax_ifthenelse_inv in H.
     eapply derives_trans;[apply H|].
     solve_andp.
   - simpl in H.
     apply semax_seq_inv in H. destruct H as [Q' [? ?]].
-    apply semax_seq_inv in H. destruct H as [Q'' [? ?]].
+    replace p with (p ++ nil) in H0 by apply app_nil_r.
+    apply path_to_statement_app in H0.
+    apply semax_seq_inv in H0. destruct H0 as [Q'' [? ?]].
     apply semax_ifthenelse_inv in H.
     eapply derives_trans;[apply H|].
     solve_andp.
@@ -1885,9 +1892,15 @@ Proof.
     clear - H2. rename H2 into H. destruct a.
     { simpl in H. hnf.
       rename H into H1. simpl in H1.
-      
-      eapply semax_seq_inv' in H1.
-      eapply semax_seq_inv' in H1.
+
+      apply semax_seq_inv in H1. destruct H1 as [Q0 [H3 H2]].
+      replace p with (p ++ nil) in H2 by apply app_nil_r.
+      apply path_to_statement_app in H2. simpl in H2.
+      specialize (semax_seq _ _ _ _ _ _ H3 H2) as H1.
+      clear H2 H3 Q0. apply seq_assoc in H1.
+
+      apply semax_seq_inv' in H1.
+      apply semax_seq_inv' in H1.
       apply semax_ifthenelse_inv in H1.
       eapply semax_pre'.
       { rewrite <- !andp_assoc.
@@ -1908,6 +1921,8 @@ Proof.
       rewrite overridePost_normal'.
       rewrite !exp_andp1. apply semax_extract_exists. intros R.
       rewrite !andp_assoc. apply semax_extract_prop. intros.
+      replace p with (p ++ nil) by apply app_nil_r.
+      apply path_to_statement_app. simpl path_to_statement.
       eapply semax_seq with (Q0:=(EX Q0 : environ -> mpred,
         !! semax Delta Q0 (Clight.Sreturn o) (return_split_assert Q) && Q0)
       ).
@@ -1932,6 +1947,12 @@ Proof.
     clear - H2. rename H2 into H. destruct a.
     { simpl in H. hnf.
       rename H into H1. simpl in H1.
+
+      apply semax_seq_inv in H1. destruct H1 as [Q0 [H3 H2]].
+      replace p with (p ++ nil) in H2 by apply app_nil_r.
+      apply path_to_statement_app in H2. simpl in H2.
+      specialize (semax_seq _ _ _ _ _ _ H3 H2) as H1.
+      clear H2 H3 Q0. apply seq_assoc in H1.
       
       eapply semax_seq_inv' in H1.
       eapply semax_seq_inv' in H1.
@@ -1955,6 +1976,8 @@ Proof.
       rewrite overridePost_normal'.
       rewrite !exp_andp1. apply semax_extract_exists. intros R.
       rewrite !andp_assoc. apply semax_extract_prop. intros.
+      replace p with (p ++ nil) by apply app_nil_r.
+      apply path_to_statement_app. simpl path_to_statement.
       eapply semax_seq with (Q0:=(EX Q0 : environ -> mpred,
         !! semax Delta Q0 (Clight.Sreturn o) (return_split_assert Q) && Q0)
       ).

@@ -32,7 +32,7 @@ Fixpoint is_effective_struct i (m: members) (v: reptype_skeleton) : option repty
     end
   end.
 
-Fixpoint is_effective_union i (m: members) (v: reptype_skeleton) : option reptype_skeleton :=
+Definition is_effective_union i (m: members) (v: reptype_skeleton) : option reptype_skeleton :=
   match m with
   | nil => None
   | _ :: nil => Some v
@@ -82,7 +82,7 @@ Fixpoint effective_len (t: type) (gfs: list gfield) (v: reptype_skeleton) : nat
 *)
 
 (* This is how we control the length of computation. *)
-Fixpoint effective_len (t: type) (gfs: list gfield) (v: reptype_skeleton) : nat
+Definition effective_len (t: type) (gfs: list gfield) (v: reptype_skeleton) : nat
   := length gfs.
 
 End SIMPL_REPTYPE.

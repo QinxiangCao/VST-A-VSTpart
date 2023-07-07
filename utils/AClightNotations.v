@@ -1,15 +1,12 @@
-
 Require Import compcert.cfrontend.Ctypes.
 Require Import compcert.cfrontend.Clight.
-Require Import CSplit.AClight.
-Require Import CSplit.AClightFunc.
+Require Import Csplit.AClight.
 Require Import compcert.common.AST.
 
-
-Require Import CSplit.semantics.
-Require Import CSplit.strongSoundness.
+Require Import Csplit.semantics.
+Require Import Csplit.strongSoundness.
 Require Import FloydSeq.proofauto.
-
+Require Import Csplit.AClightFunc.
 
 (* Require Import FloydSeq.forward. *)
 (** ** Functions *)
@@ -141,11 +138,6 @@ Module AClightNotations.
 Notation "'ANNOTATION_WITH' x .. y , c " :=
   (fun x => .. (fun y => c) .. ) (at level 65, x binder, y binder).
 
-
-
-(* Infix "++" := app (right associativity, at level 60).
-Infix "+++" := Capp (right associativity, at level 60) : aclight_scope. *)
-
 Notation "'GIVEN' x .. y , c " :=
   (bind_C_full_path (fun x => .. (bind_C_full_path (fun y => c)) ..)) (at level 65, x binder, y binder) : logic.
 
@@ -155,6 +147,11 @@ Notation "'EXGIVEN' x  '[[' ass ']]'  c " :=
 Notation "!!"  := semax_lemmas.Cnot.
 
 Notation "{ x ; y ; .. ; z }" := (list_binded_cons x (list_binded_cons y .. (list_binded_cons z list_binded_nil) ..)) : list_scope.
+
+Notation "'assume' '!' e ;" := (Sifthenelse (e%expr) Sbreak Sskip) (only printing, right associativity, at level 26, format "'assume'  '!'  e ;") : C_scope.
+
+Notation "'assume' e ;" := (Sifthenelse (e%expr) Sskip Sbreak) (only printing, right associativity, at level 26, format "'assume'  e ;") : C_scope.
+
 End AClightNotations.
 
 Ltac compute_split c_stm :=
@@ -339,11 +336,14 @@ Ltac start_function_argument_tac HINT_CODE :=
     change (C_split c) with (ltac:(compute_split HINT_CODE))
   end;
   apply split_Semax_fun_equiv;
-    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign
+    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign S_split_call
         path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
         hd_assert_of_post hd_assert_of_post_ret
         path_to_statement to_Clight
-        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall];
+        atoms_conn_atoms atom_conn_atom atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall
+        add_exp_to_atom add_exp_to_atoms
+        add_exp_to_ret_atom add_exp_to_ret_atoms
+        atom_conn_return];
   repeat
     match goal with
     | |- _ /\ _ => split
@@ -352,26 +352,28 @@ Ltac start_function_argument_tac HINT_CODE :=
     end.
 
 Ltac VST_A_start_function hint :=
-  start_function.start_function hint start_function_argument_tac.
-(*
-  match goal with
-  | |- context [C_split ?c] =>
-    change (C_split c) with (f_reverse_hint_split sh p l)
+  start_function.start_function hint start_function_argument_tac;
+  intros; rewrite semax_remove_skip; simpl remove_skip.
+
+Ltac get_para_type_rec_tac A B :=
+  match B with
+  | ?B1 -> ?B2 => get_para_type_rec_tac (prod A B1) B2
+  | prod _ _ => exact A
   end.
-  apply split_Semax_fun_equiv.
-  unfold f_reverse_hint_split;
-    cbv [split_Semax_fun S_split S_split_sequence S_split_assert S_split_set S_split_loop_refined S_split_loop S_split_ifthenelse S_split_break S_split_continue S_split_return S_split_skip S_split_assign
-        path_to_semax pre_to_semax post_to_semax post_ret_to_semax atom_to_semax atom_ret_to_semax 
-        hd_assert_of_post hd_assert_of_post_ret
-        path_to_statement to_Clight
-        atoms_conn_atoms atom_conn_atoms atoms_conn_returns atom_conn_returns Sconcat Sapp Smap SForall CForall].
-  repeat
-    match goal with
-    | |- _ /\ _ => split
-    | |- True => auto
-    | |- _ => intros;
-              match goal with
-              | |- semax _ _ Clight.Sskip _ => apply semax_skip_normal_split_post, derives_refl
-              end
-    end.
-*)
+
+Ltac get_para_type_tac spec_annot :=
+  match type of spec_annot with
+  | ?A -> prod _ _ => exact A
+  | ?A -> ?B => get_para_type_rec_tac A B
+  end.
+
+Notation "'GET_PARA_TYPE' x" := ltac:(get_para_type_tac x) (at level 99).
+
+Module Type STRAIGHTLINE_HOARE_TRIPLE_PROOF.
+
+Parameter functional_correctness_statement: Prop.
+  
+Axiom proof: functional_correctness_statement.
+
+End STRAIGHTLINE_HOARE_TRIPLE_PROOF.
+

@@ -8,8 +8,8 @@ Require Import VST.floyd.field_at.
 Require Import VST.floyd.field_compat.
 Require Import FloydSeq.closed_lemmas.
 Require Import VST.floyd.nested_pred_lemmas.
-(*Require Import FloydSeq.unfold_data_at.*)
-Require Import CSplit.strong.
+Require Import Csplit.strong.
+Require Import VST.floyd.seplog_tactics.
 Import LiftNotation.
 Local Open Scope logic.
 
@@ -93,7 +93,7 @@ Qed.
 
 Definition zero_of_type (t: type) : val :=
  match t with
-  | Tfloat _ _ => Vfloat Float.zero
+  | Ctypes.Tfloat _ _ => Vfloat Float.zero
   | _ => Vint Int.zero
  end.
 
@@ -378,10 +378,10 @@ Lemma id2pred_star_ZnthV_Tint  {cs: compspecs} :
   (NBS: notboolsize sz),
   n = Zlength mdata ->
   mdata = map (inttype2init_data sz) data ->
-  !! isptr v && !! align_compatible (Tint sz sign noattr) v &&
-  !! (offset_strict_in_range (sizeof (Tint sz sign noattr) * n)) v &&
+  !! isptr v && !! align_compatible (Ctypes.Tint sz sign noattr) v &&
+  !! (offset_strict_in_range (sizeof (Ctypes.Tint sz sign noattr) * n)) v &&
   id2pred_star Delta gz sh v mdata |--
-  `(data_at sh (tarray (Tint sz sign noattr) n)
+  `(data_at sh (tarray (Ctypes.Tint sz sign noattr) n)
            (map (Basics.compose Vint (Cop.cast_int_int sz sign)) data) v).
 Proof.
   intros. subst n mdata.
@@ -389,11 +389,11 @@ Proof.
     by (repeat rewrite Zlength_correct; rewrite map_length; auto).
   go_lowerx.
   match goal with |- ?F _ _ _ _ _ _ _ |-- _ => change F with @id2pred_star end.
-  change (offset_strict_in_range (sizeof (Tint sz sign noattr) * Zlength data) v) in H1.
-  assert (offset_strict_in_range (sizeof (Tint sz sign noattr) * 0) v) by
+  change (offset_strict_in_range (sizeof (Ctypes.Tint sz sign noattr) * Zlength data) v) in H1.
+  assert (offset_strict_in_range (sizeof (Ctypes.Tint sz sign noattr) * 0) v) by
     (unfold offset_strict_in_range; destruct v; auto; pose proof Ptrofs.unsigned_range i; omega).
 unfold tarray.
-set (t := Tint sz sign noattr) in *.
+set (t := Ctypes.Tint sz sign noattr) in *.
 revert v H H0 H1 H2; induction data; intros.
 *
   rewrite Zlength_nil. unfold data_at, field_at; simpl.
@@ -405,7 +405,7 @@ revert v H H0 H1 H2; induction data; intros.
   hnf. simpl.
   split3; auto.
   split3; auto.
-  hnf. destruct v; auto. replace (sizeof (Tarray (Tint sz sign noattr) 0 noattr)) with 0 by (destruct sz; simpl; auto).
+  hnf. destruct v; auto. replace (sizeof (Tarray (Ctypes.Tint sz sign noattr) 0 noattr)) with 0 by (destruct sz; simpl; auto).
   pose proof Ptrofs.unsigned_range i; omega.
   hnf; destruct v; auto. apply align_compatible_rec_Tarray. intros. omega.
 *
@@ -540,14 +540,14 @@ Lemma unpack_globvar_array  {cs: compspecs}:
    gvar_info gv = tarray t n ->
    gvar_volatile gv = false ->
 (*   globvar_all_aligned gv = true -> *)
-   t = Tint sz sign noattr ->
+   t = Ctypes.Tint sz sign noattr ->
   forall    (NBS: notboolsize sz),
    n = Zlength (gvar_init gv) ->
    gvar_init gv = map (inttype2init_data sz) data ->
    init_data_list_size (gvar_init gv) <= sizeof (gvar_info gv) <= Ptrofs.max_unsigned ->
    local (`and (tc_environ Delta) (fun rho =>gz = globals_of_env rho)) && globvar2pred gz(i, gv) |--
       `(data_at (readonly2share (gvar_readonly gv))
-         (tarray (Tint sz sign noattr) n)
+         (tarray (Ctypes.Tint sz sign noattr) n)
          (map (Basics.compose Vint (Cop.cast_int_int sz sign)) data)
          (gz i)).
 Proof.
@@ -557,7 +557,7 @@ Proof.
   end.
  2: solve [apply andp_left1; unfold local, lift1; intro rho; apply prop_derives; intros [? ?]; auto].
   match goal with |- ?A |-- _ =>
-    erewrite (add_andp A (local (`isptr (eval_var i (tarray (Tint sz sign noattr) n)))))
+    erewrite (add_andp A (local (`isptr (eval_var i (tarray (Ctypes.Tint sz sign noattr) n)))))
   end.
   2:{
     go_lowerx. apply prop_right. eapply eval_var_isptr; eauto.
@@ -584,9 +584,9 @@ Proof.
     unfold globals_of_env. destruct  (globvar_eval_var _ _ _ _ H3 H H0) as [b [_ H10]]. rewrite H10.
     exists b; auto. 
   }
-  assert (align_compatible (Tint sz sign noattr) (globals_of_env rho i)). {
+  assert (align_compatible (Ctypes.Tint sz sign noattr) (globals_of_env rho i)). {
     destruct H7 as [b ?]. rewrite H7.
-   assert (exists ch, access_mode (Tint sz sign noattr) = By_value ch)
+   assert (exists ch, access_mode (Ctypes.Tint sz sign noattr) = By_value ch)
      by (clear; destruct sz,sign; eexists; reflexivity).
    destruct H8 as [ch ?].
     eapply align_compatible_rec_by_value; try eassumption.
@@ -594,14 +594,14 @@ Proof.
     apply Z.divide_0_r.
   }
  apply headptr_isptr in H7.
- simpl andp. fold (sizeof (Tint sz sign noattr)).
-  assert (offset_strict_in_range (sizeof (Tint sz sign noattr) * n) (globals_of_env rho i)). {
+ simpl andp. fold (sizeof (Ctypes.Tint sz sign noattr)).
+  assert (offset_strict_in_range (sizeof (Ctypes.Tint sz sign noattr) * n) (globals_of_env rho i)). {
     unfold offset_strict_in_range.
     destruct (globals_of_env rho i) eqn:?H; auto.
     rewrite H5 in H6; simpl in H6.
     pose proof initial_world.zlength_nonneg _ (gvar_init gv).
     rewrite Z.max_r in H6 by omega.
-    fold (sizeof (Tint sz sign noattr)) in H6.
+    fold (sizeof (Ctypes.Tint sz sign noattr)) in H6.
     unfold Ptrofs.max_unsigned in H6.
     pose proof init_data_list_size_pos (gvar_init gv).
     simpl in H8.
@@ -610,7 +610,7 @@ Proof.
     split; try omega. 
     rewrite Z.add_0_l.
     apply Z.mul_nonneg_nonneg.
-    clear; pose proof (sizeof_pos (Tint sz sign noattr)); omega.
+    clear; pose proof (sizeof_pos (Ctypes.Tint sz sign noattr)); omega.
     apply Zlength_nonneg.
   }
   normalize.
@@ -667,7 +667,7 @@ Lemma process_globvar_array:
        gvar_info gv = tarray t n ->
        gvar_volatile gv = false ->
 (*       globvar_all_aligned gv = true -> *)
-       t = Tint sz sign noattr ->
+       t = Ctypes.Tint sz sign noattr ->
        notboolsize sz ->
        n = Zlength (gvar_init gv) ->
        gvar_init gv = map (inttype2init_data sz) data ->
@@ -676,7 +676,7 @@ Lemma process_globvar_array:
   semax Delta (PROPx P (LOCALx (gvars gz :: Q)
                       (SEPx ((data_at
                    (readonly2share (gvar_readonly gv))
-                   (tarray (Tint sz sign noattr) n)
+                   (tarray (Ctypes.Tint sz sign noattr) n)
                    (map (Vint oo Cop.cast_int_int sz sign) data) (gz i))
                     :: R)))
                        * globvars2pred gz gvs * SF)

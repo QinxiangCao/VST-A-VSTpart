@@ -1,8 +1,9 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
 Require Import VST.floyd.mapsto_memory_block.
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
+Require Import VST.floyd.seplog_tactics.
 Import LiftNotation.
 
 Local Open Scope logic.

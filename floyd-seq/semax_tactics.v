@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 (* Bug: abbreviate replaces _ALL_ instances, when sometimes
   we only want just one. *)
 Tactic Notation "abbreviate" constr(y) "as"  ident(x)  :=
@@ -665,16 +665,17 @@ Ltac function_pointers :=
  let x := fresh "there_are" in
  pose (x := function_pointers).
 
+(*
 Ltac leaf_function := 
  try lazymatch goal with
  | x := function_pointers |- _ => clear x
- (* | |- semax_body ?Vprog ?Gprog _ _ =>
- eapply leaf_function;
+  | |- semax_body ?Vprog ?Gprog _ _ =>
+ eapply leaf_functionleaf_function;
  [reflexivity 
  | reflexivity; fail "Error in leaf_function tactic: your" Vprog "and" Gprog "overlap!"
  | reflexivity; fail "Error in leaf_function tactic: your function body refers to an identifier in" Gprog
- | ] *)
-end.
+ | ] 
+end.*)
 
 (*
 Definition any_gvars (ds: PTree.t funspec) (s: statement) : bool :=

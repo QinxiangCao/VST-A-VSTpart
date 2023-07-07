@@ -1,16 +1,16 @@
 Require Import VST.veric.mpred.
 Require Import VST.veric.compcert_rmaps.
-Require Import CSplit.model_lemmas.
+Require Import Csplit.model_lemmas.
 Require Import VST.veric.seplog.
 Require Import VST.msl.seplog.
 (* Require Import VST.floyd.proofauto. *)
 Require Import VST.veric.expr.
 Require Import VST.veric.lift.
 Import Ctypes LiftNotation.
-Local Open Scope logic.
 Require Import VST.veric.SeparationLogic.
 Require Import VST.floyd.SeparationLogicFacts.
 
+Local Open Scope logic.
 
 Lemma typ_of_params_eq_inv:
 forall argsig1 argsig2,

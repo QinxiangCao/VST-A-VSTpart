@@ -15,8 +15,8 @@ Require Import VST.floyd.SeparationLogicFacts.
 Require Import VST.floyd.SeparationLogicAsLogic.
 Require Import VST.floyd.proofauto. *)
 Import Ctypes LiftNotation.
+Require Import Csplit.strong.
 Local Open Scope logic.
-Require Import CSplit.strong.
 
 Lemma modifiedvars_aux: forall id, (fun i => isSome (insert_idset id idset0) ! i) = eq id.
 Proof.
@@ -89,12 +89,12 @@ Lemma semax_frame:
 Proof.
   intros.
   induction H0.
-  + apply semax_pre with (!! (bool_type (typeof b) = true) && tc_expr Delta (Eunop Cop.Onotbool b (Tint I32 Signed noattr)) && (P * F)).
+  + apply semax_pre with (!! (bool_type (typeof b) = true) && tc_expr Delta (Eunop Cop.Onotbool b (Ctypes.Tint I32 Signed noattr)) && (P * F)).
     - normalize.
       apply andp_left2, andp_right.
       * eapply derives_trans; [apply sepcon_derives; [apply andp_left1 |]; apply derives_refl |].
         intro rho.
-        apply (predicates_sl.extend_sepcon (extend_tc.extend_tc_expr Delta (Eunop Cop.Onotbool b (Tint I32 Signed noattr)) rho)).
+        apply (predicates_sl.extend_sepcon (extend_tc.extend_tc_expr Delta (Eunop Cop.Onotbool b (Ctypes.Tint I32 Signed noattr)) rho)).
       * eapply derives_trans; [apply sepcon_derives; [apply andp_left2 |]; apply derives_refl |].
         auto.
     - rewrite semax_lemmas.closed_Sifthenelse in H; destruct H.
@@ -288,6 +288,9 @@ Proof.
       rewrite exp_sepcon1. apply exp_derives; intros Q.
       rewrite exp_sepcon1. apply exp_derives; intros NEP.
       rewrite exp_sepcon1. apply exp_derives; intros NEQ.
+      rewrite exp_sepcon1. apply exp_derives; intros b.
+      rewrite exp_sepcon1. apply exp_derives; intros id.
+      rewrite exp_sepcon1. apply exp_derives; intros fs.
       normalize.
       apply andp_right; [apply andp_right |];[apply andp_right|..].
       * apply wand_sepcon_adjoint.
@@ -317,23 +320,14 @@ Proof.
         apply wand_sepcon_adjoint.
         apply derives_left_sepcon_right_corable; auto.
         intro.
-        apply corable_func_ptr.
+        unfold local, lift1.
+        apply corable_prop.
       * apply wand_sepcon_adjoint.
-        apply andp_left1, andp_left2.
+        apply andp_left1. apply andp_left2.
         apply wand_sepcon_adjoint.
         apply derives_left_sepcon_right_corable; auto.
-        intro.
-        unfold model_lemmas.precise_fun_at_ptr. unfold liftx.
-        unfold_lift. rewrite !allp_rewrite.
-        apply corable_allp. intros.
-        rewrite !allp_rewrite. apply corable_allp. intros.
-        rewrite !imp_rewrite. apply corable_imp.
-        { rewrite !andp_rewrite. apply corable_andp.
-          + rewrite !prop_rewrite. apply corable_prop.
-          + change corable with corable.corable.
-            apply assert_lemmas.corable_func_at.
-        }
-        { rewrite !prop_rewrite. apply corable_prop. }
+        unfold_lift. intro rho.
+        apply assert_lemmas.corable_funspec_sub_si.
       * apply wand_sepcon_adjoint.
         apply andp_left2.
         apply wand_sepcon_adjoint.
@@ -344,7 +338,7 @@ Proof.
         rewrite exp_sepcon1. apply exp_derives; intros x.
         rewrite sepcon_assoc; apply sepcon_derives; auto.
 
-        destruct H0 as [? [? ?]].
+        destruct H0 as [? [? [? ?]]].
         rewrite <- (oboxopt_closed Delta ret F) at 1
         (* Locate tc_fn_return_temp_guard_opt.
         2:{ eapply tc_fn_return_temp_guard_opt; eauto. } *)
@@ -720,15 +714,20 @@ Qed.
 
 
 Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: tycontext),
-    forall A P Q NEP NEQ ts x (F: environ -> mpred) ret argsig retsig cc a bl,
+    forall A P Q NEP NEQ b id fs ts x (F: environ -> mpred) ret argsig retsig cc a bl,
            Cop.classify_fun (typeof a) =
            Cop.fun_case_f (type_of_params argsig) retsig cc ->
            (retsig = Tvoid -> ret = None) ->
           tc_fn_return Delta ret retsig ->
+          precise_context Delta ->
+          (glob_specs Delta) ! id = Some fs ->
   @semax CS Espec Delta
-          (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-         (`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
-         (` (model_lemmas.precise_fun_at_ptr Delta)) (eval_expr a) &&
+          (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl))  &&
+         (local (fun rho =>
+            gvar_injection (ge_of rho) /\
+            eval_expr a rho = Vptr b Ptrofs.zero /\
+            global_block rho id b) &&
+          `(funspec_sub_si fs (mk_funspec (argsig, retsig) cc A P Q NEP NEQ)) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
@@ -736,17 +735,17 @@ Theorem semax_call_forward: forall {CS: compspecs} {Espec: OracleKind} (Delta: t
 Proof.
   intros.
   eapply semax_pre; [| apply semax_call].
-  apply (exp_right argsig), (exp_right retsig), (exp_right cc), (exp_right A), (exp_right P), (exp_right Q), (exp_right NEP), (exp_right NEQ).
+  apply (exp_right argsig), (exp_right retsig), (exp_right cc), (exp_right A), (exp_right P), (exp_right Q), (exp_right NEP), (exp_right NEQ), (exp_right b), (exp_right id), (exp_right fs).
   rewrite !andp_assoc.
-  apply andp_right; [apply prop_right; auto |].
+  apply andp_right; [apply prop_right; auto 6 |].
   apply andp_right; [solve_andp |].
-  apply andp_right; [solve_andp |]. 
+  apply andp_right; [solve_andp |].
   rewrite andp_comm, imp_andp_adjoint.
   apply andp_left2.
   apply andp_left2.
   rewrite <- imp_andp_adjoint, andp_comm.
   apply andp_right. solve_andp.
-  apply andp_right. solve_andp. 
+  apply andp_right. solve_andp.
   rewrite andp_comm, imp_andp_adjoint. apply andp_left2.
   apply andp_left2.
   rewrite <- imp_andp_adjoint, andp_comm.

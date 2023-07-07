@@ -13,7 +13,7 @@ Require Import FloydSeq.closed_lemmas.
 Require Import FloydSeq.proj_reptype_lemmas.
 Require Import FloydSeq.replace_refill_reptype_lemmas.
 Require Import FloydSeq.loadstore_field_at.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 Import DataCmpNotations.
 Import LiftNotation.
 
@@ -191,10 +191,10 @@ Proof.
       cbv iota beta in v''.
       unfold reptype_structlist in v''.
       unfold nested_reptype_structlist in v'.
-      apply (@proj_compact_prod_JMeq _ (i, field_type i (co_members (get_co i0)))
+      apply (@proj_compact_prod_JMeq _ (i, fieldlist.field_type i (co_members (get_co i0)))
              _
              (fun it : prod ident type => @reptype cs (@nested_field_type cs t (@cons gfield (StructField (@fst ident type it)) gfs)))
-             (fun it => reptype (field_type (fst it) (co_members (get_co i0))))); auto.
+             (fun it => reptype (fieldlist.field_type (fst it) (co_members (get_co i0))))); auto.
       * intros.
         rewrite nested_field_type_ind, H2; reflexivity.
       * apply in_members_field_type; auto.
@@ -239,10 +239,10 @@ Proof.
       cbv iota beta in v''.
       unfold reptype_structlist in v''.
       unfold nested_reptype_unionlist in v'.
-      apply (@proj_compact_sum_JMeq' _ (i, field_type i (co_members (get_co i0)))
+      apply (@proj_compact_sum_JMeq' _ (i, fieldlist.field_type i (co_members (get_co i0)))
              _
              (fun it => reptype (nested_field_type t (gfs UDOT fst it)))
-             (fun it => reptype (field_type (fst it) (co_members (get_co i0))))); auto.
+             (fun it => reptype (fieldlist.field_type (fst it) (co_members (get_co i0))))); auto.
       * intros.
         rewrite nested_field_type_ind, H2; reflexivity.
       * rewrite nested_field_type_ind, H2; apply JMeq_refl.

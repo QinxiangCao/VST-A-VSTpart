@@ -49,7 +49,7 @@ Require VST.msl.iter_sepcon.
 Require VST.msl.wand_frame.
 Require VST.msl.wandQ_frame.
 Require FloydSeq.linking.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 
 Arguments semax {CS} {Espec} Delta Pre%assert cmd%C Post%assert.
 Export ListNotations.
@@ -232,3 +232,45 @@ Hint Extern 1 (@eq Z _ _) => Zlength_solve : Zlength_solve.
 Hint Extern 1 (@eq _ _ _) => f_equal : f_equal.
 
 Ltac list_solve ::= Zlength_solve.
+
+Ltac construct_DS1 G :=
+  let DS1_0 := eval hnf in (make_tycontext_s G) in
+  let DS1_1 := eval cbv beta iota delta [ptree_set] in DS1_0 in
+  constr:(DS1_1).
+
+Ltac construct_Delta_specs G :=
+  let DS1 := construct_DS1 G in
+  constr:(@abbreviate (PTree.t funspec) DS1).
+
+Ltac construct_Delta f V G A Delta_specs :=
+  let Delta_0 := eval cbv [func_tycontext make_tycontext] in (func_tycontext f V G A) in
+  let Delta_1 := eval pattern (make_tycontext_s G) in Delta_0 in
+  match Delta_1 with
+  | ?P (make_tycontext_s G) =>
+      let Delta_2 := eval cbv - [Delta_specs] in (P Delta_specs) in
+      constr:(@abbreviate _ Delta_2)
+  end.
+
+Ltac construct_Gprog_by_checking_leaf_function f V G :=
+  let Gtable := constr:(fold_left
+    (fun (t : PTree.t unit) (v : ident * funspec) =>
+       PTree.set (fst v) tt t) G (PTree.empty unit)) in
+  let flag := eval compute in
+   (andb
+      (floyd.semax_tactics.check_no_overlap' V Gtable)
+      (floyd.semax_tactics.check_no_Gvars Gtable (Clight.fn_body f)))
+  in
+    match flag with
+    | true =>  constr:(@nil (ident * funspec))
+    | false => constr:(G)
+    end.
+
+Notation "'DELTA_SPECS' ( f , V , G )" :=
+  ltac:(
+    let G' := construct_Gprog_by_checking_leaf_function f V G in
+    let DS := construct_Delta_specs G' in exact DS) (at level 99).
+
+Notation "'DELTA' ( f ,  V , G , A , Delta_specs )" :=
+  ltac:(
+    let G' := construct_Gprog_by_checking_leaf_function f V G in
+    let D := construct_Delta f V G' A Delta_specs in exact D) (at level 99).

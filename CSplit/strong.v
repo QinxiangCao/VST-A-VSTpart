@@ -11,15 +11,10 @@ Require Export VST.floyd.val_lemmas.
 Require Export VST.floyd.assert_lemmas.
 Require Import VST.veric.semax_lemmas.
 Require Import VST.floyd.SeparationLogicFacts.
-(* Require VST.floyd.SeparationLogicAsLogicSoundness.
-Require Import VST.floyd.SeparationLogicAsLogic.
-Require Import VST.floyd.proofauto. *)
 Import Ctypes LiftNotation.
 Local Open Scope logic.
-(* Require Import CSplit.vst_ext. *)
-Require Import CSplit.model_lemmas.
-Require Import CSplit.logic_lemmas.
-
+Require Import Csplit.model_lemmas.
+Require Import Csplit.logic_lemmas.
 
 Definition numeric_type (t: type) : bool :=
   match t with
@@ -30,6 +25,15 @@ Definition numeric_type (t: type) : bool :=
   | _ => false
   end.
 
+Definition precise_context (Delta: tycontext) : Prop :=
+  forall id fs,
+    (glob_specs Delta) ! id = Some fs ->
+    precise_funspec Delta fs.
+
+Definition global_block (rho: environ) : ident -> block -> Prop :=
+  fun id b =>
+    Map.get (ve_of rho) id = None /\
+    Map.get (ge_of rho) id = Some b.
 
 Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ -> mpred) -> Clight.statement -> ret_assert -> Prop :=
 | semax_ifthenelse :
@@ -47,7 +51,7 @@ Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ
 | semax_continue: forall Q,
     @semax CS Espec Delta (RA_continue Q) Clight.Scontinue Q
 | semax_loop: forall Q Q' incr body R,
-     @semax CS Espec Delta  Q body (loop1_ret_assert Q' R) ->
+     @semax CS Espec Delta Q  body (loop1_ret_assert Q' R) ->
      @semax CS Espec Delta Q' incr (loop2_ret_assert Q R) ->
      @semax CS Espec Delta Q (Clight.Sloop body incr) R
 | semax_return: forall (R: ret_assert) ret ,
@@ -89,7 +93,7 @@ Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ
               subst id (`(force_val (sem_cast (typeof e1) t1 v2))) P)))
         (Clight.Sset id e) (normal_ret_assert P)
 | semax_conseq: forall P' (R': ret_assert) P c (R: ret_assert) ,
-    (local (tc_environ Delta) && (allp_fun_id Delta && P) |-- P') ->
+    local (tc_environ Delta) && (allp_fun_id Delta && P) |-- P' ->
     local (tc_environ Delta) && (allp_fun_id Delta && RA_normal R') |-- RA_normal R ->
     local (tc_environ Delta) && (allp_fun_id Delta && RA_break R') |-- RA_break R ->
     local (tc_environ Delta) && (allp_fun_id Delta && RA_continue R') |-- RA_continue R ->
@@ -97,28 +101,32 @@ Inductive semax {CS: compspecs} {Espec: OracleKind} (Delta: tycontext): (environ
     @semax CS Espec Delta P' c R' -> @semax CS Espec Delta P c R
 
 | semax_builtin: forall P opt ext tl el, @semax CS Espec Delta FF (Clight.Sbuiltin opt ext tl el) P
-(* | semax_call: forall P ret a bl, @semax CS Espec Delta FF (Clight.Scall ret a bl) P *)
-| semax_call: forall ret a bl R,
-    @semax CS Espec Delta
-        (EX argsig: _, EX retsig: _, EX cc: _,
-        EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _,
-        (* different from standard VST rule  *)
 
+| semax_call: forall ret a bl R, (* different from standard VST rule  *)
+    @semax CS Espec Delta
+      (EX argsig retsig cc A P Q NEP NEQ b id fs,
         !! (Cop.classify_fun (typeof a) =
-            Cop.fun_case_f (type_of_params argsig) retsig cc /\ 
+              Cop.fun_case_f (type_of_params argsig) retsig cc /\ 
             (* type of a must match argsig/retsig *)
             (retsig = Tvoid -> ret = None) /\
-            tc_fn_return Delta ret retsig) && (* return value type check *)
-        (((tc_expr Delta a) &&  (* function-expression must typecheck *)
-        (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-        (* argument-expressions must typecheck *)
-        `(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&
-        `(precise_fun_at_ptr Delta) (eval_expr a) &&
+            tc_fn_return Delta ret retsig /\ (* return value type check *)
+            precise_context Delta /\
+            (glob_specs Delta) ! id = Some fs) &&
+        ((tc_expr Delta a) && (* function-expression must typecheck *)
+         (tc_exprlist Delta (snd (split argsig)) bl)) && (* argument-expressions must typecheck *)
+        local (fun rho =>
+          gvar_injection (ge_of rho) /\
+          eval_expr a rho = Vptr b Ptrofs.zero /\
+          global_block rho id b) &&
+        `(funspec_sub_si fs (mk_funspec (argsig, retsig) cc A P Q NEP NEQ)) &&
         (* evaluate to an actual function with specification [A]{P}{Q} *)
-        |>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
-        (Clight.Scall ret a bl)
-        (* ret = a(bl) *)
-        (normal_ret_assert R)
+        |>(EX ts x,
+            (`(P ts x: environ -> mpred)
+              (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) *
+            oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* R)))
+      (Clight.Scall ret a bl)
+      (* ret = a(bl) *)
+      (normal_ret_assert R)
 | semax_label: forall (P:environ -> mpred) (c:Clight.statement) (Q:ret_assert) l,
   @semax CS Espec Delta P c Q ->
   @semax CS Espec Delta P (Clight.Slabel l c) Q
@@ -180,132 +188,129 @@ Qed.
 Ltac unfold_der := unfold normal_ret_assert,
   overridePost, RA_normal, RA_break, RA_continue, RA_return in *.
 
-
-
-
-(* Lemma oboxopt_ENTAIL: forall (Delta : tycontext) (ret : option ident) 
-  (retsig : type) (P Q : environ -> mpred),
-tc_fn_return Delta ret retsig ->
-ENTAIL Delta,  P |-- Q ->
-ENTAIL Delta, oboxopt Delta ret P
-|-- oboxopt Delta ret Q.
+Lemma semax_call_inv:
+  forall {CS: compspecs} {Espec: OracleKind} 
+      Delta ret a bl Pre Post,
+    @semax CS Espec Delta Pre (Clight.Scall ret a bl) Post ->
+    local (tc_environ Delta) && (allp_fun_id Delta && Pre)
+    |-- 
+    (EX argsig retsig cc A P Q NEP NEQ b id fs, 
+      !! (Cop.classify_fun (typeof a) =
+            Cop.fun_case_f (type_of_params argsig) retsig cc /\
+          (retsig = Tvoid -> ret = None) /\
+          tc_fn_return Delta ret retsig /\
+          precise_context Delta /\
+          (glob_specs Delta) ! id = Some fs) &&
+      ((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)) &&
+      local (fun rho =>
+        gvar_injection (ge_of rho) /\
+        eval_expr a rho = Vptr b Ptrofs.zero /\
+        global_block rho id b) &&
+      `(funspec_sub_si fs (mk_funspec (argsig, retsig) cc A P Q NEP NEQ)) &&
+     |>(EX ts x,
+        (`(P ts x: environ -> mpred)
+          (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) *
+        oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
 Proof.
-intros.
-apply oboxopt_left2; auto.
-Locate tc_fn_return_temp_guard_opt.
-eapply tc_fn_return_temp_guard_opt; eauto.
-Qed. *)
-
-Lemma semax_call_inv: forall {CS: compspecs} {Espec: OracleKind} 
-Delta ret a bl Pre Post,
-@semax CS Espec Delta Pre (Clight.Scall ret a bl) Post ->
-local (tc_environ Delta) && (allp_fun_id Delta && Pre) |-- 
-(EX argsig: _, EX retsig: _, EX cc: _,
-EX A: _, EX P: _, EX Q: _, EX NEP: _, EX NEQ: _, 
-!! (Cop.classify_fun (typeof a) =
- Cop.fun_case_f (type_of_params argsig) retsig cc /\
- (retsig = Tvoid -> ret = None) /\
- tc_fn_return Delta ret retsig) &&
-((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-`(func_ptr (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) (eval_expr a) &&  
-`(precise_fun_at_ptr Delta) (eval_expr a) &&
-|>(EX ts: _, EX x: _, (`(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl))) * oboxopt Delta ret (maybe_retval (Q ts x) retsig ret -* RA_normal Post))).
-Proof.
-intros. 
-remember (Clight.Scall ret a bl) as c1.
-induction H; try inversion Heqc1.
-- subst. 
-eapply derives_trans with (Q:=
-local (tc_environ Delta) && (allp_fun_id Delta && P')
-).
-{ rewrite (add_andp _ _ H). solve_andp. }
-eapply derives_trans.
-{ apply andp_right.
-+ rewrite <- andp_assoc. apply andp_left1.
- apply derives_refl.
-+ apply IHsemax;auto. }
-clear IHsemax.
-clear P H.
-reduceR. rewrite andp_assoc.
-apply exp_ENTAILL; intro argsig.
-apply exp_ENTAILL; intro retsig.
-apply exp_ENTAILL; intro cc.
-apply exp_ENTAILL; intro A.
-apply exp_ENTAILL; intro P.
-apply exp_ENTAILL; intro Q.
-apply exp_ENTAILL; intro NEP.
-apply exp_ENTAILL; intro NEQ.
-normalize.
-(* apply andp_right. { apply prop_right. auto. } *)
-apply andp_ENTAILL; [reduceLL;solve_andp|].
-apply later_ENTAILL.
-apply exp_ENTAILL; intro ts.
-apply exp_ENTAILL; intro x.
-apply sepcon_ENTAILL; [reduceLL; solve_andp |].
-apply oboxopt_left2'; eauto.
-{ hnf. destruct H. destruct H6.
-  hnf in H7. destruct ret;auto.
-  hnf. destruct ((temp_types Delta) ! i);auto.
-  intros C. inv C. }
-apply wand_ENTAILL; [reduceL; solve_andp |].
-auto.
-- solve_andp.
+  intros. 
+  remember (Clight.Scall ret a bl) as c1.
+  induction H; try inversion Heqc1.
+  - subst. 
+    eapply derives_trans with
+      (Q := local (tc_environ Delta) && (allp_fun_id Delta && P')).
+    { rewrite (add_andp _ _ H). solve_andp. }
+    eapply derives_trans.
+    { apply andp_right.
+      + rewrite <- andp_assoc. apply andp_left1.
+        apply derives_refl.
+      + apply IHsemax;auto. }
+    clear IHsemax.
+    clear P H.
+    reduceR. rewrite andp_assoc.
+    apply exp_ENTAILL; intro argsig.
+    apply exp_ENTAILL; intro retsig.
+    apply exp_ENTAILL; intro cc.
+    apply exp_ENTAILL; intro A.
+    apply exp_ENTAILL; intro P.
+    apply exp_ENTAILL; intro Q.
+    apply exp_ENTAILL; intro NEP.
+    apply exp_ENTAILL; intro NEQ.
+    apply exp_ENTAILL; intro b.
+    apply exp_ENTAILL; intro id.
+    apply exp_ENTAILL; intro fs.
+    normalize.
+    apply andp_ENTAILL; [reduceLL; solve_andp |].
+    apply later_ENTAILL.
+    apply exp_ENTAILL; intro ts.
+    apply exp_ENTAILL; intro x.
+    apply sepcon_ENTAILL; [reduceLL; solve_andp |].
+    apply oboxopt_left2'; eauto.
+    { hnf. destruct H. destruct H6 as [? [H7 ?]].
+      hnf in H7. destruct ret;auto.
+      hnf. destruct ((temp_types Delta) ! i);auto.
+      intros C. inv C. }
+    apply wand_ENTAILL; [reduceL; solve_andp |].
+    auto.
+  - solve_andp.
 Qed.
 
-Lemma exp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
-@predicates_hered.exp T H B x = @exp (predicates_hered.pred T) 
-(algNatDed T) B x.
+Lemma exp_rewrite T H B x:
+  @predicates_hered.exp T H B x =
+    @exp (predicates_hered.pred T) (algNatDed T) B x.
+Proof. reflexivity. Qed.
+
+Lemma allp_rewrite T H B x:
+  @predicates_hered.allp T H B x =
+    @allp (predicates_hered.pred T) (algNatDed T) B x.
+Proof. reflexivity. Qed.
+
+Lemma andp_rewrite T H x y:
+  @predicates_hered.andp T H x y =
+    @andp (predicates_hered.pred T) (algNatDed T) x y.
+Proof. reflexivity. Qed.
+
+Lemma imp_rewrite T H x y:
+  @predicates_hered.imp T H x y =
+    @imp (predicates_hered.pred T) (algNatDed T) x y.
+Proof. reflexivity. Qed.
+
+Lemma prop_rewrite T H x:
+  @predicates_hered.prop T H x =
+    @prop (predicates_hered.pred T) (algNatDed T) x.
+Proof. reflexivity. Qed.
+
+Lemma derives_rewrite P Q:
+  predicates_hered.derives P Q ->
+  @derives
+    (@predicates_hered.pred compcert_rmaps.RML.R.rmap compcert_rmaps.RML.R.ag_rmap) 
+    Nveric P Q.
+Proof. auto. Qed.
+
+Lemma sepcon_rewrite: forall A B,
+  predicates_sl.sepcon A B = sepcon A B.
 Proof.
-reflexivity.
+  intros. reflexivity.
 Qed.
 
-Lemma allp_rewrite: forall (T:Type) (H: ageable.ageable T) B x, 
-@predicates_hered.allp T H B x = @allp (predicates_hered.pred T) 
-(algNatDed T) B x.
-Proof.
-reflexivity.
-Qed.
-
-Lemma andp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
-@predicates_hered.andp T H x y = @andp (predicates_hered.pred T) 
-(algNatDed T) x y).
-Proof.
-reflexivity.
-Qed.
-
-
-Lemma imp_rewrite: (forall (T:Type) (H: ageable.ageable T) x y, 
-@predicates_hered.imp T H x y = @imp (predicates_hered.pred T) 
-(algNatDed T) x y).
-Proof.
-reflexivity.
-Qed.
-
-Lemma prop_rewrite: (forall (T:Type) (H: ageable.ageable T) x,  
-@predicates_hered.prop T H x = @prop (predicates_hered.pred T) 
-(algNatDed T) x).
-Proof.
-reflexivity.
-Qed.
-
-Lemma derives_rewrite: forall P Q,
-predicates_hered.derives P Q ->
-@derives
-(@predicates_hered.pred compcert_rmaps.RML.R.rmap
-compcert_rmaps.RML.R.ag_rmap) Nveric P Q.
-Proof.
-intros.
-auto.
-Qed.
+Ltac rewrite_predicates_hered:=
+  repeat (
+    try rewrite !andp_rewrite;
+    try rewrite !prop_rewrite;
+    try rewrite !exp_rewrite;
+    try rewrite !imp_rewrite;
+    try rewrite !allp_rewrite;
+    try rewrite !sepcon_rewrite
+  ).
 
 Lemma semax_fun_id:
-  forall {CS: compspecs} {Espec: OracleKind},
-      forall id f Delta P Q c,
+  forall {CS: compspecs} {Espec: OracleKind}
+      id f Delta P Q c,
     (var_types Delta) ! id = None ->
     (glob_specs Delta) ! id = Some f ->
     (glob_types Delta) ! id = Some (type_of_funspec f) ->
-    @semax CS Espec Delta (P && `(func_ptr f) (eval_var id (type_of_funspec f)))
-                  c Q ->
+    @semax CS Espec Delta
+      (P && `(func_ptr f) (eval_var id (type_of_funspec f)))
+      c Q ->
     @semax CS Espec Delta P c Q.
 Proof.
   intros.
@@ -315,6 +320,7 @@ Proof.
   rewrite imp_andp_adjoint.
   rewrite imp_andp_adjoint.
   intros rho.
+  apply derives_extract_prop. intros Hinj.
   apply (allp_left _ id).
   apply (allp_left _ f).
   rewrite log_normalize.prop_imp by auto.
@@ -338,101 +344,25 @@ Proof.
 Qed.
 
 Definition precise_funspec_logic (Delta : seplog.tycontext) (f : funspec) :=
-match f with
-| mk_funspec fsig _ A P R _ _ =>	
-forall (bl : environ -> list val) (Q1 Q2 : environ -> mpred)
-(ret : option ident),
-(snd fsig = Tvoid -> ret = None) ->
-tc_fn_return Delta ret (snd fsig) ->
-((EX (ts : list Type)
-  (x : functors.MixVariantFunctor._functor
-         ((fix dtfr (T : rmaps.TypeTree) :
-             functors.MixVariantFunctor.functor :=
-             match T with
-             | rmaps.ConstType A =>
-                 functors.MixVariantFunctorGenerator.fconst A
-             | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-             | rmaps.DependentType n =>
-                 functors.MixVariantFunctorGenerator.fconst (nth n ts unit)
-             | rmaps.ProdType T1 T2 =>
-                 functors.MixVariantFunctorGenerator.fpair 
-                   (dtfr T1) (dtfr T2)
-             | rmaps.ArrowType T1 T2 =>
-                 functors.MixVariantFunctorGenerator.ffunc 
-                   (dtfr T1) (dtfr T2)
-             | rmaps.SigType I0 f =>
-                 functors.MixVariantFunctorGenerator.fsig
-                   (fun i : I0 => dtfr (f i))
-             | rmaps.PiType I0 f =>
-                 functors.MixVariantFunctorGenerator.fpi
-                   (fun i : I0 => dtfr (f i))
-             | rmaps.ListType T0 =>
-                 functors.MixVariantFunctorGenerator.flist (dtfr T0)
-             end) A) mpred),
-  (` (P ts x : environ-> mpred)) (make_args' fsig bl) *
-  oboxopt Delta ret
-    (fun rho : environ => maybe_retval (R ts x) (snd fsig) ret rho -* Q1 rho)) &&
- (EX (ts' : list Type)
-  (x' : functors.MixVariantFunctor._functor
-          ((fix dtfr (T : rmaps.TypeTree) :
-              functors.MixVariantFunctor.functor :=
-              match T with
-              | rmaps.ConstType A =>
-                  functors.MixVariantFunctorGenerator.fconst A
-              | rmaps.Mpred => functors.MixVariantFunctorGenerator.fidentity
-              | rmaps.DependentType n =>
-                  functors.MixVariantFunctorGenerator.fconst (nth n ts' unit)
-              | rmaps.ProdType T1 T2 =>
-                  functors.MixVariantFunctorGenerator.fpair 
-                    (dtfr T1) (dtfr T2)
-              | rmaps.ArrowType T1 T2 =>
-                  functors.MixVariantFunctorGenerator.ffunc 
-                    (dtfr T1) (dtfr T2)
-              | rmaps.SigType I0 f =>
-                  functors.MixVariantFunctorGenerator.fsig
-                    (fun i : I0 => dtfr (f i))
-              | rmaps.PiType I0 f =>
-                  functors.MixVariantFunctorGenerator.fpi
-                    (fun i : I0 => dtfr (f i))
-              | rmaps.ListType T0 =>
-                  functors.MixVariantFunctorGenerator.flist (dtfr T0)
-              end) A) mpred),
-  (` (P ts' x' : environ-> mpred))
-    (make_args' fsig bl) *
-  oboxopt Delta ret (maybe_retval (R ts' x') (snd fsig) ret -* Q2)))
-|-- (EX (ts : list Type)
-     (x : functors.MixVariantFunctor._functor
-            ((fix dtfr (T : rmaps.TypeTree) :
-                functors.MixVariantFunctor.functor :=
-                match T with
-                | rmaps.ConstType A =>
-                    functors.MixVariantFunctorGenerator.fconst A
-                | rmaps.Mpred =>
-                    functors.MixVariantFunctorGenerator.fidentity
-                | rmaps.DependentType n =>
-                    functors.MixVariantFunctorGenerator.fconst
-                      (nth n ts unit)
-                | rmaps.ProdType T1 T2 =>
-                    functors.MixVariantFunctorGenerator.fpair 
-                      (dtfr T1) (dtfr T2)
-                | rmaps.ArrowType T1 T2 =>
-                    functors.MixVariantFunctorGenerator.ffunc 
-                      (dtfr T1) (dtfr T2)
-                | rmaps.SigType I0 f =>
-                    functors.MixVariantFunctorGenerator.fsig
-                      (fun i : I0 => dtfr (f i))
-                | rmaps.PiType I0 f =>
-                    functors.MixVariantFunctorGenerator.fpi
-                      (fun i : I0 => dtfr (f i))
-                | rmaps.ListType T0 =>
-                    functors.MixVariantFunctorGenerator.flist (dtfr T0)
-                end) A) mpred),
-     (` (P ts x : environ-> mpred))
-       (make_args' fsig bl) *
-     oboxopt Delta ret (maybe_retval (R ts x) (snd fsig) ret -* Q1 && Q2))
-end.
+  match f with mk_funspec fsig _ A P R _ _ =>	
+    forall (bl : environ -> list val) (Q1 Q2 : environ -> mpred)
+        (ret : option ident),
+      (snd fsig = Tvoid -> ret = None) ->
+      tc_fn_return Delta ret (snd fsig) ->
+      ((EX ts x,
+        (` (P ts x : environ-> mpred) (make_args' fsig bl)) *
+        oboxopt Delta ret
+          (fun rho : environ => maybe_retval (R ts x) (snd fsig) ret rho -* Q1 rho)) &&
+      (EX ts' x',
+        (` (P ts' x' : environ-> mpred) (make_args' fsig bl)) *
+        oboxopt Delta ret (maybe_retval (R ts' x') (snd fsig) ret -* Q2)))
+      |-- (EX ts x,
+          (` (P ts x : environ-> mpred) (make_args' fsig bl)) *
+          oboxopt Delta ret (maybe_retval (R ts x) (snd fsig) ret -* Q1 && Q2))
+  end.
 
-Lemma precise_funspec_is_precise_logic (Delta : seplog.tycontext) (f : funspec) :
+Lemma precise_funspec_is_precise_logic
+    (Delta : seplog.tycontext) (f : funspec):
   precise_funspec Delta f ->
   precise_funspec_logic Delta f.
 Proof.
@@ -448,26 +378,14 @@ Proof.
   { apply derives_refl. }
 Qed.
 
-
 Ltac Intro_prop :=
-autorewrite with gather_prop;
-match goal with
- (* | |- semax _ ?PQR _ _ =>
-     first [ is_evar PQR; fail 1
-            | simple apply semax_extract_PROP; fancy_intros false
-            | move_from_SEP' PQR;
-              simple apply semax_extract_PROP; fancy_intros false
-            | flatten_in_SEP PQR
-            ] *)
- | |- _ && ?PQR |-- _ =>
-     first [ is_evar PQR; fail 1
+  autorewrite with gather_prop;
+  match goal with
+  | |- _ && ?PQR |-- _ =>
+      first [ is_evar PQR; fail 1
             | simple apply derives_extract_prop; fancy_intros false
-            (* | simple apply derives_extract_PROP; fancy_intros false
-            | move_from_SEP' PQR;
-               simple apply derives_extract_PROP; fancy_intros false
-            | flatten_in_SEP PQR *)
-             ]
-end.
+            ]
+  end.
 
 Ltac Intro'' a :=
    ( (simple apply extract_exists_pre; intro a)
@@ -476,7 +394,6 @@ Ltac Intro'' a :=
    || (rewrite exp_andp2; Intro'' a)
    || (rewrite exp_sepcon1; Intro'' a)
    || (rewrite exp_sepcon2; Intro'' a)
-   (* || (extract_exists_from_SEP; intro a) *)
    ).
 
 Ltac Intro a :=
@@ -488,103 +405,100 @@ Ltac Intro a :=
      Intro'' a
   end.
 
-(* Tactic Notation "Intros" := repeat (let x := fresh "x" in Intro x). *)
-
 Tactic Notation "Intros" := repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0) :=
- Intro x0; repeat Intro_prop.
+  Intro x0; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) :=
- Intro x0; Intro x1; repeat Intro_prop.
+    simple_intropattern(x1) :=
+  Intro x0; Intro x1; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2) :=
- Intro x0; Intro x1; Intro x2; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2) :=
+  Intro x0; Intro x1; Intro x2; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) :=
- Intro x0; Intro x1; Intro x2; Intro x3; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6)
- simple_intropattern(x7) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; Intro x7; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6)
+    simple_intropattern(x7) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; Intro x7; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6)
- simple_intropattern(x7) simple_intropattern(x8) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; Intro x7; Intro x8; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6)
+    simple_intropattern(x7) simple_intropattern(x8) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; Intro x7; Intro x8; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6)
- simple_intropattern(x7) simple_intropattern(x8)
- simple_intropattern(x9) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; Intro x7; Intro x8; Intro x9; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6)
+    simple_intropattern(x7) simple_intropattern(x8)
+    simple_intropattern(x9) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; Intro x7; Intro x8; Intro x9; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6)
- simple_intropattern(x7) simple_intropattern(x8)
- simple_intropattern(x9) simple_intropattern(x10) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; Intro x7; Intro x8; Intro x9;
- Intro x10; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6)
+    simple_intropattern(x7) simple_intropattern(x8)
+    simple_intropattern(x9) simple_intropattern(x10) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; Intro x7; Intro x8; Intro x9;
+  Intro x10; repeat Intro_prop.
 
 Tactic Notation "Intros" simple_intropattern(x0)
- simple_intropattern(x1) simple_intropattern(x2)
- simple_intropattern(x3) simple_intropattern(x4)
- simple_intropattern(x5) simple_intropattern(x6)
- simple_intropattern(x7) simple_intropattern(x8)
- simple_intropattern(x9) simple_intropattern(x10)
- simple_intropattern(x11) :=
- Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
- Intro x5; Intro x6; Intro x7; Intro x8; Intro x9;
- Intro x10; Intro x11; repeat Intro_prop.
+    simple_intropattern(x1) simple_intropattern(x2)
+    simple_intropattern(x3) simple_intropattern(x4)
+    simple_intropattern(x5) simple_intropattern(x6)
+    simple_intropattern(x7) simple_intropattern(x8)
+    simple_intropattern(x9) simple_intropattern(x10)
+    simple_intropattern(x11) :=
+  Intro x0; Intro x1; Intro x2; Intro x3; Intro x4;
+  Intro x5; Intro x6; Intro x7; Intro x8; Intro x9;
+  Intro x10; Intro x11; repeat Intro_prop.
 
 
-
- Lemma assert_PROPP' {A}{NA: NatDed A}:
- forall P Pre (Post: A),
-   Pre |-- !! P ->
-   (P -> Pre |-- Post) ->
-   Pre |-- Post.
+Lemma assert_PROPP' {A} {NA: NatDed A}:
+  forall P Pre (Post: A),
+    Pre |-- !! P ->
+    (P -> Pre |-- Post) ->
+    Pre |-- Post.
 Proof.
-intros.
-apply derives_trans with (!!P && Pre).
-apply andp_right; auto.
-apply derives_extract_prop. auto.
+  intros.
+  apply derives_trans with (!!P && Pre).
+  apply andp_right; auto.
+  apply derives_extract_prop. auto.
 Qed.
 
 Tactic Notation "assert_PROPP" constr(A) :=
@@ -601,13 +515,12 @@ Tactic Notation "assert_PROPP" constr(A) "as" simple_intropattern(H) "by" tactic
 
 
 Ltac Exists'' a :=
-  first [apply exp_right with a
-         | rewrite exp_andp1; Exists'' a
-         | rewrite exp_andp2; Exists'' a
-         | rewrite exp_sepcon1; Exists'' a
-         | rewrite exp_sepcon2; Exists'' a
-         (* | extract_exists_from_SEP_right; apply exp_right with a *)
-         ].
+  first [ apply exp_right with a
+        | rewrite exp_andp1; Exists'' a
+        | rewrite exp_andp2; Exists'' a
+        | rewrite exp_sepcon1; Exists'' a
+        | rewrite exp_sepcon2; Exists'' a
+        ].
 
 Ltac Exists' a :=
   match goal with |- ?A |-- ?B =>
@@ -615,30 +528,30 @@ Ltac Exists' a :=
   end.
 
 Tactic Notation "Exists" constr(x0) :=
- Exists' x0.
+  Exists' x0.
 
 Tactic Notation "Exists" constr(x0) constr(x1) :=
- Exists' x0; Exists x1.
+  Exists' x0; Exists x1.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) :=
- Exists' x0; Exists' x1; Exists' x2.
+  Exists' x0; Exists' x1; Exists' x2.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3.
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4.
+    constr(x4) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5.
+    constr(x4) constr(x5) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6.
+    constr(x4) constr(x5) constr(x6) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
  constr(x4) constr(x5) constr(x6) constr(x7) :=
@@ -646,44 +559,80 @@ Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
  Exists' x5; Exists' x6; Exists' x7.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6; Exists' x7; Exists' x8.
+    constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6; Exists' x7; Exists' x8.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9.
+    constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
- constr(x10) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
- Exists' x10.
+    constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
+    constr(x10) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
+  Exists' x10.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
- constr(x10) constr(x11) :=
- Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
- Exists' x10; Exists' x11.
+    constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
+    constr(x10) constr(x11) :=
+  Exists' x0; Exists' x1; Exists' x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
+  Exists' x10; Exists' x11.
 
 Tactic Notation "Exists" constr(x0) constr(x1) constr(x2) constr(x3)
- constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
- constr(x10) constr(x11) constr(x12) :=
- Exists' x0; Exists' x1; Exists x2; Exists' x3; Exists' x4;
- Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
- Exists' x10; Exists' x11; Exists' x12.
+    constr(x4) constr(x5) constr(x6) constr(x7) constr(x8) constr(x9)
+    constr(x10) constr(x11) constr(x12) :=
+  Exists' x0; Exists' x1; Exists x2; Exists' x3; Exists' x4;
+  Exists' x5; Exists' x6; Exists' x7; Exists' x8; Exists' x9;
+  Exists' x10; Exists' x11; Exists' x12.
 
+Lemma semax_conj_call_same_function:
+  forall (CS: compspecs) a b1 b2 id1 id2,
+    local (fun rho =>
+      gvar_injection (ge_of rho) /\
+      eval_expr a rho = Vptr b1 Ptrofs.zero /\
+      global_block rho id1 b1) &&
+    local (fun rho =>
+      gvar_injection (ge_of rho) /\
+      eval_expr a rho = Vptr b2 Ptrofs.zero /\
+      global_block rho id2 b2)
+    |-- !! (b1 = b2 /\ id1 = id2).
+Proof.
+  intros.
+  intros rho. unfold local, lift1. simpl.
+  rewrite <- prop_and.
+  apply prop_derives.
+  intros [[Hinj [H0 [H1' H1]]] [_ [H2 [H3' H3]]]].
+  rewrite H0 in H2. inv H2.
+  split; trivial.
+  eapply Hinj; eassumption.
+Qed.
 
-Lemma semax_conj_call: forall CS Espec Delta ret a bl P Q Q1 Q2,
-@semax CS Espec Delta P 
-(Clight.Scall ret a bl) (overridePost Q2 Q) ->
-@semax CS Espec Delta P 
-(Clight.Scall ret a bl) (overridePost Q1 Q) ->
-@semax CS Espec Delta P 
-(Clight.Scall ret a bl) (overridePost (Q1 && Q2) Q).
+Lemma funspec_sub_si_sig_cc_eq:
+  forall fsig1 fsig2 cc1 cc2 A1 A2 P1 P2 Q1 Q2 NEP1 NEP2 NEQ1 NEQ2,
+    `(funspec_sub_si
+      (mk_funspec fsig1 cc1 A1 P1 Q1 NEP1 NEQ1)
+      (mk_funspec fsig2 cc2 A2 P2 Q2 NEP2 NEQ2))
+    |-- !! (fsig1 = fsig2 /\ cc1 = cc2).
+Proof.
+  intros. intros rho.
+  unfold_lift. unfold prop. simpl.
+  rewrite_predicates_hered.
+  apply andp_left1.
+  apply derives_refl.
+Qed.
+
+Lemma semax_conj_call:
+  forall CS Espec Delta ret a bl P Q Q1 Q2,
+    @semax CS Espec Delta P 
+      (Clight.Scall ret a bl) (overridePost Q2 Q) ->
+    @semax CS Espec Delta P 
+      (Clight.Scall ret a bl) (overridePost Q1 Q) ->
+    @semax CS Espec Delta P 
+      (Clight.Scall ret a bl) (overridePost (Q1 && Q2) Q).
 Proof.
   intros CS Espec Delta ret a bl P Q Q1 Q2.
   intros.
@@ -697,123 +646,153 @@ Proof.
   try solve [repeat apply andp_left2;apply FF_left]).
   2:{ destruct Q;unfold_der. solve_andp. }
   eapply ENTAIL_trans;[apply H1|]. clear H1.
-  Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NEQ1.
-  Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NEQ2.
+  Intros argsig1 retsig1 cc1 A1 P1 R1 NEP1 NER1 b1 id1 fs1.
+  Intros argsig2 retsig2 cc2 A2 P2 R2 NEP2 NER2 b2 id2 fs2.
   rewrite <- andp_assoc. rewrite andp_comm.
   rewrite !andp_assoc.
   apply derives_extract_prop.
-  intros [H [H0 H1]].
+  intros [H [H0 [H1 [H2 H3]]]].
   rewrite <- andp_assoc. rewrite <- andp_assoc.
   rewrite <- andp_assoc. rewrite <- andp_assoc.
-  rewrite <- andp_assoc. rewrite andp_comm.
-  rewrite !andp_assoc.
+  rewrite <- andp_assoc.
+  rewrite andp_comm. rewrite !andp_assoc.
   apply derives_extract_prop.
-  intros [H2 [H3 H4]].
-  rewrite H2 in H. inv H.
-  apply typ_of_params_eq_inv in H6.
-  rewrite H6 in *.
+  intros [H4 [H5 [H6 [H7 H8]]]].
+  rewrite H4 in H. inversion H.
+  subst cc2 retsig2. clear H.
+  apply typ_of_params_eq_inv in H10.
+  rewrite H10. clear H10.
 
   destruct Q as [Qn Qb Qc Qr];unfold_der.
 
-  eapply derives_trans with (Q:=
-  local (tc_environ Delta) && tc_expr Delta a &&
-  (tc_exprlist Delta (snd (split argsig2)) bl &&
-  ((` (func_ptr (mk_funspec (argsig2, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))  (eval_expr a) ) &&
-  (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))  (eval_expr a) )  &&
-  ((` (precise_fun_at_ptr Delta)) (eval_expr a))) &&
-|> (EX (ts1:_) (x1:_), (` (P1 ts1 x1 : environ -> mpred))
-      (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig2)) bl)) *
-    oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1)) &&
- |> (EX (ts2:_) (x2:_),  (` (P2 ts2 x2 : environ -> mpred))
-       (make_args' (argsig2, retsig2)
-          (eval_exprlist (snd (split argsig2)) bl)) *
-     oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2)))
-     ).
+  apply derives_trans with (
+    local (tc_environ Delta) && tc_expr Delta a &&
+    (tc_exprlist Delta (snd (split argsig2)) bl &&
+    (local
+      (fun rho : environ =>
+        gvar_injection (ge_of rho) /\
+        eval_expr a rho = Vptr b1 Ptrofs.zero /\
+        global_block rho id1 b1) &&
+    local
+      (fun rho : environ =>
+        gvar_injection (ge_of rho) /\
+        eval_expr a rho = Vptr b2 Ptrofs.zero /\
+        global_block rho id2 b2)) &&
+    (`(funspec_sub_si fs1 (mk_funspec (argsig1, retsig1) cc1 A1 P1 R1 NEP1 NER1)) &&
+     `(funspec_sub_si fs2 (mk_funspec (argsig2, retsig1) cc1 A2 P2 R2 NEP2 NER2))) &&
+    |> (EX ts1 x1, (` (P1 ts1 x1 : environ -> mpred))
+        (make_args' (argsig1, retsig1) (eval_exprlist (snd (split argsig2)) bl)) *
+      oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig1 ret -* Q1)) &&
+    |> (EX ts2 x2,  (` (P2 ts2 x2 : environ -> mpred))
+        (make_args' (argsig2, retsig1)
+            (eval_exprlist (snd (split argsig2)) bl)) *
+      oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig1 ret -* Q2)))).
   { solve_andp. }
-  
-  rewrite (add_andp _ _ (func_ptr_der_logic _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
-  Intros blk_fun gA gP1 gP2 gR1 gR2 NEgP1 NEgP2 NEgR1 NEgR2.
-  assert_PROPP (argsig1 = argsig2). { solve_andp. }
-  subst argsig2.
-  assert_PROPP (
-    precise_funspec Delta (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)).
-  { solve_andp. }
-  
-  eapply derives_trans with (Q:=
-  local (tc_environ Delta) && tc_expr Delta a &&
-  local (fun rho : environ => eval_expr a rho = Vptr blk_fun Ptrofs.zero) &&
-  (tc_exprlist Delta (snd (split argsig1)) bl &&
-    (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))) (eval_expr a) &&
-    (` (func_ptr (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1))) (eval_expr a) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) &&
-    ((` (precise_fun_at_ptr Delta)) (eval_expr a)) &&
-    ` (funspec_sub_si (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) 
-                        (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2))
-    ) &&
-    ((
-     (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2) (blk_fun, 0))) ) &&
-    (` (func_at (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1) (blk_fun, 0))) &&
-    (local (tc_environ Delta) &&
-      tc_exprlist Delta (snd (split argsig1)) bl &&
-     ` (funspec_sub_si
-        (mk_funspec (argsig1, retsig2) cc2 gA gP1 gR1 NEgP1 NEgR1)
-        (mk_funspec (argsig1, retsig2) cc2 A1 P1 R1 NEP1 NEQ1)) &&
-      |> (EX (ts1:_) (x1:_), (` (P1 ts1 x1 : environ -> mpred))
-          (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
-        oboxopt Delta ret (maybe_retval (R1 ts1 x1) retsig2 ret -* Q1))) &&   
-   (  local (tc_environ Delta) &&
-     tc_exprlist Delta (snd (split argsig1)) bl &&
-     ` (funspec_sub_si
-        (mk_funspec (argsig1, retsig2) cc2 gA gP2 gR2 NEgP2 NEgR2)
-        (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)) &&
-     |> (EX (ts2:_) (x2:_), (` (P2 ts2 x2 : environ -> mpred))
-          (make_args' (argsig1, retsig2) (eval_exprlist (snd (split argsig1)) bl)) *
-        oboxopt Delta ret (maybe_retval (R2 ts2 x2) retsig2 ret -* Q2))))).
-  { solve_andp. }
-  
-  eapply derives_trans.
-  { apply andp_derives.
-    { apply derives_refl. }
-    apply andp_derives. 
-    * apply andp_derives.
-      { apply derives_refl. } 
-      apply funspec_rewrite_logic.
-    * apply funspec_rewrite_logic.
-  }
-  Exists argsig1 retsig2 cc2 gA gP2 gR2 NEgP2 NEgR2.
 
+  rewrite (add_andp _ _ (semax_conj_call_same_function _ _ _ _ _ _)).
+  assert_PROPP (b1 = b2 /\ id1 = id2) by solve_andp.
+  destruct H as [<- <-].
 
+  assert (fs1 = fs2).
+  { rewrite H3 in H8.
+    injection H8. auto. }
+  subst fs2.
+
+  destruct fs1 as [fsig' cc' A' P' R' NEP' NER'].
+  assert_PROPP (argsig1 = argsig2 /\
+    fsig' = (argsig1, retsig1) /\
+    cc' = cc1).
+  { apply andp_left2. apply andp_left1.
+    apply andp_left1. apply andp_left2.
+    apply derives_trans with (
+      !! (fsig' = (argsig1, retsig1) /\ cc' = cc1) &&
+      !! (fsig' = (argsig2, retsig1) /\ cc' = cc1)).
+    apply andp_derives; apply funspec_sub_si_sig_cc_eq.
+    rewrite <- prop_and. apply prop_derives.
+    intros [[? ?] [? ?]].
+    split.
+    rewrite H10 in H.
+    injection H. auto.
+    split; auto. }
+  destruct H as [? [? ?]].
+  subst argsig2 fsig' cc'.
+  clear H6 H7 H8.
+
+  Exists argsig1 retsig1 cc1 A' P' R' NEP' NER' b1 id1
+    (mk_funspec (argsig1, retsig1) cc1 A' P' R' NEP' NER').
   apply andp_right.
-  { apply andp_right.
-    + apply andp_right.
-      - apply andp_right.
-        * apply prop_right. auto.
-        * solve_andp.
-      - eapply derives_trans.
-        2:{ apply ( func_ptr_self_logic _
-                (mk_funspec (argsig1, retsig2) cc2 A2 P2 R2 NEP2 NEQ2)
-                (eval_expr a) blk_fun). }
-        solve_andp.
-    + solve_andp.
-  }
+  apply andp_right.
+  apply andp_right.
+  apply andp_right.
+  { apply prop_right. auto. }
+  { solve_andp. }
+  { solve_andp. }
+  { apply derives_trans with TT.
+    apply TT_right. unfold_lift. intros rho.
+    apply derives_rewrite.
+    apply funspec_sub_si_refl. }
+
+  repeat rewrite andp_assoc.
+  rewrite andp_comm.
+  repeat rewrite andp_assoc.
   apply andp_left2.
-  eapply derives_trans.
-  { apply andp_derives.
-    { apply func_at_unique_rewrite_logic. }
-    { apply derives_refl. }
-  }
-  rewrite <- !later_andp.
+  rewrite andp_comm.
+  repeat rewrite andp_assoc.
+  do 3 apply andp_left2.
+  rewrite <- andp_assoc.
+  rewrite andp_comm.
+  rewrite <- andp_assoc.
+
+  apply derives_trans with (
+    |> (EX ts x,
+      (` (P' ts x : environ -> mpred))
+        (make_args' (argsig1, retsig1)
+          (eval_exprlist (snd (split argsig1)) bl)) *
+      oboxopt Delta ret
+        (maybe_retval (R' ts x) retsig1 ret -* Q1)) &&
+    |> (EX ts x,
+      (` (P' ts x : environ -> mpred))
+        (make_args' (argsig1, retsig1) (eval_exprlist (snd (split argsig1)) bl)) *
+      oboxopt Delta ret
+        (maybe_retval (R' ts x) retsig1 ret -* Q2))).
+  { apply derives_trans with (
+      local (tc_environ Delta) &&
+      tc_exprlist Delta (snd (split argsig1)) bl &&
+      `(funspec_sub_si (mk_funspec (argsig1, retsig1) cc1 A' P' R' NEP' NER')
+        (mk_funspec (argsig1, retsig1) cc1 A1 P1 R1 NEP1 NER1)) &&
+      |> (EX ts x,
+      (` (P1 ts x : environ -> mpred))
+        (make_args' (argsig1, retsig1)
+          (eval_exprlist (snd (split argsig1)) bl)) *
+        oboxopt Delta ret
+          (maybe_retval (R1 ts x) retsig1 ret -* Q1)) &&
+      (local (tc_environ Delta) &&
+      tc_exprlist Delta (snd (split argsig1)) bl &&
+      `(funspec_sub_si (mk_funspec (argsig1, retsig1) cc1 A' P' R' NEP' NER')
+        (mk_funspec (argsig1, retsig1) cc1 A2 P2 R2 NEP2 NER2)) &&
+      |> (EX ts x,
+      (` (P2 ts x : environ -> mpred))
+        (make_args' (argsig1, retsig1)
+          (eval_exprlist (snd (split argsig1)) bl)) *
+        oboxopt Delta ret
+          (maybe_retval (R2 ts x) retsig1 ret -* Q2)))).
+    { solve_andp. }
+    apply andp_derives.
+    - apply funspec_rewrite_logic.
+    - apply funspec_rewrite_logic. }
+
+  rewrite <- later_andp.
   apply later_derives.
+
+  assert (precise_funspec Delta (mk_funspec (argsig1, retsig1) cc1 A' P' R' NEP' NER')).
+  { eapply H2; eassumption. }
 
   apply precise_funspec_is_precise_logic in H.
   unfold precise_funspec_logic in H.
   specialize (H ((eval_exprlist (snd (split argsig1)) bl)) Q1 Q2 ret).
-  specialize (H H3 H4).
+  specialize (H H0 H1).
   apply H.
 Qed.
-
-
 
 Lemma obox_andp: forall Delta i P Q,
   obox Delta i P && obox Delta i Q |-- obox Delta i (P && Q).
@@ -855,27 +834,10 @@ Proof.
     rewrite subst_andp. solve_andp.
 Qed.
 
-
-
-Lemma sepcon_rewrite: forall A B,
-predicates_sl.sepcon A B = sepcon A B.
-Proof.
-intros. reflexivity.
-Qed.
-
-
-Ltac rewrite_predicates_hered:=
-repeat (try rewrite !andp_rewrite;
-   try rewrite !prop_rewrite;
-   try rewrite !exp_rewrite;
-   try rewrite !imp_rewrite;
-   try rewrite !allp_rewrite;
-   try rewrite !sepcon_rewrite
-).
-
-Lemma semax_seq_inv: forall CS Espec (Delta : tycontext) (P : environ -> mpred) 
+Lemma semax_seq_inv:
+  forall CS Espec (Delta : tycontext) (P : environ -> mpred) 
       (R : ret_assert) (h t : Clight.statement),
-    @semax CS Espec Delta P (Clight.Ssequence h  t) R ->
+    @semax CS Espec Delta P (Clight.Ssequence h t) R ->
     exists Q : environ -> mpred,
       @semax CS Espec Delta P h (overridePost Q R) /\
       @semax CS Espec Delta Q t R.
@@ -898,13 +860,14 @@ Proof.
 Qed.
 
 
-Lemma semax_seq_inv': forall CS Espec (Delta : tycontext) (P : environ -> mpred) 
+Lemma semax_seq_inv':
+  forall CS Espec (Delta : tycontext) (P : environ -> mpred) 
       (R : ret_assert) (h t : Clight.statement),
-    @semax CS Espec Delta P (Clight.Ssequence h  t) R ->
+    @semax CS Espec Delta P (Clight.Ssequence h t) R ->
     @semax CS Espec Delta P h
-         (overridePost
-            (EX Q : environ -> mpred,
-             !! semax Delta Q t R && Q) R).
+      (overridePost
+        (EX Q : environ -> mpred,
+          !! semax Delta Q t R && Q) R).
 Proof.
   intros.
   remember (Clight.Ssequence h  t) as c.
@@ -928,15 +891,11 @@ Proof.
     solve_andp.
 Qed.
 
-(* Lemma semax2_seq_inv: forall CS Espec Delta c1 c2 P R,
-  @semax2  CS Espec Delta P ( Clight.Ssequence c1 c2) R ->
-  exists Q, @semax CS Espec Delta P c1 (overridePost Q R) /\
-  @semax2 CS Espec Delta Q c2 R. *)
-
 Lemma semax2_seq_inv: forall CS Espec Delta c1 c2 P R,
-  @semax2  CS Espec Delta P ( Clight.Ssequence c1 c2) R ->
-  exists Q, @semax CS Espec Delta P c1 Q /\
-  @semax2 CS Espec Delta (RA_normal Q) c2 R.
+  @semax2 CS Espec Delta P (Clight.Ssequence c1 c2) R ->
+  exists Q,
+    @semax CS Espec Delta P c1 Q /\
+    @semax2 CS Espec Delta (RA_normal Q) c2 R.
 Proof.
   intros. inv H.
   apply semax_seq_inv in H5.
@@ -956,24 +915,9 @@ Proof.
     solve_andp.
 Qed.
 
-
-(* 
-Theorem semax2_complete: forall CS Espec Delta c P R,
-@SeparationLogicAsLogic.AuxDefs.semax CS Espec Delta P c R -> @semax2 CS Espec Delta P c R.
-Proof.
-  intros. induction H.
-  - admit.
-  - eapply semax_conseq2.
-  
-  inv IHsemax1. inv IHsemax2.
-   eapply semax_conseq2.
-    inv IH
-    6:{ apply semax_ifthenelse. apply IHsemax1.  }
-  
-  ;[..|apply H]; unfold_der; auto. *)
-
 Lemma allp_ENTAILL: forall Delta B (P Q: B -> environ -> mpred),
-  (forall x: B, local (tc_environ Delta) && (allp_fun_id Delta && P x) |-- Q x) ->
+  (forall x: B,
+    local (tc_environ Delta) && (allp_fun_id Delta && P x) |-- Q x) ->
   local (tc_environ Delta) && (allp_fun_id Delta && allp P) |-- allp Q.
 Proof.
   intros.
@@ -985,7 +929,6 @@ Proof.
   rewrite andp_comm, andp_assoc.
   apply H.
 Qed.
-
 
 Lemma imp_ENTAILL: forall Delta P P' Q Q',
   local (tc_environ Delta) && (allp_fun_id Delta && P') |-- P ->
@@ -1004,16 +947,14 @@ Proof.
   apply modus_ponens.
 Qed.
 
-
-Lemma semax_assign_inv: forall {CS: compspecs} {Espec: OracleKind} 
-Delta e1 e2 P Q,
-@semax CS Espec Delta P (Clight.Sassign e1 e2) Q ->
-local (tc_environ Delta) && (allp_fun_id Delta && P) |-- 
-((EX sh: share, !! writable_share sh &&
+Lemma semax_assign_inv:
+  forall {CS: compspecs} {Espec: OracleKind} Delta e1 e2 P Q,
+    @semax CS Espec Delta P (Clight.Sassign e1 e2) Q ->
+    local (tc_environ Delta) && (allp_fun_id Delta && P) |-- 
+      (EX sh: share, !! writable_share sh &&
         |> ( (tc_lvalue Delta e1) &&  (tc_expr Delta (Ecast e2 (typeof e1)))  &&
         ((`(mapsto_ sh (typeof e1)) (eval_lvalue e1)) *
-        (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) -* RA_normal Q))))
-  ).
+        (`(mapsto sh (typeof e1)) (eval_lvalue e1) (`force_val (`(sem_cast (typeof e2) (typeof e1)) (eval_expr e2))) -* RA_normal Q)))).
 Proof.
   intros.
   remember (Clight.Sassign e1 e2) as c eqn:?H.
@@ -1046,7 +987,6 @@ Proof.
     apply wand_ENTAILL; [reduceLL; apply ENTAIL_refl |].
     auto.
 Qed.
-
 
 Lemma semax_set_inv: forall {CS: compspecs} {Espec: OracleKind} Delta P R id e,
   @semax CS Espec Delta P (Clight.Sset id e) R ->
@@ -1182,55 +1122,60 @@ Proof.
       * auto.
 Qed.
 
-
 Fixpoint nobreak s :=
- match s with
- | Clight.Ssequence s1 s2 => if nobreak s1 then nobreak s2 else false
- | Clight.Sifthenelse _ s1 s2 => if nobreak s1 then nobreak s2 else false
- | Clight.Sloop s1 s2 => if nobreak s1 then nobreak s2 else false
- | Clight.Sswitch _ sl => nobreak_ls sl
- | Clight.Sgoto _ => false
- | Clight.Sbreak => false
- | Clight.Slabel _ s => nobreak s
- | _ => true
-end
+  match s with
+  | Clight.Ssequence s1 s2 => if nobreak s1 then nobreak s2 else false
+  | Clight.Sifthenelse _ s1 s2 => if nobreak s1 then nobreak s2 else false
+  | Clight.Sloop s1 s2 => if nobreak s1 then nobreak s2 else false
+  | Clight.Sswitch _ sl => nobreak_ls sl
+  | Clight.Sgoto _ => false
+  | Clight.Sbreak => false
+  | Clight.Slabel _ s => nobreak s
+  | _ => true
+  end
 with nobreak_ls sl :=
- match sl with Clight.LSnil => true | Clight.LScons _ s sl' => if nobreak s then nobreak_ls sl' else false
+ match sl with
+ | Clight.LSnil => true
+ | Clight.LScons _ s sl' => if nobreak s then nobreak_ls sl' else false
  end.
 
-
-
 Fixpoint noreturn s :=
-match s with
-| Clight.Ssequence s1 s2 => if noreturn s1 then noreturn s2 else false
-| Clight.Sifthenelse _ s1 s2 => if noreturn s1 then noreturn s2 else false
-| Clight.Sloop s1 s2 => if noreturn s1 then noreturn s2 else false
-| Clight.Sswitch _ sl => noreturn_ls sl
-| Clight.Sgoto _ => false
-| Clight.Sreturn _ => false
-| Clight.Slabel _ s => noreturn s
-| _ => true
-end
+  match s with
+  | Clight.Ssequence s1 s2 => if noreturn s1 then noreturn s2 else false
+  | Clight.Sifthenelse _ s1 s2 => if noreturn s1 then noreturn s2 else false
+  | Clight.Sloop s1 s2 => if noreturn s1 then noreturn s2 else false
+  | Clight.Sswitch _ sl => noreturn_ls sl
+  | Clight.Sgoto _ => false
+  | Clight.Sreturn _ => false
+  | Clight.Slabel _ s => noreturn s
+  | _ => true
+  end
 with noreturn_ls sl :=
-match sl with Clight.LSnil => true | Clight.LScons _ s sl' => if noreturn s then noreturn_ls sl' else false
-end.
+  match sl with
+  | Clight.LSnil => true
+  | Clight.LScons _ s sl' => if noreturn s then noreturn_ls sl' else false
+  end.
 
 Fixpoint nocontinue s :=
-match s with
-| Clight.Ssequence s1 s2 => if nocontinue s1 then nocontinue s2 else false
-| Clight.Sifthenelse _ s1 s2 => if nocontinue s1 then nocontinue s2 else false
-| Clight.Sloop s1 s2 => if nocontinue s1 then nocontinue s2 else false
-| Clight.Sswitch _ sl => nocontinue_ls sl
-| Clight.Sgoto _ => false
-| Clight.Scontinue => false
-| Clight.Slabel _ s => nocontinue s
-| _ => true
-end
+  match s with
+  | Clight.Ssequence s1 s2 => if nocontinue s1 then nocontinue s2 else false
+  | Clight.Sifthenelse _ s1 s2 => if nocontinue s1 then nocontinue s2 else false
+  | Clight.Sloop s1 s2 => if nocontinue s1 then nocontinue s2 else false
+  | Clight.Sswitch _ sl => nocontinue_ls sl
+  | Clight.Sgoto _ => false
+  | Clight.Scontinue => false
+  | Clight.Slabel _ s => nocontinue s
+  | _ => true
+  end
 with nocontinue_ls sl :=
-match sl with Clight.LSnil => true | Clight.LScons _ s sl' => if nocontinue s then nocontinue_ls sl' else false
-end.
+  match sl with
+  | Clight.LSnil => true
+  | Clight.LScons _ s sl' => if nocontinue s then nocontinue_ls sl' else false
+  end.
 
-Lemma noreturn_ls_spec: forall sl, noreturn_ls sl = true -> noreturn (seq_of_labeled_statement sl) = true.
+Lemma noreturn_ls_spec: forall sl,
+  noreturn_ls sl = true ->
+  noreturn (seq_of_labeled_statement sl) = true.
 Proof.
   intros.
   induction sl.
@@ -1240,7 +1185,9 @@ Proof.
     auto.
 Qed.
 
-Lemma noreturn_ls_spec': forall sl n, noreturn_ls sl = true -> noreturn (seq_of_labeled_statement (select_switch n sl)) = true.
+Lemma noreturn_ls_spec': forall sl n,
+  noreturn_ls sl = true ->
+  noreturn (seq_of_labeled_statement (select_switch n sl)) = true.
 Proof.
   intros.
   apply noreturn_ls_spec in H.
@@ -1271,14 +1218,15 @@ Proof.
       * exact H.
 Qed. 
 
-Lemma semax_post: forall (R' : ret_assert) (Espec : OracleKind) 
+Lemma semax_post:
+  forall (R' : ret_assert) (Espec : OracleKind) 
       (cs : compspecs) (Delta : tycontext) (R : ret_assert)
       (P : environ -> mpred) (c : Clight.statement),
     ENTAIL Delta, RA_normal R' |-- RA_normal R ->
     ENTAIL Delta, RA_break R' |-- RA_break R ->
     ENTAIL Delta, RA_continue R' |-- RA_continue R ->
     (forall vl : option val,
-     ENTAIL Delta, RA_return R' vl |-- RA_return R vl) ->
+      ENTAIL Delta, RA_return R' vl |-- RA_return R vl) ->
     semax Delta P c R' -> semax Delta P c R.
 Proof.
   intros.
@@ -1289,24 +1237,22 @@ Proof.
   - intros. eapply derives_trans;[|apply H2]. solve_andp.
 Qed.
 
-
-Lemma derives_aux_refl : forall (Delta : tycontext) 
-  (P : environ -> mpred),
-       ENTAIL Delta, allp_fun_id Delta && P |--  P.
+Lemma derives_aux_refl:
+  forall (Delta : tycontext) (P : environ -> mpred),
+    ENTAIL Delta, allp_fun_id Delta && P |--  P.
 Proof.
   intros. solve_andp.
 Qed.
 
-
 Lemma semax_noreturn_inv:
-forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
-(Pre : environ -> mpred) (s : Clight.statement) 
-  (Post Post' : ret_assert),
-noreturn s = true ->
-RA_normal Post = RA_normal Post' ->
-RA_break Post = RA_break Post' ->
-RA_continue Post = RA_continue Post' ->
-semax Delta Pre s Post -> semax Delta Pre s Post'.
+  forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
+      (Pre : environ -> mpred) (s : Clight.statement) 
+      (Post Post' : ret_assert),
+    noreturn s = true ->
+    RA_normal Post = RA_normal Post' ->
+    RA_break Post = RA_break Post' ->
+    RA_continue Post = RA_continue Post' ->
+    semax Delta Pre s Post -> semax Delta Pre s Post'.
 Proof.
   intros.
   revert Post' H0 H1 H2.
@@ -1366,17 +1312,16 @@ Proof.
   + constructor.
 Qed.
 
-
 Lemma semax_nocontinue_inv:
-forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
-(Pre : environ -> mpred) (s : Clight.statement) 
-  (Post Post' : ret_assert),
-nocontinue s = true ->
-RA_normal Post = RA_normal Post' ->
-RA_break Post = RA_break Post' ->
-RA_return Post = RA_return Post' ->
-semax Delta Pre s Post ->
-semax Delta Pre s Post'.
+  forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
+      (Pre : environ -> mpred) (s : Clight.statement) 
+      (Post Post' : ret_assert),
+    nocontinue s = true ->
+    RA_normal Post = RA_normal Post' ->
+    RA_break Post = RA_break Post' ->
+    RA_return Post = RA_return Post' ->
+    semax Delta Pre s Post ->
+    semax Delta Pre s Post'.
 Proof.
   intros.
   revert Post' H0 H1 H2.
@@ -1435,16 +1380,15 @@ Proof.
   + constructor.
 Qed.
 
-
 Lemma semax_nobreak_inv:
-forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
-(Pre : environ -> mpred) (s : Clight.statement) 
-  (Post Post' : ret_assert),
-nobreak s = true ->
-RA_normal Post = RA_normal Post' ->
-RA_return Post = RA_return Post' ->
-RA_continue Post = RA_continue Post' ->
-semax Delta Pre s Post -> semax Delta Pre s Post'.
+  forall (CS : compspecs) (Espec : OracleKind) (Delta : tycontext)
+      (Pre : environ -> mpred) (s : Clight.statement) 
+      (Post Post' : ret_assert),
+    nobreak s = true ->
+    RA_normal Post = RA_normal Post' ->
+    RA_return Post = RA_return Post' ->
+    RA_continue Post = RA_continue Post' ->
+    semax Delta Pre s Post -> semax Delta Pre s Post'.
 Proof.
   intros.
   revert Post' H0 H1 H2.
@@ -1502,8 +1446,6 @@ Proof.
   + constructor.
 Qed.
 
-
-
 Lemma semax_conj_skip: forall CS Espec Delta P Q Q1 Q2,
   @semax CS Espec Delta P Clight.Sskip (overridePost Q2 Q) ->
   @semax CS Espec Delta P Clight.Sskip (overridePost Q1 Q) ->
@@ -1525,7 +1467,6 @@ Proof.
   apply semax_skip.
 Qed.
 
-
 Lemma share_lub_writable: forall sh1 sh2,
   writable_share sh1 -> writable_share sh2 ->
   writable_share (Share.lub sh1 sh2).
@@ -1537,21 +1478,20 @@ Qed.
 
 
 Lemma mapsto_join_andp_write_det_logic: forall sh1 sh2 t p P1 P2 v',
-tc_val t v' -> 
-writable_share sh1 -> writable_share sh2 ->
-(mapsto_ sh1 t p * (mapsto sh1 t p v' -* P1)) && 
-(mapsto_ sh2 t p * (mapsto sh2 t p v' -* P2))
-|-- 
-(mapsto_ (Share.lub sh1 sh2) t p * (mapsto (Share.lub sh1 sh2) t p v' -* (P1 && P2))).
+  tc_val t v' -> 
+  writable_share sh1 -> writable_share sh2 ->
+  (mapsto_ sh1 t p * (mapsto sh1 t p v' -* P1)) && 
+  (mapsto_ sh2 t p * (mapsto sh2 t p v' -* P2))
+  |--
+  mapsto_ (Share.lub sh1 sh2) t p * (mapsto (Share.lub sh1 sh2) t p v' -* (P1 && P2)).
 Proof.
   intros.
   apply mapsto_join_andp_write_det;auto.
 Qed.
 
-
 Lemma distrib_orp_andp2:
-forall (A : Type) (ND : NatDed A) (P Q R : A),
- R && (P || Q) = R && P || R && Q.
+  forall (A : Type) (ND : NatDed A) (P Q R : A),
+    R && (P || Q) = R && P || R && Q.
 Proof.
   intros.
   rewrite andp_comm.
@@ -1559,7 +1499,6 @@ Proof.
   rewrite andp_comm at 1.
   f_equal. rewrite andp_comm. reflexivity.
 Qed.
-
 
 Lemma semax_conj_assign: forall CS Espec Delta P Q Q1 Q2 e e0,
   @semax CS Espec Delta P (Clight.Sassign e e0) 
@@ -1584,12 +1523,6 @@ Proof.
   assert_PROPP (writable_share sh1). { solve_andp. }
   assert_PROPP (writable_share sh2). { solve_andp. }
   apply andp_right. {
-    (* rewrite andp_assoc. rewrite andp_comm.
-    rewrite !andp_assoc.
-    apply derives_extract_prop. intros.
-    rewrite andp_comm.  
-    rewrite !andp_assoc.
-    apply derives_extract_prop. intros. *)
     apply prop_right. apply share_lub_writable;auto. }
   eapply derives_trans with
   (Q:=
@@ -1814,7 +1747,7 @@ Proof.
   solve_andp.
 Qed.
 
-  
+
 Lemma semax_conj_set: forall CS Espec Delta P Q Q1 Q2 i e,
   @semax CS Espec Delta P (Clight.Sset i e) 
     (overridePost Q2 Q) ->

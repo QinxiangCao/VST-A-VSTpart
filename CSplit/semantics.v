@@ -1,7 +1,7 @@
-Require Export CSplit.AClight.
+Require Export Csplit.AClight.
 
 (* Require Import VST.floyd.proofauto. *)
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 
 Open Scope aclight_scope.
 
@@ -127,7 +127,7 @@ Section Semantics.
 
 Context {CS: compspecs} {Espec: OracleKind} (Delta: tycontext).
 
-Fixpoint to_Clight  (a: atom_statement) : Clight.statement :=
+Definition to_Clight  (a: atom_statement) : Clight.statement :=
 match a with
 | Askip => Clight.Sskip
 | Aassign e1 e2 => Clight.Sassign e1 e2
@@ -141,21 +141,36 @@ Definition split_atom_to_statement (x : (expr + atom_statement)):=
   | inr s => to_Clight s
   end.
 
-Fixpoint path_to_statement (p:path):  Clight.statement :=
+Fixpoint path_to_statement (p: path) (tail: Clight.statement): Clight.statement :=
   match p with
-  | nil => Clight.Sskip
+  | nil => tail
   | inl (true, e) :: p' => Clight.Ssequence 
               (Clight.Sifthenelse e Clight.Sskip Clight.Sbreak) 
-              (path_to_statement p')
+              (path_to_statement p' tail)
   | inl (false, e) :: p' => Clight.Ssequence 
               (Clight.Sifthenelse e Clight.Sbreak Clight.Sskip) 
-              (path_to_statement p')  
+              (path_to_statement p' tail) 
   | inr s :: p' => Clight.Ssequence
-              (to_Clight s) (path_to_statement p')
+              (to_Clight s) (path_to_statement p' tail)
   end.
 
+Lemma nocontinue_split_result: forall c tail,
+  nocontinue tail = true ->
+  nocontinue (path_to_statement c tail) = true.
+Proof.
+  intros ? ? H99.
+  induction c.
+  + simpl.
+    auto.
+  + destruct a.
+    - destruct p, b; simpl; auto.
+    - simpl.
+      destruct a; auto.
+Qed.
 
-Lemma nocontinue_split_result: forall c, nocontinue (path_to_statement c) = true.
+Lemma noreturn_split_result: forall c tail,
+  noreturn tail = true ->
+  noreturn (path_to_statement c tail) = true.
 Proof.
   intros.
   induction c.
@@ -167,27 +182,12 @@ Proof.
       destruct a; auto.
 Qed.
 
-Lemma noreturn_split_result: forall c, noreturn (path_to_statement c) = true.
-Proof.
-  intros.
-  induction c.
-  + simpl.
-    auto.
-  + destruct a.
-    - destruct p, b; simpl; auto.
-    - simpl.
-      destruct a; auto.
-Qed.
-
-(* Fixpoint path_to_statement'  (p:path):  Clight.statement :=
-    fold_Ssequence (map split_atom_to_statement p). *)
-
-
-
-Lemma path_to_statement_app: forall P Q l1 l2,
-  semax Delta P (Clight.Ssequence (path_to_statement l1)
-    (path_to_statement l2)) Q <->
-    semax Delta P (path_to_statement (l1++l2)) Q.
+Lemma path_to_statement_app: forall P Q l1 l2 tail,
+  semax Delta P
+    (Clight.Ssequence
+      (path_to_statement l1 Clight.Sskip)
+      (path_to_statement l2 tail)) Q
+  <-> semax Delta P (path_to_statement (l1 ++ l2) tail) Q.
 Proof.
   intros. revert P. induction l1.
   { intros. simpl. split;intro.
@@ -272,51 +272,45 @@ Fixpoint path_to_semax { s_path: S_full_path }
   (c_path: C_full_path s_path) : Prop :=
   match c_path with
   | mk_C_full_path pre path post =>
-      @semax CS Espec Delta pre (path_to_statement path)
+      @semax CS Espec Delta pre (path_to_statement path Clight.Sskip)
       (normal_split_assert post)
   | bind_C_full_path A s_path' c_path' =>
       forall (a:A), path_to_semax (c_path' a)
   end.
 
-Fixpoint post_to_semax post { s_post : S_partial_post }
+Definition post_to_semax post { s_post : S_partial_post }
   (c_post: C_partial_post s_post) : Prop :=
   match c_post with
   | mk_C_partial_post pre path =>
-      @semax CS Espec Delta pre (path_to_statement path)
+      @semax CS Espec Delta pre (path_to_statement path Clight.Sskip)
       (normal_split_assert post)
-  (* | bind_C_partial_post A s_post' c_post' =>
-      forall (a:A), post_to_semax post (c_post' a) *)
   end.
 
-Fixpoint pre_to_semax pre { s_pre : S_partial_pre }
+Definition pre_to_semax pre { s_pre : S_partial_pre }
   (c_pre: C_partial_pre s_pre) : Prop :=
   match c_pre with
   | mk_C_partial_pre path post =>
-      @semax CS Espec Delta pre (path_to_statement path)
+      @semax CS Espec Delta pre (path_to_statement path Clight.Sskip)
       (normal_split_assert post)
   end.
 
 
 
 
-Fixpoint post_ret_to_semax post { s_post : S_partial_post_ret }
+Definition post_ret_to_semax post { s_post : S_partial_post_ret }
   (c_post: C_partial_post_ret s_post) : Prop :=
   match c_post with
   | mk_C_partial_post_ret pre path retval =>
       @semax CS Espec Delta pre 
-        (Clight.Ssequence 
-          (path_to_statement path)
-          (Clight.Sreturn retval))
+        (path_to_statement path (Clight.Sreturn retval))
       (return_split_assert post)
-  (* | bind_C_partial_post_ret A s_post' c_post' =>
-      forall (a:A), post_ret_to_semax post (c_post' a) *)
   end.
 
 Definition atom_to_semax pre post atom := 
   match atom with
   | mk_atom path =>
       @semax CS Espec Delta pre 
-        (path_to_statement path)
+        (path_to_statement path Clight.Sskip)
         (normal_split_assert post)
   end.
 
@@ -325,8 +319,7 @@ Definition atom_ret_to_semax pre post atom :=
   match atom with
   | mk_atom_ret path retval =>
       @semax CS Espec Delta pre 
-        (Clight.Ssequence (path_to_statement path) 
-          (Clight.Sreturn retval))
+        (path_to_statement path (Clight.Sreturn retval))
         (return_split_assert (post))
   end.
 

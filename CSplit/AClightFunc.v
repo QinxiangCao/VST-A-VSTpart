@@ -21,10 +21,8 @@ Require Import VST.veric.mpred.
 Require Import VST.msl.seplog.
 Require Import VST.veric.SeparationLogic.
 Require Import VST.veric.juicy_extspec.
-Require Import CSplit.AClight.
+Require Import Csplit.AClight.
 Import ListNotations.
-
-
 
 
 Definition Sapp :=
@@ -35,28 +33,14 @@ Definition Sapp :=
     | a :: l1 => a :: Sapp l1 m
     end.
 
-Fixpoint Capp {A:Type} {binder: A -> Type} 
-  {sl1: list A} (cl1 : @list_binded_of A binder sl1)
-  {sl2: list A} (cl2 : @list_binded_of A binder sl2)
-  : @list_binded_of A binder (Sapp sl1  sl2) :=
-match cl1 in list_binded_of sl1'
-return list_binded_of (Sapp sl1'  sl2) with
-| list_binded_nil => cl2
-| list_binded_cons sx cx sl1' cl1' =>
-  list_binded_cons sx cx (app sl1' sl2) (Capp cl1' cl2)
-end.
 
-
-Declare Scope aclight_scope.
 Local Close Scope list_scope.
-
 
 Infix "::" := cons (at level 60, right associativity) : aclight_scope.
 Notation "[ ]" := nil (format "[ ]") : aclight_scope.
 Notation "[ x ]" := (cons x nil) : aclight_scope.
 Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)) : aclight_scope.
 Infix "+/+" := Sapp (right associativity, at level 60) : aclight_scope.
-Infix "+++" := Capp (right associativity, at level 60) : aclight_scope.
 
 Open Scope aclight_scope.
 
@@ -303,7 +287,7 @@ Fixpoint add_Q_to_atoms s_atoms :=
 (** Dependent Operations on split results *)
 (***********************************)
 
-Fixpoint atom_conn_Cpre s_atom1 { s_pre2 } (c_pre2: C_partial_pre s_pre2) : C_partial_pre (atom_conn_Spre s_atom1 s_pre2) :=
+Definition atom_conn_Cpre s_atom1 { s_pre2 } (c_pre2: C_partial_pre s_pre2) : C_partial_pre (atom_conn_Spre s_atom1 s_pre2) :=
 match s_atom1 with
   | mk_atom path1 =>
   match c_pre2 in C_partial_pre s_pre2'
@@ -333,7 +317,7 @@ Fixpoint atoms_conn_Cpres
   end.
 
 
-Fixpoint Cpost_conn_atom { s_post1 } 
+Definition Cpost_conn_atom { s_post1 } 
   (c_post1 : C_partial_post s_post1) atom2
   : C_partial_post (Spost_conn_atom s_post1 atom2) :=
   match atom2 with
@@ -346,7 +330,7 @@ Fixpoint Cpost_conn_atom { s_post1 }
 end.
 
 
-Fixpoint Cposts_conn_atom {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_posts (Sposts_conn_atom s_posts1 atom2) :=
+Definition Cposts_conn_atom {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_posts (Sposts_conn_atom s_posts1 atom2) :=
   Cmap(fun s_post1 => Spost_conn_atom s_post1 atom2)
        (fun s_post1 c_post1 => 
             @Cpost_conn_atom s_post1 c_post1 atom2)
@@ -367,7 +351,7 @@ Fixpoint Cposts_conn_atoms
 
 
 
-Fixpoint Cpost_conn_return { s_post1 } 
+Definition Cpost_conn_return { s_post1 } 
   (c_post1 : C_partial_post s_post1) atom2
   : C_partial_post_ret (Spost_conn_return s_post1 atom2) :=
   match atom2 with
@@ -380,7 +364,7 @@ Fixpoint Cpost_conn_return { s_post1 }
 end.
 
 
-Fixpoint Cposts_conn_return {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_post_rets (Sposts_conn_return s_posts1 atom2) :=
+Definition Cposts_conn_return {s_posts1} (c_posts1 : C_partial_posts s_posts1) atom2 : C_partial_post_rets (Sposts_conn_return s_posts1 atom2) :=
   Cmap(fun s_post1 => Spost_conn_return s_post1 atom2)
         (fun s_post1 c_post1 => 
             @Cpost_conn_return s_post1 c_post1 atom2)
@@ -416,7 +400,7 @@ return C_full_path (Spost_conn_Spre (mk_S_partial_post path1) s_pre2') with
       (fun a => Cpost_conn_Cpre_aux pre path1 (c_pre2' a)) *)
 end.
 
-Fixpoint Cpost_conn_Cpre
+Definition Cpost_conn_Cpre
   {s_post1: S_partial_post}
   (c_post1: C_partial_post s_post1)
   {s_pre2: S_partial_pre}
@@ -478,7 +462,7 @@ Definition add_exp_to_Cpres b e
   Cmap (add_exp_to_Spre b e)
     (fun s_pre c_pre => @add_exp_to_Cpre b e s_pre c_pre) c_pres.
 
-Fixpoint add_P_to_Cpre P { s_pre } 
+Definition add_P_to_Cpre P { s_pre } 
   (c_pre: C_partial_pre s_pre) : C_full_path (add_P_to_Spre s_pre) :=
 match s_pre with
 | mk_S_partial_pre path =>

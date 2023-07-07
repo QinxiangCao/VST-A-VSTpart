@@ -1,6 +1,6 @@
 Require Import FloydSeq.base2.
 Require Import FloydSeq.client_lemmas.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
 Import ListNotations.
 
 (* In any of these functions, whenever there is a [list ident],

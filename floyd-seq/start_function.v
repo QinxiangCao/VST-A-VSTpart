@@ -133,4 +133,3 @@ Ltac start_function hint tac :=
      clearbody DS
  end;
  start_function_hint*).
-

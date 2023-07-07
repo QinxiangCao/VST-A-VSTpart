@@ -14,33 +14,44 @@ Require Import VST.floyd.SeparationLogicFacts.
 Require VST.floyd.SeparationLogicAsLogicSoundness.
 Require Import VST.floyd.SeparationLogicAsLogic.
 Require Import VST.floyd.proofauto.
+Require Import Csplit.semantics.
+Require Import Csplit.soundness.
+Require Import Csplit.strong.
+Require Import Csplit.AClight.
+Require Import Csplit.AClightFunc.
 Import Ctypes LiftNotation.
 Local Open Scope logic.
-Require Import CSplit.semantics.
-Require Import CSplit.soundness.
-Require Import CSplit.strong.
-Require Import CSplit.AClightFunc.
-(* Lemma semax_derives_vst: forall CS  Espec Delta P c Q,
-@SeparationLogicAsLogic.semax CS Espec Delta P c Q ->
-@CSHL_Def.semax CS Espec Delta P c Q.
-Proof.
-  intros.
-  induction H.
-  - rewrite andp_assoc.
-    apply CSHL_PracticalLogic.semax_extract_prop. intros.
-    apply CSHL_MinimumLogic.semax_ifthenelse;eauto.
-  - eapply CSHL_MinimumLogic.semax_seq;eauto.
-  - eapply CSHL_MinimumLogic.semax_break;eauto.
-  - eapply CSHL_MinimumLogic.semax_continue;eauto.
-  - eapply CSHL_MinimumLogic.semax_loop;eauto.
-  - eapply CSHL_MinimumLogic.semax_switch;eauto.
 
-  Search semax.
-  apply H. *)
+Lemma semax_call_derives_aux:
+  forall (CS: compspecs) Delta a b id fs fs',
+    (glob_specs Delta) ! id = Some fs ->
+    allp_fun_id Delta &&
+    local (fun rho =>
+      gvar_injection (ge_of rho) /\
+      eval_expr a rho = Vptr b Ptrofs.zero /\
+      global_block rho id b) &&
+    `(funspec_sub_si fs fs')
+    |-- ` (func_ptr fs') (eval_expr a).
+Proof.
+  intros. intros rho.
+  unfold local, lift1.
+  unfold_lift. unfold andp. simpl.
+  unfold allp_fun_id. seplog_tactics.normalize. rewrite H1.
+  unfold func_ptr.
+  apply derives_trans with (
+    func_ptr_si fs (Vptr b Ptrofs.zero) && funspec_sub_si fs fs'
+  ).
+  2: { rewrite andp_comm. apply func_ptr_si_mono. }
+  apply andp_derives. 2: apply derives_refl.
+  apply (allp_left _ id).
+  apply (allp_left _ fs).
+  rewrite log_normalize.prop_imp; auto.
+  Intros b'. destruct H2. rewrite H4 in H3. inv H3.
+  apply derives_refl.
+Qed.
 
 Theorem semax_derives: forall CS Espec Delta P c Q,
   @semax CS Espec Delta P c Q -> 
-  (* @SeparationLogicAsLogic.semax CS Espec Delta P c Q. *)
   @CSHL_Def.semax CS Espec Delta P c Q.
 Proof.
   intros.
@@ -137,16 +148,25 @@ Proof.
     apply extract_exists_pre_later;intros.
     rewrite !andp_assoc.
     apply CSHL_PracticalLogic.semax_extract_prop.
-    intros [H1 [H2 H3]].
+    intros [H1 [H2 [H3 [H4 H5]]]].
     eapply CSHL_MinimumLogic.semax_conseq;
-    [..|eapply CSHL_MinimumLogic.semax_call
-    with (P := x3) (Q:=x4) (NEP:=x5) (NEQ:=x6) (A:= x2)
-    (ts:=x7) (x9:=x8) (argsig:=x) (retsig:=x0) (cc:=x1)
-    (F:=oboxopt Delta ret (maybe_retval (x4 x7 x8) x0 ret -* R))
-    ];auto.
+      [..|eapply CSHL_MinimumLogic.semax_call];
+      try eassumption.
     { rewrite <- !andp_assoc. apply aux1_reduceR.
       eapply derives_trans;[|apply bupd_intro].
-      apply andp_derives. { solve_andp. }
+      apply andp_derives.
+      { apply derives_trans with (
+          local (tc_environ Delta) && tc_expr Delta a &&
+          tc_exprlist Delta (snd (split x)) bl &&
+          (allp_fun_id Delta &&
+          local (fun rho =>
+            gvar_injection (ge_of rho) /\
+            eval_expr a rho = Vptr x7 Ptrofs.zero /\
+            global_block rho x8 x7) &&
+          `(funspec_sub_si x9 (mk_funspec (x, x0) x1 x2 x3 x4 x5 x6)))).
+        { solve_andp. }
+        apply andp_derives. solve_andp.
+        eapply semax_call_derives_aux; eassumption. }
       rewrite sepcon_comm. solve_andp.
     }
     { apply aux1_reduceR. eapply derives_trans;[|apply bupd_intro].
@@ -181,7 +201,7 @@ Proof.
   - apply CSHL_MinimumLogic.semax_Slabel. auto.
   - apply semax_ff.
   - apply semax_ff.
-Qed. 
+Qed.
 
 
 Fixpoint S_statement_to_Clight (s: S_statement) : Clight.statement :=

@@ -3,8 +3,8 @@ Require Import FloydSeq.client_lemmas.
 Require Import FloydSeq.closed_lemmas.
 Import Cop.
 Import LiftNotation.
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
 Local Open Scope logic.
 
 
@@ -549,8 +549,8 @@ Qed.
 
 Definition signof (e: expr) := 
   match typeof e with
-  | Tint _ s _ => s
-  | Tlong s _ => s 
+  | Ctypes.Tint _ s _ => s
+  | Ctypes.Tlong s _ => s 
   | _ =>  Unsigned
   end.
 

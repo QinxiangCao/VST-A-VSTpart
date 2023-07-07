@@ -27,7 +27,7 @@ Hint Resolve isptr_force_val_sem_cast_neutral : norm.
 
 Lemma FF_local_facts: forall {A}{NA: NatDed A}, (FF:A) |-- !!False.
 Proof. intros. apply FF_left. Qed.
-Hint Resolve @FF_local_facts: saturate_local.
+Hint Resolve FF_local_facts: saturate_local.
 
 (*
 (*** Omega stuff ***)
@@ -765,15 +765,6 @@ repeat match goal with
 
 Lemma EVAR_i: forall P: Prop, P -> EVAR P.
 Proof. intros. apply H. Qed.
-
-Ltac ungather_entail :=
-match goal with
-  | |- EVAR (forall x : ?t, _) =>
-       let x' := fresh x in evar (x' : t);
-       let x'' := fresh x in apply EVAR_i; intro x'';
-       replace x'' with x'; [ungather_entail; clear x'' | admit ]
-  | |- _ => intros
- end.
 
 Lemma offset_val_sizeof_hack:
  forall cenv t i p,

@@ -4,8 +4,8 @@ Require Import FloydSeq.closed_lemmas.
 Require Import VST.floyd.mapsto_memory_block.
 Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
-Require Import CSplit.strong.
-Require Import CSplit.strongFacts.
+Require Import Csplit.strong.
+Require Import Csplit.strongFacts.
 
 Import LiftNotation.
 Local Open Scope logic.
@@ -150,71 +150,81 @@ Qed.
 
 Lemma semax_call_subsume:
   forall (fs1: funspec) A P Q NEP NEQ argsig retsig cc,
-    funspec_sub fs1 (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)  ->
-   forall {CS: compspecs} {Espec: OracleKind} Delta  ts x (F: environ -> mpred) ret  a bl,
-           Cop.classify_fun (typeof a) =
-           Cop.fun_case_f (type_of_params argsig) retsig cc ->
-           (retsig = Tvoid -> ret = None) ->   
-          tc_fn_return Delta ret retsig ->
-  @semax CS Espec Delta
-          (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-         (`(func_ptr fs1) (eval_expr a) &&
-          ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
+    funspec_sub fs1 (mk_funspec (argsig,retsig) cc A P Q NEP NEQ) ->
+    forall {CS: compspecs} {Espec: OracleKind}
+        Delta ts x (F: environ -> mpred) ret a bl b id,
+      Cop.classify_fun (typeof a) =
+      Cop.fun_case_f (type_of_params argsig) retsig cc ->
+      (retsig = Tvoid -> ret = None) ->   
+      tc_fn_return Delta ret retsig ->
+      precise_context Delta ->
+      (glob_specs Delta) ! id = Some fs1 ->
+      @semax CS Espec Delta
+        (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl))  &&
+         (local (fun rho =>
+            gvar_injection (ge_of rho) /\
+            eval_expr a rho = Vptr b Ptrofs.zero /\
+            global_block rho id b) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
           (EX old:val, substopt ret (`old) F * maybe_retval (Q ts x) retsig ret)).
 Proof. intros.
 eapply semax_pre.
-2: apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
+2: apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ)(fs:=fs1)(cc0:=cc); trivial; eassumption.
 apply andp_left2. apply andp_derives; trivial. apply andp_derives; trivial.
-unfold liftx, lift. simpl. intros rho. clear - H.
+unfold liftx, lift. simpl. intros rho.
 remember (mk_funspec (argsig, retsig) cc A P Q NEP NEQ) as gs.
 remember (eval_expr a rho) as v.
-apply andp_right.
-2:{ apply andp_left2. auto. }
-unfold func_ptr. apply andp_left1.
-apply func_ptr_mono; trivial.
+rewrite <- add_andp. apply derives_refl.
+apply derives_trans with TT. apply TT_right.
+apply funspec_sub_sub_si. assumption.
 Qed.
 
 Lemma semax_call_subsume_si:
-  forall (fs1: funspec) A P Q NEP NEQ argsig retsig cc,
-   forall {CS: compspecs} {Espec: OracleKind} Delta  ts x (F: environ -> mpred) ret  a bl,
-           Cop.classify_fun (typeof a) =
-           Cop.fun_case_f (type_of_params argsig) retsig cc ->
-           (retsig = Tvoid -> ret = None) ->   
-          tc_fn_return Delta ret retsig ->
-  @semax CS Espec Delta
-          (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  && 
-          
-         (`(func_ptr fs1) (eval_expr a) && `(funspec_sub_si fs1 (mk_funspec  (argsig,retsig) cc A P Q NEP NEQ)) &&
-         ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
+  forall (fs1: funspec) A P Q NEP NEQ argsig retsig cc
+      {CS: compspecs} {Espec: OracleKind} Delta ts x
+      (F: environ -> mpred) ret a bl b id,
+    Cop.classify_fun (typeof a) =
+    Cop.fun_case_f (type_of_params argsig) retsig cc ->
+    (retsig = Tvoid -> ret = None) ->   
+    tc_fn_return Delta ret retsig ->
+    precise_context Delta ->
+    (glob_specs Delta) ! id = Some fs1 ->
+    @semax CS Espec Delta
+      (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)) && 
+        (local (fun rho =>
+          gvar_injection (ge_of rho) /\
+          eval_expr a rho = Vptr b Ptrofs.zero /\
+          global_block rho id b) &&
+          `(funspec_sub_si fs1 (mk_funspec (argsig,retsig) cc A P Q NEP NEQ)) &&
           |>(F * `(P ts x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert
           (EX old:val, substopt ret (`old) F * maybe_retval (Q ts x) retsig ret)).
 Proof. intros.
-eapply semax_pre. 2: apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ); trivial; eassumption.
-apply andp_left2. apply andp_derives; trivial. apply andp_derives; trivial.
-unfold liftx, lift. simpl. clear. intros rho.
-apply andp_derives;auto.
-rewrite andp_comm. apply func_ptr_si_mono.
+apply semax_call_forward with (P0:=P)(NEP0:=NEP)(NEQ0:=NEQ)(fs:=fs1)(cc0:=cc);
+  eassumption.
 Qed.
 
 Lemma semax_call_NDsubsume :
   forall (fs1: funspec) A P Q argsig retsig cc,
-    NDfunspec_sub fs1 
-        (NDmk_funspec  (argsig,retsig) cc A P Q)  ->
-     forall {CS: compspecs} {Espec: OracleKind},
-    forall  Delta  x (F: environ -> mpred) ret a bl,
-           Cop.classify_fun (typeof a) =
-           Cop.fun_case_f (type_of_params argsig) retsig cc ->
-           (retsig = Tvoid -> ret = None) ->
-          tc_fn_return Delta ret retsig ->
-  @semax CS Espec Delta
-          (((*|>*)((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)))  &&
-         (`(func_ptr fs1) (eval_expr a) &&
-         ` (model_lemmas.precise_fun_at_ptr Delta) (eval_expr a) &&
+      NDfunspec_sub fs1 
+    (NDmk_funspec (argsig,retsig) cc A P Q)  ->
+    forall {CS: compspecs} {Espec: OracleKind}
+        Delta x (F: environ -> mpred) ret a bl b id,
+      Cop.classify_fun (typeof a) =
+      Cop.fun_case_f (type_of_params argsig) retsig cc ->
+      (retsig = Tvoid -> ret = None) ->
+      tc_fn_return Delta ret retsig ->
+      precise_context Delta ->
+      (glob_specs Delta) ! id = Some fs1 ->
+      @semax CS Espec Delta
+        (((tc_expr Delta a) && (tc_exprlist Delta (snd (split argsig)) bl)) &&
+         (local (fun rho =>
+            gvar_injection (ge_of rho) /\
+            eval_expr a rho = Vptr b Ptrofs.zero /\
+            global_block rho id b) &&
           |>(F * `(P x: environ -> mpred) (make_args' (argsig,retsig) (eval_exprlist (snd (split argsig)) bl)))))
          (Scall ret a bl)
          (normal_ret_assert

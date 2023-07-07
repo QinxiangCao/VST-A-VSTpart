@@ -5,7 +5,8 @@ Require Import FloydSeq.local2ptree_denote.
 Require Import FloydSeq.local2ptree_eval.
 Require Import FloydSeq.local2ptree_typecheck.
 Require Import FloydSeq.semax_tactics.
-Require Import CSplit.strong.
+Require Import Csplit.strong.
+Require Import VST.floyd.seplog_tactics.
 Import LiftNotation.
 
 Local Open Scope logic.
@@ -151,8 +152,8 @@ Qed.
 
 Lemma lower_one_temp_Vint':
  forall sz sg rho Delta P i v Q R S,
-  (temp_types Delta) ! i = Some (Tint sz sg noattr) ->
-  ((exists j, v = Vint j /\ tc_val (Tint sz sg noattr) (Vint j) /\ eval_id i rho = (Vint j)) ->
+  (temp_types Delta) ! i = Some (Ctypes.Tint sz sg noattr) ->
+  ((exists j, v = Vint j /\ tc_val (Ctypes.Tint sz sg noattr) (Vint j) /\ eval_id i rho = (Vint j)) ->
    (local (tc_environ Delta) && PROPx P (LOCALx Q (SEPx R))) rho |-- S) ->
   (local (tc_environ Delta) && PROPx P (LOCALx (temp i v :: Q) (SEPx R))) rho |-- S.
 Proof.
@@ -787,7 +788,7 @@ Ltac intro_PROP :=
   | |- (tc_val ?t ?v) -> ?P =>
           let t' := eval hnf in t in
           match t with
-          | Tint ?sz ?sg _ =>
+          | Ctypes.Tint ?sz ?sg _ =>
               is_var v;
               change (is_int sz sg v -> P);
               simple apply is_int_Vint_intro;
@@ -797,7 +798,7 @@ Ltac intro_PROP :=
               intros [v [? tc]];
               safe_subst v';
               revert tc; fancy_intro true
-          | Tpointer ?t0 _ =>
+          | Ctypes.Tpointer ?t0 _ =>
               let b := eval hnf in (eqb_type t0 int_or_ptr_type) in
               match b with
               | true => change (is_pointer_or_integer v -> P); fancy_intro true
