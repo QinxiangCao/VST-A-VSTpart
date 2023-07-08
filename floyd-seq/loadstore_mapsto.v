@@ -18,7 +18,6 @@ Load/store lemmas about mapsto:
 
 ***************************************)
 
-(* [litao] semax_load is new *)
 Definition semax_load := @semax_load_forward.
 Definition semax_load_37 := @semax_load_forward.
 

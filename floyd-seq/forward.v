@@ -285,19 +285,6 @@ Ltac semax_func_skipn :=
 Ltac LookupID := first [ cbv;reflexivity | fail "Lookup for a function identifier in Genv failed" ].
 Ltac LookupB := first [ cbv;reflexivity | fail "Lookup for a function pointer block in Genv failed" ].
 
-(* [litao] semaxbody removed *)
-(* Lemma semax_body_subsumption' cs cs' V V' F F' f spec
-      (SF: @semax_body V F cs f spec)
-      (CSUB: cspecs_sub cs cs')
-      (COMPLETE : Forall (fun it : ident * type => complete_type (@cenv_cs cs) (snd it) = true) (fn_vars f))
-      (TS: tycontext_sub (func_tycontext f V F nil) (func_tycontext f V' F' nil)):
-  @semax_body V' F' cs' f spec.
-Proof.
-  intros.
-  apply (@semax_body_cenv_sub _ _ CSUB); auto.
-  eapply semax_body_subsumption; try eassumption.
-Qed. *)
-
 Lemma sub_option_get' {A: Type} (s t: PTree.t A) B (f:A -> option B):
   Forall (fun x => PTree.get (fst x) t = Some (snd x)) (PTree.elements s) ->
   forall i, sub_option (match PTree.get i s with Some x => f x | _ => None end)

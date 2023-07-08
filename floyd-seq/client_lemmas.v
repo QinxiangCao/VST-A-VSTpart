@@ -1400,7 +1400,6 @@ Require Import Csplit.strong.
 Require Import VST.floyd.seplog_tactics.
 Local Open Scope logic.
 
-  (* [litao] is this correct? *)
 Lemma semax_later_trivial: forall Espec  {cs: compspecs} Delta P c Q,
   @semax cs Espec Delta (|> P) c Q ->
   @semax cs Espec Delta P c Q.

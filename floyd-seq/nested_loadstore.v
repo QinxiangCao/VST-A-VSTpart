@@ -456,30 +456,6 @@ Qed.
 
 End NESTED_RAMIF.
 
-
-Lemma semax_extract_later_prop' {cs: compspecs}:
-  forall {Espec: OracleKind},
-    forall (Delta : tycontext) (PP : Prop) P Q R c post,
-      ENTAIL Delta, PROPx P (LOCALx Q (SEPx R)) |-- !!PP ->
-      (PP -> semax Delta (|>PROPx P (LOCALx Q (SEPx R))) c post) ->
-      semax Delta (|>PROPx P (LOCALx Q (SEPx R))) c post.
-(* Proof.
-  intros.
-  eapply semax_pre_simple.
-  + hoist_later_left.
-    apply later_derives.
-    rewrite (add_andp _ _ H).
-    rewrite andp_assoc.
-    apply andp_left2.
-    rewrite andp_comm.
-    apply derives_refl.
-  + apply semax_extract_later_prop1.
-    auto.
-Qed. *)
-Abort.
-(* [litao] semax_extract_later not available *)
-
-
 Lemma insert_corable_sep: forall R1 P Q R,
   corable R1 ->
   `R1 && PROPx P (LOCALx Q (SEPx R)) = PROPx P (LOCALx Q (SEPx (R1 && emp :: R))).
